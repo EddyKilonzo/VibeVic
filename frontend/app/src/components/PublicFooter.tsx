@@ -59,7 +59,7 @@ export function PublicFooter() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="focus-ring underline-grow text-sm text-muted-foreground transition-colors hover:text-primary"
+                      className="focus-ring underline-grow tap inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
                       {link.label}
                     </Link>
@@ -77,7 +77,7 @@ export function PublicFooter() {
                   <Reveal variant="fade" as="li">
                     <Link
                       href={`/videos?topic=${topic.slug}`}
-                      className="focus-ring underline-grow text-sm text-muted-foreground transition-colors hover:text-primary"
+                      className="focus-ring underline-grow tap inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
                       {topic.name}
                     </Link>

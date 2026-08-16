@@ -180,7 +180,7 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "focus-ring press relative inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-normal",
+        "focus-ring press tap relative inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-normal",
         active ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
         className,
       )}

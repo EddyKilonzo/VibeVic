@@ -66,18 +66,18 @@ export default function AdminStories() {
       </Reveal>
 
       <Reveal variant="fade-up" delay={70} className="mt-7 flex flex-wrap items-center gap-3">
-        <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-md border border-border bg-card px-3 transition-colors focus-within:border-accent">
+        <div className="surface flex h-10 min-w-[220px] flex-1 items-center gap-2 px-3 transition-colors focus-within:border-accent">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filter by title or tag"
             aria-label="Filter stories"
-            className="w-full bg-transparent text-sm outline-none"
+            className="tap w-full bg-transparent text-sm outline-none"
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-md border border-border bg-card p-1">
+        <div className="surface flex items-center gap-1 p-1">
           {(["all", "published", "draft", "scheduled"] as const).map((value) => (
             <button
               key={value}
@@ -85,7 +85,7 @@ export default function AdminStories() {
               onClick={() => setStatus(value)}
               aria-pressed={status === value}
               className={cn(
-                "focus-ring relative h-8 rounded px-3 text-xs font-semibold capitalize transition-colors duration-normal",
+                "focus-ring tap relative inline-flex h-8 items-center rounded px-3 text-xs font-semibold capitalize transition-colors duration-normal",
                 status === value ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
               )}
             >
@@ -102,7 +102,7 @@ export default function AdminStories() {
         </div>
       </Reveal>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-border bg-card">
+      <div className="surface mt-6 overflow-hidden">
         {loading ? (
           <div className="divide-y divide-border">
             {Array.from({ length: 5 }, (_, i) => (
@@ -172,7 +172,7 @@ export default function AdminStories() {
                       type="button"
                       onClick={() => remove(story)}
                       aria-label={`Delete ${story.title}`}
-                      className="focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+                      className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
                     </button>

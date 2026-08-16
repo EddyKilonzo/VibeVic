@@ -41,7 +41,7 @@ export function SectionHeading({
         {action && (
           <Link
             href={action.href}
-            className="focus-ring group inline-flex shrink-0 items-center gap-2 pb-1 text-sm font-semibold text-primary"
+            className="focus-ring tap group inline-flex shrink-0 items-center gap-2 pb-1 text-sm font-semibold text-primary"
           >
             <span className="underline-grow">{action.label}</span>
             <ArrowUpRight className="nudge-x h-4 w-4" aria-hidden />

@@ -86,7 +86,7 @@ export function PublicHeader() {
         <div className="container-site flex h-[68px] items-center justify-between gap-6 md:h-[76px]">
           <Link
             href="/"
-            className="focus-ring font-display shrink-0 text-lg font-semibold tracking-tight"
+            className="focus-ring font-display tap inline-flex shrink-0 items-center text-lg font-semibold tracking-tight"
           >
             Victor Kiplimo
             <span className="ml-2 hidden text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">

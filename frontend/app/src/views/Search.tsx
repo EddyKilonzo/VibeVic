@@ -57,7 +57,7 @@ export default function Search() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Housing, algorithms, the coastline…"
             aria-label="Search stories"
-            className="font-display w-full bg-transparent text-2xl outline-none placeholder:text-muted-foreground/60 sm:text-3xl"
+            className="font-display tap w-full bg-transparent text-2xl outline-none placeholder:text-muted-foreground/60 sm:text-3xl"
           />
         </div>
         <p aria-live="polite" className="mt-3 text-sm text-muted-foreground">

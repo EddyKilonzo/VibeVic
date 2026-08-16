@@ -50,7 +50,7 @@ export function ArticleActionBar({ story }: { story: Story }) {
           <div
             role="group"
             aria-label="Reading mode"
-            className="relative inline-flex items-center rounded-md border border-border bg-background p-1"
+            className="surface relative inline-flex items-center p-1"
           >
             {(
               [
@@ -66,7 +66,7 @@ export function ArticleActionBar({ story }: { story: Story }) {
                   onClick={() => (key === "listen" ? openListen() : setMode("read"))}
                   aria-pressed={active}
                   className={cn(
-                    "focus-ring relative inline-flex h-9 items-center gap-2 rounded px-3.5 text-[13px] font-semibold transition-colors duration-normal",
+                    "focus-ring tap relative inline-flex h-9 items-center gap-2 rounded px-3.5 text-[13px] font-semibold transition-colors duration-normal",
                     active ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
                   )}
                 >

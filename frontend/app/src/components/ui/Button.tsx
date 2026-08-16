@@ -31,19 +31,27 @@ const button = cva(
   {
     variants: {
       variant: {
+        // Filled buttons carry real elevation — they are the one thing on the
+        // page that should look pressable from across the room. Outline and
+        // ghost stay flat at rest and only gain a shadow on hover, so a
+        // toolbar of secondary actions doesn't read as a row of floating
+        // tiles.
         primary:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-brand-ink-deep hover:shadow-[0_10px_28px_hsl(var(--ink)/0.22)] md:hover:-translate-y-px",
+          "bg-primary text-primary-foreground shadow-raised hover:bg-brand-ink-deep hover:shadow-lifted md:hover:-translate-y-px",
         accent:
-          "bg-accent text-accent-foreground shadow-xs hover:bg-primary hover:shadow-[0_10px_28px_hsl(var(--blue)/0.28)] md:hover:-translate-y-px",
+          "bg-accent text-accent-foreground shadow-raised hover:bg-primary hover:shadow-lifted md:hover:-translate-y-px",
         outline:
-          "border border-border bg-background text-foreground hover:border-primary hover:bg-secondary hover:text-primary",
+          "border border-border bg-background text-foreground hover:border-primary hover:bg-secondary hover:text-primary hover:shadow-raised",
         ghost: "text-foreground hover:bg-secondary hover:text-primary",
         quiet: "text-muted-foreground hover:text-primary",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-raised hover:bg-destructive/90 hover:shadow-lifted",
       },
       size: {
         // 44px minimum touch target on every size that appears on mobile.
-        sm: "h-10 rounded-md px-3.5 text-[13px]",
+        // `sm` relaxes to 40px only from the `sm:` breakpoint up, where a
+        // pointer is doing the aiming rather than a thumb.
+        sm: "h-11 rounded-md px-3.5 text-[13px] sm:h-10",
         md: "h-11 rounded-md px-5 text-sm",
         lg: "h-[52px] rounded-md px-6 text-[15px] sm:px-7",
         icon: "h-11 w-11 rounded-md",

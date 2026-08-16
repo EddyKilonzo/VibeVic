@@ -48,7 +48,7 @@ export function BookmarkButton({ itemId, title, variant = "icon", className }: B
         "focus-ring relative inline-flex items-center justify-center gap-2",
         "transition-colors duration-normal",
         variant === "floating" &&
-          "glass h-10 w-10 rounded-full text-primary shadow-sm hover:text-accent",
+          "glass tap-square h-10 w-10 rounded-full text-primary shadow-sm hover:text-accent",
         variant === "icon" && "h-11 w-11 rounded-md text-muted-foreground hover:text-primary",
         inline &&
           "h-11 rounded-md border border-border px-4 text-sm font-semibold hover:border-primary hover:text-primary",

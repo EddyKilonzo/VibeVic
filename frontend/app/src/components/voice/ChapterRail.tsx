@@ -29,7 +29,7 @@ export function ChapterRail({ open }: { open: boolean }) {
           transition={transitions.normal}
           className="overflow-hidden"
         >
-          <div className="mt-3 rounded-lg border border-border bg-card p-2">
+          <div className="surface mt-3 p-2">
             <p className="rule-label px-3 py-2">Chapters</p>
             <ol>
               {article.chapters.map((chapter, i) => {

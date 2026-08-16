@@ -97,7 +97,7 @@ export function VoicePlayer({
       layout={reduced ? false : "position"}
       transition={transitions.normal}
       className={cn(
-        "rounded-lg border border-border bg-card p-4 shadow-[0_2px_18px_hsl(var(--ink)/0.05)] sm:p-5",
+        "surface p-4 sm:p-5",
         className,
       )}
     >
@@ -233,7 +233,7 @@ export function VoicePlayer({
             onClick={onToggleChapters}
             aria-expanded={chaptersOpen}
             className={cn(
-              "focus-ring ml-auto inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors duration-normal hover:bg-secondary hover:text-primary",
+              "focus-ring tap ml-auto inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors duration-normal hover:bg-secondary hover:text-primary",
               chaptersOpen ? "text-primary" : "text-muted-foreground",
             )}
           >
@@ -279,7 +279,7 @@ function IconControl({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="focus-ring flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
+      className="focus-ring tap-square flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
     >
       {children}
     </button>

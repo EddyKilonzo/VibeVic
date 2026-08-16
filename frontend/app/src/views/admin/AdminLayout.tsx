@@ -154,7 +154,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Open admin menu"
-            className="focus-ring flex h-10 w-10 items-center justify-center rounded-md lg:hidden"
+            className="focus-ring tap-square flex h-10 w-10 items-center justify-center rounded-md lg:hidden"
           >
             <PanelLeftClose className="h-4 w-4 rotate-180" aria-hidden />
           </button>
@@ -166,7 +166,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <Link
             href="/"
-            className="focus-ring underline-grow ml-auto text-sm text-muted-foreground transition-colors hover:text-primary"
+            className="focus-ring underline-grow tap ml-auto inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             View site
           </Link>

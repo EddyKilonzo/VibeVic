@@ -189,7 +189,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/admin/stories"
-            className="focus-ring inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
+            className="focus-ring tap inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Stories
@@ -235,7 +235,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             <select
               value={draft.genre}
               onChange={(e) => setDraft((d) => ({ ...d, genre: e.target.value }))}
-              className="focus-ring rounded border border-border bg-background px-2 py-1 text-xs"
+              className="focus-ring tap rounded border border-border bg-background px-2 py-1 text-xs"
             >
               {GENRES.map((g) => (
                 <option key={g.slug} value={g.slug}>
@@ -524,7 +524,7 @@ function BlockRow({
                 <button
                   type="button"
                   onClick={onDuplicate}
-                  className="focus-ring inline-flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-semibold text-muted-foreground hover:bg-secondary hover:text-primary"
+                  className="focus-ring tap inline-flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-semibold text-muted-foreground hover:bg-secondary hover:text-primary"
                 >
                   <Copy className="h-3 w-3" aria-hidden />
                   Duplicate
@@ -532,7 +532,7 @@ function BlockRow({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="focus-ring inline-flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="focus-ring tap inline-flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3 w-3" aria-hidden />
                   Delete

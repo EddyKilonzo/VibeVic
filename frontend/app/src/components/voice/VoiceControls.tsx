@@ -45,7 +45,7 @@ function Menu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={label}
-        className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
+        className="focus-ring tap inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
       >
         {trigger}
         <ChevronDown
@@ -188,7 +188,7 @@ export function FollowAlongToggle() {
       role="switch"
       aria-checked={on}
       onClick={() => setFollowAlong(!on)}
-      className="focus-ring inline-flex h-9 items-center gap-2 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:text-primary"
+      className="focus-ring tap inline-flex h-9 items-center gap-2 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:text-primary"
     >
       <span
         className={cn(

@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import { TOPICS, posterFor, videosByTopic } from "@/data/videos";
 import { storiesByGenre } from "@/data/content";
 import { ImageReveal, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { GooeyNav } from "@/components/reactbits";
 
 export default function Genres() {
   return (
@@ -20,7 +21,14 @@ export default function Genres() {
         </p>
       </Reveal>
 
-      <Stagger className="mt-16 space-y-px" step="normal">
+      {/* Jump nav. Each beat has an anchor further down the page, so this is
+          real navigation rather than a decorative row — which is the only
+          reason it earns an effect this loud. */}
+      <div className="mt-12">
+        <GooeyNav items={TOPICS.map((t) => ({ label: t.name, href: `#${t.slug}` }))} />
+      </div>
+
+      <Stagger className="mt-14 space-y-px" step="normal">
         {TOPICS.map((topic, i) => {
           const videos = videosByTopic(topic.slug);
           const written = storiesByGenre(topic.slug);

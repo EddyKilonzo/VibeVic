@@ -67,6 +67,29 @@
     --shadow-lifted:
       0 2px 4px hsl(var(--ink) / 0.06),
       0 12px 28px -8px hsl(var(--ink) / 0.14);
+
+    /*
+     * The primary shadow.
+     *
+     * A tall, wide cast with an inset lip along the bottom edge — the object
+     * reads as sitting well above the page with light raking across it. The
+     * hover state swaps the bottom lip for a lit top edge, which is what makes
+     * the surface look like it has tilted toward the pointer rather than just
+     * grown a bigger shadow.
+     *
+     * Scale matters here: 100px of blur at a 50px offset is built for a card
+     * or a panel. Applying it unchanged to a 32px filter chip makes the chip
+     * look like it is floating a foot off the screen, so compact controls keep
+     * `--shadow-raised` and the primary pair is reserved for real surfaces.
+     */
+    --shadow-primary:
+      rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+      rgba(0, 0, 0, 0.3) 0px 30px 60px -30px,
+      rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+    --shadow-primary-hover:
+      rgba(255, 255, 255, 0.1) 0px 1px 1px 0px inset,
+      rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+      rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
     --shadow-floating:
       0 4px 10px hsl(var(--ink) / 0.08),
       0 24px 48px -12px hsl(var(--ink) / 0.18);
@@ -466,7 +489,7 @@
      grid of twelve cards does not ripple as the cursor crosses it.   */
   .surface {
     @apply rounded-lg border border-border bg-card;
-    box-shadow: var(--shadow-edge), var(--shadow-raised);
+    box-shadow: var(--shadow-primary);
   }
   .surface-hover {
     transition:
@@ -478,13 +501,23 @@
     .surface-hover:hover {
       transform: translate3d(0, -2px, 0);
       border-color: hsl(var(--accent) / 0.4);
-      box-shadow: var(--shadow-edge), var(--shadow-lifted);
+      box-shadow: var(--shadow-primary-hover);
     }
   }
   .surface-hover:active {
     transform: translate3d(0, 0, 0);
-    box-shadow: var(--shadow-edge), var(--shadow-raised);
+    box-shadow: var(--shadow-primary);
     transition-duration: var(--dur-fast);
+  }
+
+  /*
+   * The compact variant. Same family, a third of the cast — for chips,
+   * toolbars and inline controls where the full primary shadow would read as
+   * an object hovering rather than a control sitting on the page.
+   */
+  .surface-compact {
+    @apply rounded-md border border-border bg-card;
+    box-shadow: var(--shadow-edge), var(--shadow-raised);
   }
 
   .hover-lift {

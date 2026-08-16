@@ -14,6 +14,7 @@ import { useVoice } from "@/context/VoiceProvider";
 import { ImageReveal, Reveal, ScrollProgress, Stagger, StaggerItem } from "@/components/motion";
 import { ArticleActionBar } from "@/components/story/ArticleActionBar";
 import { ArticleBody } from "@/components/story/ArticleBody";
+import { ArticleIndex } from "@/components/story/ArticleIndex";
 import { PlaceholderNotice } from "@/components/story/PlaceholderNotice";
 import { StoryCard } from "@/components/story/StoryCard";
 import { ArticleSkeleton } from "@/components/ui/Skeleton";
@@ -69,6 +70,7 @@ export default function Story({ slug }: { slug: string }) {
       {/* Progress through the article itself, not the document — the footer
           and related rail should not count as reading. */}
       <ScrollProgress target={articleRef} />
+      <ArticleIndex story={story} />
 
       <article
         ref={articleRef}

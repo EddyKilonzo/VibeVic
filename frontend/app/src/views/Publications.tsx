@@ -2,7 +2,8 @@
 
 import { ArrowUpRight } from "lucide-react";
 import { PUBLICATIONS } from "@/data/content";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { Reveal } from "@/components/motion";
+import { ScrollStack, ScrollStackItem } from "@/components/reactbits";
 
 export default function Publications() {
   return (
@@ -17,12 +18,16 @@ export default function Publications() {
         </p>
       </Reveal>
 
-      {/* A quiet stagger: entries fade up in sequence, nothing slides. */}
-      <Stagger className="mt-16" step="normal">
-        {PUBLICATIONS.map((publication, i) => (
-          <StaggerItem key={publication.name} index={i}>
-            <Reveal variant="fade-up" as="article">
-              <div className="grid gap-4 border-t border-border py-8 sm:grid-cols-[1fr_2fr]">
+      {/* Each platform is a card that pins and stacks as the next one arrives.
+          The page is a short, ordered list of a handful of things — exactly
+          the shape the stack reads well at, and the one place on the site
+          where a scroll-driven sequence adds information (order) rather than
+          just motion. Under reduced motion it falls back to a plain column. */}
+      <ScrollStack className="mt-16">
+        {PUBLICATIONS.map((publication) => (
+          <ScrollStackItem key={publication.name} className="surface p-7 sm:p-9">
+            <article>
+              <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
                 <div>
                   <h2 className="font-display text-2xl font-semibold tracking-tight">
                     {publication.url ? (
@@ -51,10 +56,10 @@ export default function Publications() {
                   </p>
                 </div>
               </div>
-            </Reveal>
-          </StaggerItem>
+            </article>
+          </ScrollStackItem>
         ))}
-      </Stagger>
+      </ScrollStack>
     </div>
   );
 }

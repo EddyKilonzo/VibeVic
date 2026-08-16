@@ -97,8 +97,12 @@ export default {
         edge: "var(--shadow-edge)",
         // A raised surface with its lit top edge, which is what most cards
         // actually want.
-        card: "var(--shadow-edge), var(--shadow-raised)",
-        "card-hover": "var(--shadow-edge), var(--shadow-lifted)",
+        // The primary pair — the default for cards, panels and filled
+        // buttons. `raised`/`lifted` remain for compact controls.
+        primary: "var(--shadow-primary)",
+        "primary-hover": "var(--shadow-primary-hover)",
+        card: "var(--shadow-primary)",
+        "card-hover": "var(--shadow-primary-hover)",
       },
       keyframes: {
         "accordion-down": {

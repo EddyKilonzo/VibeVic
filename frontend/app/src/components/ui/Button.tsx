@@ -37,15 +37,15 @@ const button = cva(
         // toolbar of secondary actions doesn't read as a row of floating
         // tiles.
         primary:
-          "bg-primary text-primary-foreground shadow-raised hover:bg-brand-ink-deep hover:shadow-lifted md:hover:-translate-y-px",
+          "bg-primary text-primary-foreground shadow-primary hover:bg-brand-ink-deep hover:shadow-primary-hover md:hover:-translate-y-px",
         accent:
-          "bg-accent text-accent-foreground shadow-raised hover:bg-primary hover:shadow-lifted md:hover:-translate-y-px",
+          "bg-accent text-accent-foreground shadow-primary hover:bg-primary hover:shadow-primary-hover md:hover:-translate-y-px",
         outline:
           "border border-border bg-background text-foreground hover:border-primary hover:bg-secondary hover:text-primary hover:shadow-raised",
         ghost: "text-foreground hover:bg-secondary hover:text-primary",
         quiet: "text-muted-foreground hover:text-primary",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-raised hover:bg-destructive/90 hover:shadow-lifted",
+          "bg-destructive text-destructive-foreground shadow-primary hover:bg-destructive/90 hover:shadow-primary-hover",
       },
       size: {
         // 44px minimum touch target on every size that appears on mobile.

@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Youtube } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Youtube } from "lucide-react";
 import { PROFILE, publishedStories } from "@/data/content";
 import { CHANNEL, TOPICS, VIDEOS, longFormVideos, posterFor, totalViews } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import {
-  CountUp,
   HeroSequence,
-  Magnetic,
   Parallax,
   Reveal,
   Stagger,
@@ -18,8 +17,10 @@ import { VideoCard } from "@/components/video/VideoCard";
 import { StoryCard } from "@/components/story/StoryCard";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
+import { CurvedMarquee, SpecularButton, SpringCountUp } from "@/components/reactbits";
 
 export default function Home() {
+  const router = useRouter();
   const videos = longFormVideos();
   const [lead, ...rest] = videos;
   const written = publishedStories();
@@ -63,14 +64,15 @@ export default function Home() {
                 </p>
 
                 <div className="mt-9 flex flex-wrap items-center gap-3">
+                  {/* One specular button on the whole site. Each instance owns
+                      a WebGL context, so it is spent on the single action the
+                      hero exists to offer. */}
                   <div data-seq="cta">
-                    <Magnetic>
-                      <Button as={Link} href="/videos" size="lg" className="group">
-                        Watch the reports
-                        <ArrowRight className="nudge-x h-4 w-4" aria-hidden />
-                      </Button>
-                    </Magnetic>
+                    <SpecularButton onClick={() => router.push("/videos")}>
+                      Watch the reports
+                    </SpecularButton>
                   </div>
+
                   <div data-seq="cta">
                     <Button
                       as="a"
@@ -183,6 +185,18 @@ export default function Home() {
         </Stagger>
       </section>
 
+      {/* ── Curved band ──────────────────────────────────────────
+          A section break with a voice. It names what the reporting covers
+          and doubles as the hinge between the video grid and the beats,
+          which is a job a horizontal rule cannot do. */}
+      <section className="mt-24 overflow-hidden border-y border-border py-4">
+        <CurvedMarquee
+          text="Campus reporting · Kenyan culture · Student life · Features · "
+          speed={1.2}
+          curveAmount={260}
+        />
+      </section>
+
       {/* ── Beats ────────────────────────────────────────────────── */}
       <section className="container-site mt-28 lg:pb-10">
         <SectionHeading
@@ -291,7 +305,7 @@ export default function Home() {
                   }
                 >
                   <p className="font-display text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
-                    <CountUp value={stat.value} />
+                    <SpringCountUp to={stat.value} />
                   </p>
                   <p className="rule-label mt-1.5">{stat.label}</p>
                 </Reveal>

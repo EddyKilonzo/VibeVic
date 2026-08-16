@@ -50,7 +50,7 @@ export function ArticleActionBar({ story }: { story: Story }) {
           <div
             role="group"
             aria-label="Reading mode"
-            className="surface relative inline-flex items-center p-1"
+            className="surface-compact relative inline-flex items-center p-1"
           >
             {(
               [

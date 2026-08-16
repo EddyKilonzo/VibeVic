@@ -66,7 +66,7 @@ export default function AdminStories() {
       </Reveal>
 
       <Reveal variant="fade-up" delay={70} className="mt-7 flex flex-wrap items-center gap-3">
-        <div className="surface flex h-10 min-w-[220px] flex-1 items-center gap-2 px-3 transition-colors focus-within:border-accent">
+        <div className="surface-compact flex h-10 min-w-[220px] flex-1 items-center gap-2 px-3 transition-colors focus-within:border-accent">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <input
             value={query}
@@ -77,7 +77,7 @@ export default function AdminStories() {
           />
         </div>
 
-        <div className="surface flex items-center gap-1 p-1">
+        <div className="surface-compact flex items-center gap-1 p-1">
           {(["all", "published", "draft", "scheduled"] as const).map((value) => (
             <button
               key={value}

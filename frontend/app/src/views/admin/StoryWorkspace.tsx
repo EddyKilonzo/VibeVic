@@ -184,7 +184,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-[860px] pb-24">
+    <div className="mx-auto max-w-[900px] pb-24">
       <Reveal variant="fade-up">
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -213,20 +213,23 @@ export default function StoryWorkspace({ id }: { id?: string }) {
       </Reveal>
 
       {/* Headline and standfirst */}
-      <Reveal variant="fade-up" delay={60} className="mt-8">
+      {/* The writing surface: a raised sheet the draft lives on, so the
+          editor reads as a page being written rather than a form being
+          filled in. Everything chrome-like stays outside it. */}
+      <Reveal variant="fade-up" delay={60} className="surface mt-8 px-6 py-8 sm:px-10 sm:py-10">
         <textarea
           value={draft.title}
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           placeholder="Headline"
           rows={2}
-          className="font-display w-full resize-none bg-transparent text-4xl font-semibold leading-tight tracking-tight outline-none placeholder:text-muted-foreground/40"
+          className="font-display display-2 w-full resize-none bg-transparent font-semibold outline-none placeholder:text-muted-foreground/30"
         />
         <textarea
           value={draft.dek}
           onChange={(e) => setDraft((d) => ({ ...d, dek: e.target.value }))}
           placeholder="Standfirst — one sentence on why this matters."
           rows={2}
-          className="mt-4 w-full resize-none bg-transparent text-lg leading-relaxed text-muted-foreground outline-none placeholder:text-muted-foreground/40"
+          className="font-display lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30"
         />
 
         <div className="mt-5 flex flex-wrap items-center gap-3 border-y border-border py-3 text-xs text-muted-foreground">
@@ -245,9 +248,13 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             </select>
           </label>
           <span aria-hidden className="h-3 w-px bg-border" />
-          <span>{wordCount} words</span>
+          <span>
+            {wordCount} {wordCount === 1 ? "word" : "words"}
+          </span>
           <span aria-hidden className="h-3 w-px bg-border" />
-          <span>{draft.body.length} blocks</span>
+          <span>
+            {draft.body.length} {draft.body.length === 1 ? "block" : "blocks"}
+          </span>
           <span
             className={cn(
               "ml-auto rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
@@ -264,7 +271,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
         axis="y"
         values={draft.body}
         onReorder={(body) => setDraft((d) => ({ ...d, body }))}
-        className="drag-zone mt-8 space-y-1"
+        className="drag-zone surface mt-6 space-y-1 px-6 py-8 sm:px-10 sm:py-10"
         data-dimmed={dragging || undefined}
       >
         {draft.body.map((block, i) => (
@@ -456,7 +463,10 @@ function BlockRow({
         y: 0,
         transition: { ...transitions.normal, delay: Math.min(index, 8) * stagger.tight },
       }}
-      className="drag-item group/block relative rounded-md"
+      className={cn(
+        "drag-item group/block relative rounded-lg transition-shadow duration-normal",
+        held && "z-10 bg-card shadow-lifted",
+      )}
       data-dragging={held || undefined}
     >
       {/* Gutter controls — invisible until this block is touched. */}

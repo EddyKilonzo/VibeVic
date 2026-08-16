@@ -84,7 +84,7 @@ export default function Awards() {
                   </span>
                 </div>
 
-                <h2 className="font-display mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
+                <h2 className="font-display display-3 mt-3 font-semibold">
                   {award.title}
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-muted-foreground">{award.body}</p>

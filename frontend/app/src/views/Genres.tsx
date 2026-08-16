@@ -50,7 +50,7 @@ export default function Genres() {
                   )}
 
                   <div className="min-w-0">
-                    <h2 className="font-display text-2xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none sm:text-3xl">
+                    <h2 className="font-display display-3 font-semibold transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
                       {topic.name}
                     </h2>
                     <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">

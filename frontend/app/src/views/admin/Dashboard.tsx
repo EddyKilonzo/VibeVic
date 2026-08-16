@@ -21,6 +21,7 @@ import { formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { Reveal } from "@/components/motion";
 import { StatCard } from "@/components/admin/StatCard";
 import { BeatShare } from "@/components/admin/BeatShare";
+import { ViewsTrend } from "@/components/admin/ViewsTrend";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 
@@ -115,8 +116,33 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Reveal variant="fade-up" className="surface p-5">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+        {/* Lead panel: the only chart with a time axis, given the widest span. */}
+        <Reveal variant="fade-up" className="surface p-5 lg:col-span-7">
+          <p className="rule-label">Views by publication month</p>
+          <p className="mt-1 max-w-[52ch] text-sm text-muted-foreground">
+            Reports grouped by the month they went out, accumulated. These are
+            today&rsquo;s view counts by vintage of work — not a traffic history, which
+            would need the YouTube Analytics API.
+          </p>
+          <div className="mt-5">
+            <ViewsTrend />
+          </div>
+        </Reveal>
+
+        <Reveal variant="fade-up" delay={70} className="surface p-5 lg:col-span-5">
+          <p className="rule-label">Reports by beat</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            How the published work divides across the four subjects.
+          </p>
+          <div className="mt-6">
+            <BeatShare />
+          </div>
+        </Reveal>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:mt-5 lg:grid-cols-12 lg:gap-5">
+        <Reveal variant="fade-up" className="surface p-5 lg:col-span-7">
           <p className="rule-label">Views by report</p>
           <p className="mt-1 text-sm text-muted-foreground">
             As published on {CHANNEL.handle}.
@@ -184,20 +210,8 @@ export default function Dashboard() {
           </div>
         </Reveal>
 
-        <div className="flex flex-col gap-6">
-        {/* Where the work is going: four real counts, one bar. */}
-        <Reveal variant="fade-up" delay={60} className="surface p-5">
-          <p className="rule-label">Reports by beat</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            How the published work divides across the four subjects.
-          </p>
-          <div className="mt-6">
-            <BeatShare />
-          </div>
-        </Reveal>
-
         {/* Audio analytics — real recorded playback only. */}
-        <Reveal variant="fade-up" delay={120} className="surface p-5">
+        <Reveal variant="fade-up" delay={70} className="surface p-5 lg:col-span-5">
           <p className="rule-label">Listening on this device</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Recorded as written pieces are played aloud.
@@ -242,7 +256,6 @@ export default function Dashboard() {
             {formatCompact(totalViews())} total video views across {VIDEOS.length} reports.
           </p>
         </Reveal>
-        </div>
       </div>
     </div>
   );

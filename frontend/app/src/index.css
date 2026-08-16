@@ -809,6 +809,26 @@
     }
   }
 
+  /* ── Editor surface ───────────────────────────────────────────
+     Blocks share one animated rhythm so inserting, converting and
+     reordering read as the same gesture. The lift on grab is a
+     shadow change plus 1px of travel — enough to say "this is
+     detached", small enough that a long draft does not ripple.   */
+  .drag-item {
+    transition:
+      box-shadow var(--dur-normal) var(--ease-out),
+      background-color var(--dur-normal) var(--ease-out);
+  }
+  .drag-item[data-dragging] {
+    cursor: grabbing;
+  }
+  /* Neighbours recede while something is held, so the held block is
+     unambiguous without needing to be bigger. */
+  .drag-zone[data-dimmed] > .drag-item:not([data-dragging]) {
+    opacity: 0.45;
+    transition: opacity var(--dur-normal) var(--ease);
+  }
+
   /* ── Skeleton loading ─────────────────────────────────────────── */
   .skeleton {
     position: relative;

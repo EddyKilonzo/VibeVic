@@ -17,7 +17,7 @@ export default function AdminPlaceholder({ title }: { title: string }) {
     <div className="mx-auto max-w-[900px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Admin</p>
-        <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display display-2 mt-2 font-semibold">{title}</h1>
       </Reveal>
 
       <div className="mt-8">

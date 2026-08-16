@@ -358,7 +358,7 @@ export default function Home() {
           <div className="grid gap-10 lg:grid-cols-[1fr_1fr]">
             <div>
               <p className="rule-label">The channel</p>
-              <h2 className="font-display mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              <h2 className="font-display display-2 mt-3 font-semibold text-balance">
                 {CHANNEL.name}
               </h2>
               <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">

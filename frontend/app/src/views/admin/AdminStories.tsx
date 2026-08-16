@@ -56,7 +56,7 @@ export default function AdminStories() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="rule-label">Content</p>
-            <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight">Stories</h1>
+            <h1 className="font-display display-2 mt-2 font-semibold">Stories</h1>
           </div>
           <Button as={Link} href="/admin/stories/new" size="sm">
             <PenLine className="h-4 w-4" aria-hidden />

@@ -55,11 +55,23 @@ export class WebSpeechEngine implements VoiceEngine {
     error: new Set(),
   };
 
-  constructor() {
-    const supported =
+  /**
+   * Cheap capability probe.
+   *
+   * Split out from the constructor so the UI can ask "should this feature
+   * exist at all?" without instantiating an engine and its listeners. It reads
+   * only globals, so it is safe to call during render and on the server.
+   */
+  static isSupported(): boolean {
+    return (
       typeof window !== "undefined" &&
       "speechSynthesis" in window &&
-      typeof window.SpeechSynthesisUtterance === "function";
+      typeof window.SpeechSynthesisUtterance === "function"
+    );
+  }
+
+  constructor() {
+    const supported = WebSpeechEngine.isSupported();
 
     this.synth = supported ? window.speechSynthesis : null;
 

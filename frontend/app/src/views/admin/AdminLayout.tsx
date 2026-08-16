@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [collapsed, setCollapsed] = useLocalStorage("vv:admin-sidebar-collapsed", false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const reduced = useReducedMotion();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/admin";
 
   return (
     <div className="flex min-h-screen bg-muted/40">

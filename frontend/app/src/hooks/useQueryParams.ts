@@ -15,6 +15,9 @@ export function useQueryParams() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  // Both are nullable in Next's types — during static prerender there is no
+  // router yet. Falling back to "/" keeps the URL builder total.
+  const path = pathname ?? "/";
 
   const setParams = useCallback(
     (next: Record<string, string | null>, options?: { replace?: boolean }) => {
@@ -26,12 +29,12 @@ export function useQueryParams() {
       }
 
       const query = search.toString();
-      const url = query ? `${pathname}?${query}` : pathname;
+      const url = query ? `${path}?${query}` : path;
 
       if (options?.replace) router.replace(url, { scroll: false });
       else router.push(url, { scroll: false });
     },
-    [params, pathname, router],
+    [params, path, router],
   );
 
   const get = useCallback(

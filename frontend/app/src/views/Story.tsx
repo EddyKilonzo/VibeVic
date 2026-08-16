@@ -2,10 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/data/api";
-import { genreName, relatedStories } from "@/data/content";
+import { PROFILE, genreName, relatedStories } from "@/data/content";
 import { coverFor } from "@/lib/cover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -15,14 +14,14 @@ import { useVoice } from "@/context/VoiceProvider";
 import { ImageReveal, Reveal, ScrollProgress, Stagger, StaggerItem } from "@/components/motion";
 import { ArticleActionBar } from "@/components/story/ArticleActionBar";
 import { ArticleBody } from "@/components/story/ArticleBody";
+import { PlaceholderNotice } from "@/components/story/PlaceholderNotice";
 import { StoryCard } from "@/components/story/StoryCard";
 import { ArticleSkeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
 
-export default function Story() {
-  const { slug = "" } = useParams();
+export default function Story({ slug }: { slug: string }) {
   const articleRef = useRef<HTMLElement>(null);
 
   const { data: story, loading, error, reload } = useAsync(() => api.story(slug), [slug]);
@@ -101,7 +100,7 @@ export default function Story() {
 
           <Reveal variant="fade-up" delay={160}>
             <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Mara Ellison</span>
+              <span className="font-medium text-foreground">{PROFILE.name}</span>
               <span aria-hidden className="h-3 w-px bg-border" />
               <time dateTime={story.publishedAt}>{formatDate(story.publishedAt)}</time>
               <span aria-hidden className="h-3 w-px bg-border" />
@@ -116,6 +115,14 @@ export default function Story() {
 
             <ArticleActionBar story={story} />
           </Reveal>
+
+          {/* Template pieces say so, above the fold, before a reader has
+              invested any time in them. */}
+          {story.placeholder && (
+            <div className="mt-8">
+              <PlaceholderNotice storyId={story.id} />
+            </div>
+          )}
         </header>
 
         <figure className="mx-auto mt-14 max-w-[1100px] px-0 sm:px-8">

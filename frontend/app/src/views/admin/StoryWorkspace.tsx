@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import {
   AnimatePresence,
   Reorder,
@@ -88,8 +87,7 @@ const BLANK: Story = {
  * Controls stay hidden until a block is hovered or focused. An editor covered
  * in affordances is an editor you cannot read your own writing in.
  */
-export default function StoryWorkspace() {
-  const { id } = useParams();
+export default function StoryWorkspace({ id }: { id?: string }) {
   const existing = id ? storyById(id) : undefined;
   const reduced = useReducedMotion();
 
@@ -99,9 +97,14 @@ export default function StoryWorkspace() {
   const [activeBlock, setActiveBlock] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    if (existing) setDraft({ ...existing, body: [...existing.body] });
-  }, [existing]);
+  // Switching to a different story loads that story's draft. Tracked by id
+  // rather than by object identity, so a re-render of the same piece can never
+  // discard edits the journalist has made but not yet saved.
+  const [loadedId, setLoadedId] = useState(existing?.id);
+  if (existing && existing.id !== loadedId) {
+    setLoadedId(existing.id);
+    setDraft({ ...existing, body: [...existing.body] });
+  }
 
   /* Autosave — stands in for the CMS write. */
   const save = useCallback(async (value: Story) => {

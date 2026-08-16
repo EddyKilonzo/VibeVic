@@ -110,6 +110,11 @@ export function Overlay({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  // Portals need a real DOM node, which does not exist during prerender. The
+  // overlay is closed on first paint anyway, so rendering nothing on the server
+  // costs the reader nothing and keeps every page statically renderable.
+  if (typeof document === "undefined") return null;
+
   const spec = panelMotion[from];
   const panelTransition = reduced
     ? { duration: 0 }

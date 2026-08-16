@@ -158,7 +158,7 @@ export default function Dashboard() {
                   className="border-t border-border pt-4 first:border-0 first:pt-0"
                 >
                   <Link
-                    href={`/story/${summary.slug}`}
+                    href={`/stories/${summary.slug}`}
                     className="focus-ring underline-grow text-sm font-semibold"
                   >
                     {summary.slug}

@@ -17,8 +17,10 @@ const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
+  // Variable axes, so no weight list: the optical-size axis is what lets one
+  // file serve both the 64px hero and 20px pull quotes without a second
+  // download, and naming explicit weights would opt out of that.
   axes: ["opsz"],
-  weight: ["300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
 });
 
@@ -26,7 +28,6 @@ const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 const description = `${PROFILE.name} — journalist reporting from ${PROFILE.base}. Campus systems, Kenyan culture and student life, published as video on ${CHANNEL.handle}.`;

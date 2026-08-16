@@ -14,6 +14,7 @@ export interface NavLinkProps {
   end?: boolean;
   onClick?: () => void;
   "aria-label"?: string;
+  title?: string;
   className?: string | ((args: RenderArgs) => string);
   children: ReactNode | ((args: RenderArgs) => ReactNode);
 }

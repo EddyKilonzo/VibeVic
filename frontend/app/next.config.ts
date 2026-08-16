@@ -1,7 +1,15 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  // Pin the workspace root. Without it Turbopack walks up past the repo and
+  // finds an unrelated lockfile in the home directory.
+  turbopack: {
+    root: path.dirname(fileURLToPath(import.meta.url)),
+  },
 
   images: {
     // YouTube poster frames are the only remote images the site uses.

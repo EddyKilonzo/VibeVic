@@ -34,7 +34,7 @@ const NETWORKS = [
 
 export interface ShareSheetProps {
   title: string;
-  /** Path on this site, e.g. "/story/the-quiet-ledger". */
+  /** Path on this site, e.g. "/stories/the-quiet-ledger". */
   path: string;
   open: boolean;
   onClose: () => void;

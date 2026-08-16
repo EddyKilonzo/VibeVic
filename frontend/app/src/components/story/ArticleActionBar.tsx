@@ -138,7 +138,7 @@ export function ArticleActionBar({ story }: { story: Story }) {
 
       <ShareSheet
         title={story.title}
-        path={`/story/${story.slug}`}
+        path={`/stories/${story.slug}`}
         open={shareOpen}
         onClose={() => setShareOpen(false)}
       />

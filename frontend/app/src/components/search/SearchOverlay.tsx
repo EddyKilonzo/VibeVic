@@ -33,20 +33,36 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   const results = useMemo(() => searchStories(query).slice(0, MAX_RESULTS), [query]);
 
-  // Fresh every time it opens, and focused without the caller remembering to.
+  // Two pieces of state that follow other state, adjusted during render rather
+  // than in an effect: the overlay must never paint for a frame showing the
+  // previous session's query, or a highlight sitting on a row that the new
+  // results no longer contain.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setQuery("");
+      setActive(0);
+    }
+  }
+
+  const [lastQuery, setLastQuery] = useState(query);
+  if (query !== lastQuery) {
+    setLastQuery(query);
+    setActive(0);
+  }
+
+  // Focus is a DOM effect, not state, so it stays here. The delay lets the
+  // panel finish its entrance before the caret lands.
   useEffect(() => {
     if (!open) return;
-    setQuery("");
-    setActive(0);
     const t = window.setTimeout(() => inputRef.current?.focus(), 60);
     return () => window.clearTimeout(t);
   }, [open]);
 
-  useEffect(() => setActive(0), [query]);
-
   const go = (slug: string) => {
     onClose();
-    router.push(`/story/${slug}`);
+    router.push(`/stories/${slug}`);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {

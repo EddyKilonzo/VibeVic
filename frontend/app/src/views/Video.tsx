@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ArrowLeft, Share2, Youtube } from "lucide-react";
 import {
   CHANNEL,
@@ -21,8 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/States";
 import { SectionHeading } from "@/components/SectionHeading";
 
-export default function Video() {
-  const { id = "" } = useParams();
+export default function Video({ id }: { id: string }) {
   const video = videoById(id);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -149,7 +147,7 @@ export default function Video() {
 
       <ShareSheet
         title={video.title}
-        path={`/video/${video.id}`}
+        path={`/videos/${video.id}`}
         open={shareOpen}
         onClose={() => setShareOpen(false)}
       />

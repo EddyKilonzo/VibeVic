@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { BookmarksProvider } from "@/context/BookmarksProvider";
 import { VoiceProvider } from "@/context/VoiceProvider";
@@ -17,7 +17,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <BookmarksProvider>
       <VoiceProvider>
-        <RouteProgress />
+        {/* RouteProgress reads the query string to know when a navigation has
+            landed. That has to sit behind Suspense or it would opt every page
+            out of static rendering — for a 2px bar that isn't drawn yet. */}
+        <Suspense fallback={null}>
+          <RouteProgress />
+        </Suspense>
         {children}
 
         {/* One toaster for the whole app — every confirmation routes through

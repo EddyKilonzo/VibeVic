@@ -8,11 +8,13 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import type { Block } from "@/data/types";
 import {
   createVoiceEngine,
+  voiceSupported,
   extractArticle,
   type Chapter,
   type PlaybackState,
@@ -115,7 +117,19 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   );
 
   const engineRef = useRef<VoiceEngine | null>(null);
-  const [supported, setSupported] = useState(false);
+  /**
+   * Whether narration can exist on this device at all.
+   *
+   * Read straight from the engine registry rather than tracked in state: it is
+   * a fixed property of the browser, and the server snapshot is deliberately
+   * `false` so the markup never ships a Listen button that a device without
+   * speech synthesis would render and then have to take away.
+   */
+  const supported = useSyncExternalStore(
+    () => () => {},
+    voiceSupported,
+    () => false,
+  );
   const [preparing, setPreparing] = useState(false);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [state, setState] = useState<PlaybackState>("idle");
@@ -127,20 +141,22 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const segmentStartedAt = useRef(0);
   const listenStartedAt = useRef(0);
+  // The ref mirrors `article` so engine callbacks — which are registered once
+  // and outlive every load — can read the current piece without the whole
+  // subscription being torn down and rebuilt each time a reader opens a story.
+  // It is written together with the state rather than during render, so the two
+  // can never disagree.
   const articleRef = useRef<ArticleAudio | null>(null);
-  articleRef.current = article;
 
   /* ── Engine lifecycle ───────────────────────────────────────── */
 
   useEffect(() => {
+    if (!supported) return;
+
     const engine = createVoiceEngine();
-    if (!engine) {
-      setSupported(false);
-      return;
-    }
+    if (!engine) return;
 
     engineRef.current = engine;
-    setSupported(true);
 
     const offs = [
       engine.on("segmentStart", (index) => {
@@ -170,7 +186,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       engine.destroy();
       engineRef.current = null;
     };
-  }, []);
+  }, [supported]);
 
   /* ── Elapsed time within the current sentence ───────────────── */
 
@@ -188,6 +204,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     (slug: string, title: string, blocks: Block[]): ArticleAudio => {
       const extracted = extractArticle(title, blocks);
       const next: ArticleAudio = { slug, title, ...extracted };
+      articleRef.current = next;
       setArticle(next);
       setSegmentIndex(0);
       setWithinSegment(0);

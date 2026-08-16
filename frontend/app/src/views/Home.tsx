@@ -88,7 +88,7 @@ export default function Home() {
                   scrolls. Enough to feel dimensional, not enough to notice. */}
               <Parallax amount={22} className="relative">
                 <Link
-                  href={lead ? `/video/${lead.id}` : "/videos"}
+                  href={lead ? `/videos/${lead.id}` : "/videos"}
                   data-seq="image"
                   className="group focus-ring relative block aspect-[4/5] overflow-hidden rounded-sm bg-brand-ink-deep"
                 >

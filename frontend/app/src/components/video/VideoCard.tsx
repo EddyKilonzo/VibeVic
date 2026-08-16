@@ -38,7 +38,7 @@ export function VideoCard({
   return (
     <Reveal variant="fade-up" as="article" className={cn("group", className)}>
       <Link
-        href={`/video/${video.id}`}
+        href={`/videos/${video.id}`}
         className="focus-ring press block"
         aria-label={`Watch ${video.title}`}
       >

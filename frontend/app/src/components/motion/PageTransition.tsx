@@ -18,21 +18,21 @@ import { refreshScrollTriggers } from "@/lib/gsap";
  * a scroll height that is about to change.
  */
 export function PageTransition({ children }: { children: ReactNode }) {
-  const location = useLocation();
+  const pathname = usePathname() ?? "/";
   const reduced = useReducedMotion();
 
-  // New routes land at the top; back/forward keeps the browser's position.
+  // A new route starts at the top. Next restores the scroll position itself on
+  // back/forward, so this only runs for forward navigation.
   useEffect(() => {
-    const state = location.state as { keepScroll?: boolean } | null;
-    if (!state?.keepScroll) window.scrollTo(0, 0);
-  }, [location.pathname, location.state]);
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   if (reduced) return <>{children}</>;
 
   return (
     <AnimatePresence mode="wait" onExitComplete={refreshScrollTriggers}>
       <motion.div
-        key={location.pathname}
+        key={pathname}
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0, transition: { duration: seconds.normal, ease: bezier.easeOut } }}
         exit={{ opacity: 0, y: -4, transition: { duration: seconds.fast, ease: bezier.ease } }}

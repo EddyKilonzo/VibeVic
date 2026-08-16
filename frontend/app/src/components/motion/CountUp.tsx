@@ -31,17 +31,14 @@ export function CountUp({
   const reduced = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
-  const [display, setDisplay] = useState(() => (reduced ? value : value * from));
+  const [display, setDisplay] = useState(() => value * from);
   const played = useRef(false);
 
   useEffect(() => {
-    if (!inView || played.current) return;
+    // Under reduced motion the number is derived below, never animated, so
+    // there is nothing to start here.
+    if (!inView || played.current || reduced) return;
     played.current = true;
-
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
 
     const controls = animate(value * from, value, {
       duration: durationMs / 1000,
@@ -53,7 +50,11 @@ export function CountUp({
     return () => controls.stop();
   }, [inView, value, from, durationMs, reduced]);
 
-  const formatted = display.toLocaleString(undefined, {
+  // Reduced motion goes straight to the final figure — the number is the
+  // information, and the count is only ever the presentation of it.
+  const shown = reduced ? value : display;
+
+  const formatted = shown.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });

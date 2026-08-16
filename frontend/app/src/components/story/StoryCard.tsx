@@ -39,7 +39,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
     return (
       <Reveal variant="fade-up" delay={delay} distance="sm" as="li">
         <Link
-          href={`/story/${story.slug}`}
+          href={`/stories/${story.slug}`}
           className="group focus-ring press flex items-baseline gap-5 border-b border-border py-5 transition-colors duration-normal hover:border-primary"
         >
           <span className="rule-label w-24 shrink-0 tabular-nums">
@@ -65,7 +65,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
   return (
     <Reveal variant="fade-up" delay={delay} as="article" className={cn("group relative", className)}>
       <Link
-        href={`/story/${story.slug}`}
+        href={`/stories/${story.slug}`}
         className="focus-ring press block"
         aria-label={`Read ${story.title}`}
       >
@@ -78,7 +78,16 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           className="mb-5"
         />
 
-        <p className="kicker">{genreName(story.genre)}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="kicker">{genreName(story.genre)}</p>
+          {/* Template pieces are labelled in the listing too, so a reader knows
+              before they click rather than after. */}
+          {story.placeholder && (
+            <span className="rounded-full border border-dashed border-accent/50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent">
+              Template
+            </span>
+          )}
+        </div>
 
         <h3
           className={cn(

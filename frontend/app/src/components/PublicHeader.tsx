@@ -42,11 +42,15 @@ export function PublicHeader() {
   const pathname = usePathname();
   const { count } = useBookmarks();
 
-  // Route changes always close both surfaces.
-  useEffect(() => {
+  // Route changes always close both surfaces. Adjusted during render rather
+  // than in an effect so the new page never paints for a frame with the old
+  // page's menu still over it.
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
     setMenuOpen(false);
     setSearchOpen(false);
-  }, [pathname]);
+  }
 
   // ⌘K / Ctrl-K anywhere on the site.
   useEffect(() => {

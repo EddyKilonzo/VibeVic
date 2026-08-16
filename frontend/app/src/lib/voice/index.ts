@@ -24,10 +24,35 @@ export { WebSpeechEngine } from "./webSpeechEngine";
  */
 type EngineFactory = () => VoiceEngine;
 
-const REGISTRY = new Map<string, EngineFactory>([["web-speech", () => new WebSpeechEngine()]]);
+interface EngineRegistration {
+  create: EngineFactory;
+  /**
+   * Cheap probe answering "could this engine ever work here?" — no network, no
+   * DOM writes, no instance. It exists so the UI can decide whether to render
+   * the Listen affordance at all without paying to construct an engine, and so
+   * that decision is safe to make during render.
+   */
+  isSupported: () => boolean;
+}
 
-export function registerEngine(id: string, factory: EngineFactory): void {
-  REGISTRY.set(id, factory);
+const REGISTRY = new Map<string, EngineRegistration>([
+  ["web-speech", { create: () => new WebSpeechEngine(), isSupported: WebSpeechEngine.isSupported }],
+]);
+
+export function registerEngine(
+  id: string,
+  factory: EngineFactory,
+  isSupported: () => boolean = () => true,
+): void {
+  REGISTRY.set(id, { create: factory, isSupported });
+}
+
+/** True when at least one registered engine could run on this device. */
+export function voiceSupported(): boolean {
+  for (const registration of REGISTRY.values()) {
+    if (registration.isSupported()) return true;
+  }
+  return false;
 }
 
 export function availableEngineIds(): string[] {
@@ -43,9 +68,9 @@ export function createVoiceEngine(preferred?: string): VoiceEngine | null {
   const order = preferred ? [preferred, ...availableEngineIds()] : availableEngineIds();
 
   for (const id of order) {
-    const factory = REGISTRY.get(id);
-    if (!factory) continue;
-    const engine = factory();
+    const registration = REGISTRY.get(id);
+    if (!registration || !registration.isSupported()) continue;
+    const engine = registration.create();
     if (engine.capabilities.available) return engine;
     engine.destroy();
   }

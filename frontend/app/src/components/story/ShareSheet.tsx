@@ -72,8 +72,8 @@ export function ShareSheet({ title, path, open, onClose }: ShareSheetProps) {
     >
       <div
         className={cn(
-          "bg-card p-6 shadow-2xl",
-          desktop ? "rounded-lg border border-border" : "rounded-t-2xl pb-[max(1.5rem,env(safe-area-inset-bottom))]",
+          "bg-card p-6 shadow-deep",
+          desktop ? "rounded-xl border border-border" : "rounded-t-2xl pb-[max(1.5rem,env(safe-area-inset-bottom))]",
         )}
       >
         {!desktop && (
@@ -108,7 +108,7 @@ export function ShareSheet({ title, path, open, onClose }: ShareSheetProps) {
               initial={reduced ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...transitions.normal, delay: reduced ? 0 : i * stagger.tight }}
-              className="focus-ring press flex min-h-[88px] flex-col items-center justify-center gap-2.5 rounded-md border border-border bg-background text-primary transition-colors duration-normal hover:border-primary hover:bg-secondary"
+              className="focus-ring press surface surface-hover flex min-h-[88px] flex-col items-center justify-center gap-2.5 text-primary hover:border-primary hover:bg-secondary"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
                 <path d={BRAND_ICON[network.name]} />
@@ -121,7 +121,7 @@ export function ShareSheet({ title, path, open, onClose }: ShareSheetProps) {
         <button
           type="button"
           onClick={onCopy}
-          className="focus-ring press mt-3 flex h-12 w-full items-center gap-3 rounded-md border border-border bg-background px-4 text-left transition-colors duration-normal hover:border-primary hover:bg-secondary"
+          className="focus-ring press mt-3 surface surface-hover flex h-12 w-full items-center gap-3 px-4 text-left hover:border-primary hover:bg-secondary"
         >
           {/* Icon and label cross-fade together: Copy → Copied ✓ */}
           <span className="relative flex h-4 w-4 items-center justify-center">

@@ -79,7 +79,7 @@ export function PublicHeader() {
           "fixed inset-x-0 top-0 z-50",
           "transition-[background-color,border-color,box-shadow,backdrop-filter] duration-slow ease-editorial",
           scrolled
-            ? "border-b border-border/70 bg-background/85 shadow-[0_1px_20px_hsl(var(--ink)/0.06)] backdrop-blur-xl"
+            ? "border-b border-border/70 bg-background/85 shadow-raised backdrop-blur-xl"
             : "border-b border-transparent bg-transparent",
         )}
       >

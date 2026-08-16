@@ -15,7 +15,7 @@ import { Reveal } from "@/components/motion";
 export function PlaceholderNotice({ storyId }: { storyId?: string }) {
   return (
     <Reveal variant="fade" distance="sm">
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-accent/50 bg-secondary/60 px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-accent/50 bg-secondary/60 px-4 py-3 text-sm shadow-raised">
         <PencilRuler className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         <p className="min-w-0 flex-1 text-muted-foreground">
           <span className="font-semibold text-primary">Template text.</span> This piece ships with

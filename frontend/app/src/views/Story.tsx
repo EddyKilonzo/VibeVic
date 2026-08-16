@@ -131,7 +131,7 @@ export default function Story({ slug }: { slug: string }) {
             alt=""
             ratio="16/9"
             priority
-            className="sm:rounded-sm"
+            className="sm:rounded-xl sm:shadow-floating"
           />
         </figure>
 

@@ -40,10 +40,10 @@ export default function Genres() {
                       alt=""
                       ratio="3/2"
                       hoverZoom
-                      className="rounded-sm"
+                      className="rounded-lg shadow-card"
                     />
                   ) : (
-                    <div className="aspect-[3/2] rounded-sm bg-muted" />
+                    <div className="aspect-[3/2] rounded-lg bg-muted shadow-card" />
                   )}
 
                   <div className="min-w-0">

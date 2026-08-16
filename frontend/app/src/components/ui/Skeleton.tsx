@@ -54,7 +54,7 @@ export function AvatarSkeleton({ className }: { className?: string }) {
 /** A generic bordered card — used wherever a tile has no more specific shape. */
 export function CardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-lg border border-border p-5", className)}>
+    <div className={cn("surface p-5", className)}>
       <Skeleton className="h-3 w-20" />
       <Skeleton className="mt-3 h-6 w-28" />
       <Skeleton className="mt-4 h-3 w-full" />
@@ -76,7 +76,7 @@ export function MediaSkeleton({
     "1/1": "aspect-square",
     "4/5": "aspect-[4/5]",
   }[ratio];
-  return <Skeleton className={cn("w-full", aspect, className)} />;
+  return <Skeleton className={cn("w-full rounded-lg shadow-card", aspect, className)} />;
 }
 
 export function StoryCardSkeleton() {
@@ -172,7 +172,7 @@ export function TableSkeleton({ rows = 6 }: { rows?: number }) {
     <div
       role="status"
       aria-label="Loading table"
-      className="overflow-hidden rounded-lg border border-border"
+      className="surface overflow-hidden"
     >
       <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-4 py-3">
         <Skeleton className="h-3 w-[38%]" />
@@ -201,7 +201,7 @@ export function TableSkeleton({ rows = 6 }: { rows?: number }) {
 export function ChartSkeleton({ className }: { className?: string }) {
   const bars = [42, 68, 31, 79, 55, 88, 47, 63];
   return (
-    <div className={cn("rounded-lg border border-border p-5", className)}>
+    <div className={cn("surface p-5", className)}>
       <Skeleton className="h-3 w-32" />
       <div aria-hidden className="mt-6 flex h-40 items-end gap-2">
         {bars.map((h, i) => (
@@ -226,7 +226,7 @@ export function DashboardSkeleton() {
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <ChartSkeleton />
-        <div className="flex flex-col gap-4 rounded-lg border border-border p-5">
+        <div className="surface flex flex-col gap-4 p-5">
           <Skeleton className="h-3 w-28" />
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="flex items-center gap-3">

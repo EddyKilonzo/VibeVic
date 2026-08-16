@@ -141,7 +141,12 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
     case "image":
       return (
         <figure data-block-id={block.id} className="my-10 -mx-5 sm:mx-0">
-          <ImageReveal src={coverFor(block.src)} alt={block.alt} ratio="16/9" />
+          <ImageReveal
+            src={coverFor(block.src)}
+            alt={block.alt}
+            ratio="16/9"
+            className="rounded-lg shadow-card"
+          />
           {block.caption && (
             <figcaption
               className={cn(

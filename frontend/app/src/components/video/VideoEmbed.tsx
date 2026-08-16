@@ -42,7 +42,7 @@ export function VideoEmbed({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-sm bg-brand-ink-deep",
+        "relative overflow-hidden rounded-lg bg-brand-ink-deep shadow-floating",
         video.format === "short" ? "aspect-[9/16]" : "aspect-video",
         className,
       )}

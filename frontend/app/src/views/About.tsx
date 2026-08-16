@@ -106,7 +106,7 @@ export default function About() {
                 src={posterFor(VIDEOS[0].id)}
                 alt={`Still from ${VIDEOS[0].title}`}
                 ratio="4/5"
-                className="rounded-sm"
+                className="rounded-lg shadow-lifted"
                 imgClassName="object-cover"
               />
             </Parallax>

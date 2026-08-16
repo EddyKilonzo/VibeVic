@@ -1,0 +1,494 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Brand palette (from reference image) ──────────────────────
+       ice  #E4F2FD · sky #90CAF8 · blue #2196F3 · ink #0E47A1
+       Secondary system: black, white, grey
+    ─────────────────────────────────────────────────────────────── */
+    --ice: 205 92% 94%;        /* #E4F2FD */
+    --sky: 207 89% 74%;        /* #90CAF8 */
+    --blue: 207 90% 54%;       /* #2196F3 */
+    --ink: 215 84% 34%;        /* #0E47A1 */
+    --ink-deep: 216 72% 24%;   /* darker navy for depth */
+
+    --background: 0 0% 100%;
+    --foreground: 220 13% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 9%;
+    --primary: 215 84% 34%;           /* ink navy */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 205 92% 94%;         /* ice */
+    --secondary-foreground: 215 84% 34%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 220 9% 44%;
+    --accent: 207 90% 54%;            /* bright blue */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 20% 90%;
+    --input: 214 20% 88%;
+    --ring: 207 90% 54%;
+    --radius: 0.375rem;
+
+    /* ── Motion tokens (mirrored in src/lib/motion.ts) ───────────── */
+    --dur-fast: 180ms;
+    --dur-normal: 320ms;
+    --dur-slow: 620ms;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-editorial: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
+
+    /* Glass tokens */
+    --glass-bg: 0 0% 100%;
+    --glass-border: 0 0% 100%;
+
+    --sidebar-background: 215 84% 34%;
+    --sidebar-foreground: 205 92% 94%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 215 84% 34%;
+    --sidebar-accent: 216 72% 28%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 214 60% 42%;
+    --sidebar-ring: 207 89% 74%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: hsl(var(--sky) / 0.55);
+    color: hsl(var(--ink-deep));
+  }
+}
+
+@layer components {
+  /* Editorial type scale */
+  .font-display {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+  }
+  .kicker {
+    @apply font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-accent;
+  }
+  .rule-label {
+    @apply font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground;
+  }
+
+  /* ── Frosted glass ─────────────────────────────────────────── */
+  .glass {
+    background: hsl(var(--glass-bg) / 0.62);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
+    border: 1px solid hsl(var(--glass-border) / 0.55);
+    box-shadow: 0 8px 32px hsl(var(--ink) / 0.07), inset 0 1px 0 hsl(0 0% 100% / 0.6);
+  }
+  .glass-strong {
+    background: hsl(var(--glass-bg) / 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid hsl(var(--glass-border) / 0.65);
+    box-shadow: 0 12px 40px hsl(var(--ink) / 0.1), inset 0 1px 0 hsl(0 0% 100% / 0.7);
+  }
+  .glass-dark {
+    background: hsl(var(--ink-deep) / 0.55);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid hsl(var(--sky) / 0.22);
+    box-shadow: 0 12px 40px hsl(var(--ink-deep) / 0.35), inset 0 1px 0 hsl(var(--sky) / 0.18);
+  }
+  .glass-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold;
+    background: hsl(var(--glass-bg) / 0.66);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border) / 0.6);
+    box-shadow: 0 2px 12px hsl(var(--ink) / 0.08);
+  }
+
+  /* Article body typography */
+  .article-body {
+    @apply font-display text-[1.075rem] leading-[1.85] text-foreground/90;
+  }
+  .article-body p {
+    @apply mb-7;
+  }
+  .article-body > p:first-of-type::first-letter {
+    @apply font-display float-left mr-3 mt-1 text-[4.6rem] font-semibold leading-[0.8] text-primary;
+  }
+  .article-body h2 {
+    @apply font-display mt-12 mb-5 text-[1.65rem] font-semibold leading-snug text-foreground;
+  }
+  .article-body blockquote {
+    @apply my-10 border-l-2 border-accent pl-6 font-display text-[1.35rem] italic leading-relaxed text-primary;
+  }
+  .article-body a {
+    @apply text-accent underline decoration-brand-sky underline-offset-4 hover:text-primary;
+  }
+
+  /* Underline link hover used across the public site */
+  .link-underline {
+    @apply relative inline-block after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-current after:transition-all after:duration-300 hover:after:w-full;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .container-site {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8;
+  }
+  .container-article {
+    @apply mx-auto w-full max-w-[680px] px-5 sm:px-6;
+  }
+
+  /* ── Newsprint / paper grain overlay ──────────────────────────
+     feTurbulence fractal noise as an inline SVG data-URI mask.    */
+  .grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .grain::before {
+      opacity: 0.035;
+    }
+  }
+
+  /* Ambient aurora wash behind sections (subtle, brand-tinted) */
+  .aurora {
+    background:
+      radial-gradient(60% 50% at 12% 8%, hsl(var(--ice) / 0.9) 0%, transparent 60%),
+      radial-gradient(45% 40% at 88% 20%, hsl(var(--sky) / 0.35) 0%, transparent 55%),
+      radial-gradient(50% 60% at 75% 95%, hsl(var(--ice) / 0.55) 0%, transparent 60%);
+  }
+
+  /* ── Reveal primitives ────────────────────────────────────────
+     The <Reveal> component toggles `data-revealed` on these; the
+     hidden state is the CSS default so nothing flashes unstyled.
+     Every reveal is transform + opacity only (compositor-friendly). */
+  .reveal {
+    opacity: 0;
+    transition:
+      opacity var(--dur-slow) var(--ease-editorial),
+      transform var(--dur-slow) var(--ease-editorial),
+      clip-path var(--dur-slow) var(--ease-editorial);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  .reveal[data-variant="fade-up"] {
+    transform: translate3d(0, var(--reveal-distance, 18px), 0);
+  }
+  .reveal[data-variant="fade-down"] {
+    transform: translate3d(0, calc(-1 * var(--reveal-distance, 18px)), 0);
+  }
+  .reveal[data-variant="fade-left"] {
+    transform: translate3d(var(--reveal-distance, 18px), 0, 0);
+  }
+  .reveal[data-variant="fade-right"] {
+    transform: translate3d(calc(-1 * var(--reveal-distance, 18px)), 0, 0);
+  }
+  .reveal[data-variant="fade-scale"] {
+    transform: scale(0.97);
+  }
+  .reveal[data-variant="mask"] {
+    clip-path: inset(0 0 100% 0);
+    transform: scale(1.015);
+  }
+  .reveal[data-variant="mask-left"] {
+    clip-path: inset(0 100% 0 0);
+  }
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+  /* Once settled, stop reserving a compositor layer. */
+  .reveal[data-settled="true"] {
+    will-change: auto;
+  }
+
+  /* Legacy aliases kept so hand-written markup keeps working. */
+  .reveal-hidden {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  .reveal-shown {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity var(--dur-slow) var(--ease-editorial),
+      transform var(--dur-slow) var(--ease-editorial);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .mask-hidden {
+    clip-path: inset(0 0 100% 0);
+    transform: scale(0.97);
+  }
+  .mask-shown {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+    transition:
+      clip-path var(--dur-slow) var(--ease-editorial),
+      transform var(--dur-slow) var(--ease-editorial);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  /* ── Interaction primitives ───────────────────────────────────── */
+
+  /* Lift on hover, press back down on tap. Restrained by design. */
+  .hover-lift {
+    transition:
+      transform var(--dur-normal) var(--ease-out),
+      box-shadow var(--dur-normal) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .hover-lift:hover {
+      transform: translate3d(0, -3px, 0);
+      box-shadow: 0 14px 34px hsl(var(--ink) / 0.11);
+    }
+  }
+  .hover-lift:active {
+    transform: translate3d(0, -1px, 0) scale(0.995);
+    transition-duration: var(--dur-fast);
+  }
+
+  /* Expanding underline for text links. */
+  .underline-grow {
+    position: relative;
+  }
+  .underline-grow::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-normal) var(--ease-editorial);
+  }
+  @media (hover: hover) {
+    .underline-grow:hover::after {
+      transform: scaleX(1);
+    }
+  }
+  .underline-grow:focus-visible::after,
+  .underline-grow[data-active="true"]::after {
+    transform: scaleX(1);
+  }
+
+  /* Arrow that nudges with its parent card/button. */
+  .nudge-x {
+    transition: transform var(--dur-normal) var(--ease-out);
+  }
+  .group:hover .nudge-x,
+  .group:focus-visible .nudge-x {
+    transform: translate3d(3px, 0, 0);
+  }
+
+  /* Image inside a card: very subtle scale, never a zoom. */
+  .media-zoom {
+    transition: transform var(--dur-slow) var(--ease-editorial);
+    will-change: transform;
+  }
+  .group:hover .media-zoom {
+    transform: scale(1.035);
+  }
+  .group:active .media-zoom {
+    transform: scale(1.015);
+  }
+
+  /* One consistent keyboard focus treatment across the product. */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  /* Touch feedback replaces hover on coarse pointers. */
+  @media (hover: none) {
+    .press:active {
+      transform: scale(0.975);
+      transition: transform var(--dur-fast) var(--ease);
+    }
+  }
+
+  /* ── Skeleton loading ─────────────────────────────────────────── */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: hsl(var(--muted));
+    border-radius: calc(var(--radius) - 2px);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(0 0% 100% / 0.62) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s var(--ease) infinite;
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Indeterminate sweep for the editorial loading banner. */
+  @keyframes loader-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+  .loader-sweep {
+    animation: loader-sweep 1.4s var(--ease) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loader-sweep { animation: none; width: 100%; opacity: 0.5; }
+  }
+
+  /* ── Voice reading highlight ──────────────────────────────────── */
+  /* Deliberately a warm wash + left rule, not a marker pen. */
+  .speaking {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--ice) / 0.85) 0%,
+      hsl(var(--ice) / 0.45) 100%
+    );
+    box-shadow: -12px 0 0 0 hsl(var(--ice) / 0.85), inset 2px 0 0 0 hsl(var(--accent) / 0.55);
+    border-radius: 2px;
+    transition:
+      background var(--dur-normal) var(--ease),
+      box-shadow var(--dur-normal) var(--ease);
+  }
+  .speaking-sentence {
+    color: hsl(var(--ink-deep));
+    transition: color var(--dur-normal) var(--ease);
+  }
+
+  /* Minimal three-bar audio indicator. Editorial, not a visualizer. */
+  @keyframes bar {
+    0%, 100% { transform: scaleY(0.35); }
+    50% { transform: scaleY(1); }
+  }
+  .audio-bar {
+    transform-origin: center;
+    animation: bar 900ms var(--ease) infinite;
+  }
+  .audio-bar:nth-child(2) { animation-delay: 150ms; }
+  .audio-bar:nth-child(3) { animation-delay: 300ms; }
+
+  /* ── Drag & drop ──────────────────────────────────────────────── */
+  .drag-item {
+    transition:
+      transform var(--dur-normal) var(--ease-out),
+      opacity var(--dur-fast) var(--ease),
+      box-shadow var(--dur-normal) var(--ease-out);
+  }
+  .drag-item[data-dragging="true"] {
+    opacity: 0.55;
+    transform: scale(1.015);
+    box-shadow: 0 18px 40px hsl(var(--ink) / 0.18);
+  }
+  .drag-zone[data-dimmed="true"] .drag-item:not([data-dragging="true"]) {
+    opacity: 0.5;
+  }
+
+  /* ── Reduced motion ───────────────────────────────────────────
+     Content stays visible and everything stays usable; we only
+     strip the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .reveal,
+    .reveal-hidden,
+    .mask-hidden {
+      opacity: 1 !important;
+      transform: none !important;
+      clip-path: none !important;
+    }
+    .reveal,
+    .reveal-shown,
+    .mask-shown,
+    .hover-lift,
+    .media-zoom,
+    .nudge-x,
+    .underline-grow::after,
+    .drag-item {
+      transition-duration: 1ms !important;
+      transition-delay: 0ms !important;
+    }
+    .hover-lift:hover,
+    .group:hover .media-zoom,
+    .group:hover .nudge-x {
+      transform: none !important;
+    }
+    .skeleton::after,
+    .audio-bar {
+      animation: none !important;
+    }
+    .underline-grow::after {
+      transition: none !important;
+    }
+  }
+
+  /* Scroll indicator line pulse */
+  @keyframes scrollpulse {
+    0% { transform: scaleY(0); transform-origin: top; }
+    45% { transform: scaleY(1); transform-origin: top; }
+    55% { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+  .animate-scrollpulse {
+    animation: scrollpulse 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-scrollpulse { animation: none; transform: scaleY(1); }
+  }
+}
+
+/* Thin editorial scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--sky));
+  border: 2px solid hsl(var(--muted));
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--blue));
+}

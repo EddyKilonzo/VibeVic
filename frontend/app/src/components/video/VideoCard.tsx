@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Play } from "lucide-react";
-import { posterFor, topicName, type Video } from "@/data/videos";
+import { topicName, type Video } from "@/data/videos";
+import { VideoPoster } from "./VideoPoster";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/motion";
@@ -51,12 +52,10 @@ export function VideoCard({
             video.format === "short" ? "aspect-[9/16]" : "aspect-video",
           )}
         >
-          <img
-            src={posterFor(video.id)}
-            alt=""
-            loading={isFeature ? "eager" : "lazy"}
-            decoding="async"
-            className="media-zoom absolute inset-0 h-full w-full object-cover"
+          <VideoPoster
+            id={video.id}
+            className="media-zoom absolute inset-0"
+            priority={variant === "feature"}
           />
           <span
             aria-hidden

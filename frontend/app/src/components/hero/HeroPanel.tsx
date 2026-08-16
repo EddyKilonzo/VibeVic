@@ -53,7 +53,7 @@ export function HeroBadge({
   children: ReactNode;
 }) {
   return (
-    <span className="glass-chip inline-flex items-center gap-2 border-white/60 text-[11px] uppercase tracking-[0.16em] text-primary">
+    <span className="glass-chip frost inline-flex items-center gap-2 border-white/60 text-[11px] uppercase tracking-[0.16em] text-primary">
       {icon}
       {children}
     </span>

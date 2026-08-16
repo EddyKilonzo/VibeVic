@@ -168,7 +168,22 @@ export const totalViews = (): number => VIDEOS.reduce((sum, v) => sum + v.views,
  * `hqdefault` rather than `maxresdefault`: every upload has one, so a card can
  * never fall back to a grey box, and it is a fraction of the bytes.
  */
-export const posterFor = (id: string): string => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+/**
+ * Poster frame for a report.
+ *
+ * `maxresdefault` is 1280×720; `hqdefault` is 480×360 and was being upscaled
+ * into every card and hero on the site, which is why the thumbnails looked
+ * soft. Not every upload has a maxres frame — Shorts frequently do not — so
+ * callers should render through `VideoPoster`, which falls back on error
+ * rather than showing YouTube's grey placeholder.
+ */
+export type PosterSize = "max" | "hq" | "sd";
+
+export const posterFor = (id: string, size: PosterSize = "max"): string => {
+  const file =
+    size === "max" ? "maxresdefault" : size === "hq" ? "hqdefault" : "sddefault";
+  return `https://i.ytimg.com/vi/${id}/${file}.jpg`;
+};
 
 /** Privacy-enhanced embed — no cookies until the viewer presses play. */
 export const embedUrl = (id: string, autoplay = false): string =>

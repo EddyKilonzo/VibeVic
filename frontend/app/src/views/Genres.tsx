@@ -39,6 +39,7 @@ export default function Genres() {
                   {lead ? (
                     <ImageReveal
                       src={posterFor(lead.id)}
+                      fallbackSrc={posterFor(lead.id, "hq")}
                       alt=""
                       ratio="3/2"
                       hoverZoom

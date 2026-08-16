@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PageTransition } from "@/components/motion";
+import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
+import { ConnectionState } from "@/components/admin/ConnectionState";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -159,6 +161,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <PanelLeftClose className="h-4 w-4 rotate-180" aria-hidden />
           </button>
 
+          <ConnectionState className="order-last ml-auto sm:order-none sm:ml-0" />
+
           <p className="font-display truncate text-lg font-semibold tracking-tight">
             {NAV.find((n) => (n.end ? pathname === n.href : pathname.startsWith(n.href)))?.label ??
               "Admin"}
@@ -172,10 +176,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </header>
 
-        <main className="min-w-0 flex-1 p-5 sm:p-8">
+        {/* Bottom padding clears the mobile bar so the last control on a
+            page is never sitting underneath it. */}
+        <main className="min-w-0 flex-1 p-5 pb-28 sm:p-8 lg:pb-8">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+
+      <MobileAdminBar />
     </div>
   );
 }

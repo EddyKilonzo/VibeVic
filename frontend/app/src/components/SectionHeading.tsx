@@ -30,7 +30,7 @@ export function SectionHeading({
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
           <p className="rule-label">{label}</p>
-          <h2 className="font-display mt-2.5 text-3xl font-semibold tracking-tight text-balance sm:text-[2.5rem]">
+          <h2 className="font-display display-2 mt-2.5 font-semibold text-balance">
             {title}
           </h2>
           {description && (

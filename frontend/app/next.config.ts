@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "i.ytimg.com" },
       { protocol: "https", hostname: "yt3.googleusercontent.com" },
+      // Stock photography, used only as atmosphere — never as reporting.
+      // See src/data/imagery.ts for the rule and the full list.
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
     // Sized for the breakpoints the mobile-first brief calls out.
     deviceSizes: [320, 375, 430, 640, 768, 1024, 1280, 1536],

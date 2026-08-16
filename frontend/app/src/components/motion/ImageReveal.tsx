@@ -19,6 +19,15 @@ export interface ImageRevealProps {
   priority?: boolean;
   className?: string;
   imgClassName?: string;
+  /**
+   * Tried once if `src` fails to load.
+   *
+   * Exists for YouTube poster frames: `maxresdefault` is the sharp one but
+   * does not exist for every upload, and asking for a missing frame returns a
+   * grey placeholder rather than an error. Stepping down keeps the crisp frame
+   * wherever it is available without risking a blank card where it is not.
+   */
+  fallbackSrc?: string;
 }
 
 /**
@@ -37,12 +46,14 @@ export function ImageReveal({
   immediate = false,
   hoverZoom = false,
   priority = false,
+  fallbackSrc,
   className,
   imgClassName,
 }: ImageRevealProps) {
   const reduced = useReducedMotion();
   const inherited = useStaggerDelay();
   const [loaded, setLoaded] = useState(false);
+  const [source, setSource] = useState(src);
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, {
     once: true,
@@ -68,14 +79,18 @@ export function ImageReveal({
         )}
       />
       <motion.img
-        src={src}
+        src={source}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         fetchPriority={priority ? "high" : "auto"}
         onLoad={() => setLoaded(true)}
-        // A broken image should still resolve its frame rather than hang hidden.
-        onError={() => setLoaded(true)}
+        onError={() => {
+          // Step down once, then give up — a broken image should still resolve
+          // its frame rather than hang hidden behind the placeholder.
+          if (fallbackSrc && source !== fallbackSrc) setSource(fallbackSrc);
+          else setLoaded(true);
+        }}
         className={cn(
           "absolute inset-0 h-full w-full object-cover",
           hoverZoom && "media-zoom",

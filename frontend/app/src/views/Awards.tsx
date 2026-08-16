@@ -8,6 +8,8 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/hero/PageHero";
+import { AtmosphereBand } from "@/components/ui/AtmosphereBand";
+import { RECOGNITION_ATMOSPHERE } from "@/data/imagery";
 
 /**
  * Awards.
@@ -26,6 +28,13 @@ export default function Awards() {
       />
 
       <div className="container-site mt-16">
+        <AtmosphereBand image={RECOGNITION_ATMOSPHERE} className="mb-12" height="min-h-[200px]">
+          <p className="rule-label text-brand-sky">Recognition</p>
+          <p className="font-display mt-2 max-w-[40ch] text-xl font-semibold leading-snug text-white sm:text-2xl">
+            Entries are added as they happen. Nothing is listed here that has not been awarded.
+          </p>
+        </AtmosphereBand>
+
 
       {AWARDS.length === 0 ? (
         <div className="mt-16">

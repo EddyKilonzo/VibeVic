@@ -3,13 +3,24 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
 import { STORIES } from "@/data/content";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
 import { summariseAll } from "@/lib/voice/analytics";
 import { formatCompact, formatPercent, formatTime } from "@/lib/format";
-import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { Reveal } from "@/components/motion";
+import { StatCard } from "@/components/admin/StatCard";
+import { BeatShare } from "@/components/admin/BeatShare";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 
@@ -41,12 +52,12 @@ export default function Dashboard() {
   const audio = useMemo(() => summariseAll(), []);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto max-w-[1440px]">
       <Reveal variant="fade-up">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="rule-label">Overview</p>
-            <h1 className="font-display mt-2 text-3xl font-semibold tracking-tight">
+            <h1 className="font-display display-2 mt-2 font-semibold">
               Welcome back, Victor
             </h1>
           </div>
@@ -70,27 +81,39 @@ export default function Dashboard() {
         </div>
       </Reveal>
 
-      {/* Stat tiles — each number counts once, on arrival. */}
-      <Stagger className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Reports published", value: CHANNEL.videoCount, icon: Youtube },
-          { label: "Total views", value: totalViews(), icon: Eye },
-          { label: "Subscribers", value: CHANNEL.subscribers, icon: Headphones },
-          { label: "Drafts in progress", value: drafts, icon: FileText },
-        ].map((stat, i) => (
-          <StaggerItem key={stat.label} index={i}>
-            <Reveal variant="fade-up" distance="sm" className="bg-card p-5">
-              <div className="flex items-center justify-between">
-                <p className="rule-label">{stat.label}</p>
-                <stat.icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-              </div>
-              <p className="font-display mt-3 text-3xl font-semibold tracking-tight text-primary">
-                <CountUp value={stat.value} />
-              </p>
-            </Reveal>
-          </StaggerItem>
-        ))}
-      </Stagger>
+      {/* Four figures, each a card. No trend arrows: this product holds a
+          snapshot of channel figures, not a time series, and a delta would be
+          a comparison against data that does not exist. */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Reports published"
+          value={CHANNEL.videoCount}
+          icon={Youtube}
+          caption={`On ${CHANNEL.handle}`}
+          accent
+        />
+        <StatCard
+          label="Total views"
+          value={totalViews()}
+          icon={Eye}
+          caption="Across every report"
+          delay={70}
+        />
+        <StatCard
+          label="Subscribers"
+          value={CHANNEL.subscribers}
+          icon={Headphones}
+          caption="At last capture"
+          delay={140}
+        />
+        <StatCard
+          label="Drafts in progress"
+          value={drafts}
+          icon={FileText}
+          caption="Not yet published"
+          delay={210}
+        />
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Reveal variant="fade-up" className="surface p-5">
@@ -99,9 +122,22 @@ export default function Dashboard() {
             As published on {CHANNEL.handle}.
           </p>
 
-          <div className="mt-6 h-[320px]">
+          <div className="mt-6 h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 20 }}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 44 }}>
+                <defs>
+                  {/* One hue, light to dark along the bar: the colour is
+                      carrying magnitude, not identity. */}
+                  <linearGradient id="barFill" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="hsl(var(--chart-seq) / 0.55)" />
+                    <stop offset="100%" stopColor="hsl(var(--chart-seq))" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  horizontal={false}
+                  stroke="hsl(var(--border))"
+                  strokeDasharray="2 4"
+                />
                 <XAxis type="number" hide />
                 <YAxis
                   type="category"
@@ -112,11 +148,13 @@ export default function Dashboard() {
                   tick={{ fontSize: 11, fill: "hsl(220 9% 44%)" }}
                 />
                 <Tooltip
-                  cursor={{ fill: "hsl(205 92% 94% / 0.5)" }}
+                  cursor={{ fill: "hsl(var(--secondary) / 0.6)" }}
                   contentStyle={{
-                    borderRadius: 6,
-                    border: "1px solid hsl(214 20% 90%)",
+                    borderRadius: 10,
+                    border: "1px solid hsl(var(--border))",
+                    boxShadow: "var(--shadow-floating)",
                     fontSize: 12,
+                    padding: "8px 10px",
                   }}
                   formatter={(value: number) => [value.toLocaleString(), "Views"]}
                 />
@@ -124,20 +162,42 @@ export default function Dashboard() {
                     switched off entirely under reduced motion. */}
                 <Bar
                   dataKey="views"
-                  fill="hsl(207 90% 54%)"
-                  radius={[0, 3, 3, 0]}
-                  barSize={14}
+                  fill="url(#barFill)"
+                  radius={[0, 4, 4, 0]}
+                  barSize={13}
                   isAnimationActive={!reduced}
                   animationDuration={620}
                   animationEasing="ease-out"
-                />
+                >
+                  {/* Selective direct labels: the value at the end of each
+                      bar, so the axis can stay unlabelled and recessive. */}
+                  <LabelList
+                    dataKey="views"
+                    position="right"
+                    className="fill-muted-foreground"
+                    fontSize={11}
+                    formatter={(v: number) => v.toLocaleString()}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Reveal>
 
+        <div className="flex flex-col gap-6">
+        {/* Where the work is going: four real counts, one bar. */}
+        <Reveal variant="fade-up" delay={60} className="surface p-5">
+          <p className="rule-label">Reports by beat</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            How the published work divides across the four subjects.
+          </p>
+          <div className="mt-6">
+            <BeatShare />
+          </div>
+        </Reveal>
+
         {/* Audio analytics — real recorded playback only. */}
-        <Reveal variant="fade-up" delay={80} className="surface p-5">
+        <Reveal variant="fade-up" delay={120} className="surface p-5">
           <p className="rule-label">Listening on this device</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Recorded as written pieces are played aloud.
@@ -182,6 +242,7 @@ export default function Dashboard() {
             {formatCompact(totalViews())} total video views across {VIDEOS.length} reports.
           </p>
         </Reveal>
+        </div>
       </div>
     </div>
   );

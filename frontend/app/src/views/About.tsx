@@ -104,6 +104,7 @@ export default function About() {
             <Parallax amount={18}>
               <ImageReveal
                 src={posterFor(VIDEOS[0].id)}
+                      fallbackSrc={posterFor(VIDEOS[0].id, "hq")}
                 alt={`Still from ${VIDEOS[0].title}`}
                 ratio="4/5"
                 className="rounded-lg shadow-lifted"

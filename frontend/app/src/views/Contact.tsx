@@ -10,6 +10,8 @@ import { notify } from "@/lib/toast";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/hero/PageHero";
+import { AtmosphereBand } from "@/components/ui/AtmosphereBand";
+import { CONTACT_ATMOSPHERE } from "@/data/imagery";
 
 const EMAIL = "tips@maraellison.example";
 const SIGNAL = "+44 7700 900112";
@@ -46,6 +48,14 @@ export default function Contact() {
       />
 
       <div className="container-site">
+        {/* Atmosphere only — a desk, not a scene he reported. */}
+        <AtmosphereBand image={CONTACT_ATMOSPHERE} className="mt-12" height="min-h-[220px]">
+          <p className="rule-label text-brand-sky">Confidential</p>
+          <p className="font-display mt-2 max-w-[36ch] text-2xl font-semibold leading-snug text-white sm:text-3xl">
+            If it needs to stay off the record, say so in the first line.
+          </p>
+        </AtmosphereBand>
+
 
       <div className="mt-16 grid gap-14 lg:grid-cols-[1fr_1.1fr]">
         <Reveal variant="fade-right">

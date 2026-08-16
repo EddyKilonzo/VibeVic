@@ -91,12 +91,12 @@ export function PublicHeader() {
             // Not `container-site`: that utility carries its own horizontal
             // padding, and which of the two wins depends on stylesheet order
             // rather than on the class list. The width is spelled out instead.
-            "mx-auto flex h-[60px] w-full max-w-[1200px] items-center justify-between gap-6 rounded-full px-4 sm:px-5 md:h-[68px]",
+            "frost mx-auto flex h-[60px] w-full max-w-[1440px] items-center justify-between gap-6 rounded-full px-4 sm:px-5 md:h-[68px]",
             "transition-[background-color,border-color,box-shadow,backdrop-filter] duration-slow ease-editorial",
             "border",
             scrolled
-              ? "border-white/70 bg-background/80 shadow-floating backdrop-blur-xl"
-              : "border-white/45 bg-white/35 shadow-raised backdrop-blur-md",
+              ? "border-white/70 bg-background/75 shadow-floating backdrop-blur-2xl backdrop-saturate-150"
+              : "border-white/50 bg-white/30 shadow-raised backdrop-blur-lg backdrop-saturate-150",
           )}
         >
           <Link

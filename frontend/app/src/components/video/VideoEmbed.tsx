@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Play } from "lucide-react";
-import { embedUrl, posterFor, type Video } from "@/data/videos";
+import { embedUrl, type Video } from "@/data/videos";
+import { VideoPoster } from "./VideoPoster";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
 import { useVoice } from "@/context/VoiceProvider";
@@ -57,12 +58,10 @@ export function VideoEmbed({
             exit={reduced ? { opacity: 0 } : { opacity: 0 }}
             transition={transitions.fast}
           >
-            <img
-              src={posterFor(video.id)}
-              alt=""
-              loading={priority ? "eager" : "lazy"}
-              decoding="async"
-              className="media-zoom absolute inset-0 h-full w-full object-cover"
+            <VideoPoster
+              id={video.id}
+              priority={priority}
+              className="media-zoom absolute inset-0"
             />
             <span
               aria-hidden

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, GraduationCap, MapPin, Youtube } from "lucide-react";
 import { PROFILE, publishedStories } from "@/data/content";
-import { CHANNEL, TOPICS, longFormVideos, posterFor, totalViews } from "@/data/videos";
+import { CHANNEL, TOPICS, longFormVideos, totalViews } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -15,6 +15,7 @@ import {
   StaggerItem,
 } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
+import { VideoPoster } from "@/components/video/VideoPoster";
 import { StoryCard } from "@/components/story/StoryCard";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -35,7 +36,7 @@ export default function Home() {
           One GSAP timeline drives the whole entrance; elements opt in
           with data-seq. Nothing here blocks interaction. */}
       <HeroSequence>
-        <HeroPanel bleed>
+        <HeroPanel>
           <div data-seq="texture" className="aurora absolute inset-0 -z-10 opacity-70" aria-hidden />
 
           {/* Centred composition: badge, headline, serif subhead, two actions,
@@ -48,7 +49,7 @@ export default function Home() {
               </HeroBadge>
             </div>
 
-            <h1 className="font-display mt-7 text-[2.6rem] font-semibold leading-[1.08] tracking-tight text-balance sm:text-6xl lg:text-[4.5rem]">
+            <h1 className="font-display display-1 mt-7 font-semibold text-balance">
               {["Reporting from the ground,", "one story at a time."].map((line) => (
                 <span key={line} className="block overflow-hidden pb-[0.16em]">
                   <span data-seq="headline" className="block">
@@ -62,7 +63,7 @@ export default function Home() {
                 second headline. */}
             <p
               data-seq="support"
-              className="font-display mx-auto mt-7 max-w-[52ch] text-lg leading-relaxed text-muted-foreground sm:text-xl"
+              className="font-display lead-copy mx-auto mt-7 max-w-[52ch] text-muted-foreground"
             >
               {PROFILE.name} reports on <LeadMark>campus systems</LeadMark>,{" "}
               <LeadMark>Kenyan culture</LeadMark> and <LeadMark>student life</LeadMark> — published
@@ -129,16 +130,15 @@ export default function Home() {
                 href={`/videos/${video.id}`}
                 aria-label={video.title}
                 className={cn(
-                  "group focus-ring relative block overflow-hidden rounded-t-xl bg-brand-ink-deep",
+                  "group focus-ring relative block overflow-hidden rounded-xl bg-brand-ink-deep",
                   "shadow-floating ring-1 ring-white/50",
-                  i === 1 ? "aspect-[3/4] sm:aspect-[4/5]" : "mt-8 aspect-[3/4] sm:aspect-[4/5]",
+                  "aspect-[3/4] sm:aspect-[4/5]",
+                  // The middle card stands proud; the outer two drop, so the
+                  // row has a centre without any of them being cropped.
+                  i === 1 ? "sm:-translate-y-5" : "",
                 )}
               >
-                <img
-                  src={posterFor(video.id)}
-                  alt=""
-                  className="media-zoom h-full w-full object-cover"
-                />
+                <VideoPoster id={video.id} priority className="media-zoom" />
                 <span
                   aria-hidden
                   className="absolute inset-0 bg-gradient-to-t from-brand-ink-deep/80 via-transparent to-transparent"
@@ -174,7 +174,7 @@ export default function Home() {
           <div>
             <Reveal variant="fade-up" delay={60}>
               <p className="rule-label">The journalist</p>
-              <h2 className="font-display mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-[2.75rem]">
+              <h2 className="font-display display-2 mt-3 font-semibold text-balance">
                 {PROFILE.name}
               </h2>
               <p className="mt-5 max-w-[54ch] text-lg leading-relaxed text-muted-foreground">
@@ -388,11 +388,7 @@ export default function Home() {
                   className="group focus-ring surface surface-hover overflow-hidden"
                 >
                   <span className="relative block aspect-video overflow-hidden bg-brand-ink-deep">
-                    <img
-                      src={posterFor(video.id)}
-                      alt=""
-                      className="media-zoom h-full w-full object-cover"
-                    />
+                    <VideoPoster id={video.id} className="media-zoom" />
                   </span>
                   <span className="block p-4">
                     <span className="font-display line-clamp-2 block text-sm font-semibold leading-snug">

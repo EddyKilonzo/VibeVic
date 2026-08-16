@@ -54,7 +54,7 @@ export function PageHero({
 
         <Reveal variant="fade-up" delay={60} className={cn(badge && "mt-6")}>
           <p className="rule-label">{label}</p>
-          <h1 className="font-display mt-3 text-[2.5rem] font-semibold leading-[1.04] tracking-tight text-balance sm:text-6xl lg:text-[4rem]">
+          <h1 className="font-display display-1 mt-3 font-semibold text-balance">
             {title}
           </h1>
         </Reveal>
@@ -64,7 +64,7 @@ export function PageHero({
             {/* Fraunces at reading size, matching the reference's serif
                 subhead — it separates the promise from the headline without
                 a second colour or weight. */}
-            <p className="font-display mx-auto mt-6 max-w-[46ch] text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            <p className="font-display lead-copy mx-auto mt-6 max-w-[46ch] text-muted-foreground">
               {lead}
             </p>
           </Reveal>

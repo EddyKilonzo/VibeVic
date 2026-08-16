@@ -91,7 +91,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       className="items-start justify-center"
       panelClassName="mx-auto max-w-[680px] px-4 pt-[10vh] sm:pt-[14vh]"
     >
-      <div className="glass-strong overflow-hidden rounded-xl shadow-deep">
+      <div className="glass-strong frost overflow-hidden rounded-xl shadow-deep">
         <div className="flex items-center gap-3 border-b border-border/60 px-5">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <input

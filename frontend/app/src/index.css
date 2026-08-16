@@ -146,6 +146,31 @@
       transparent 78%
     );
 
+    /* ── Chart palette ────────────────────────────────────────────
+       Four categorical hues, validated against the light chart
+       surface for lightness band, chroma, CVD separation, normal-
+       vision separation and contrast. Assigned in this fixed order
+       and never cycled — a fifth category folds into "Other".
+
+       The brand navy itself is deliberately NOT slot 1: at L 0.42 it
+       sits below the readable band on a pale surface, and four blues
+       could not be told apart by a deuteranope in any case.
+
+       Adjacent tritan separation for amber↔teal is 6.1, inside the
+       6–8 floor band, which is only legal alongside a second
+       encoding — so every segment that uses these is directly
+       labelled and separated by a 2px surface gap.
+
+       No dark set is defined because the product has no dark theme;
+       inventing one here without validating it against a dark
+       surface would be worse than leaving it out.               */
+    --chart-1: 217 83% 53%;   /* #2563EB */
+    --chart-2: 174 82% 32%;   /* #0E9384 */
+    --chart-3: 25 91% 37%;    /* #B54708 */
+    --chart-4: 259 63% 59%;   /* #7F56D9 */
+    /* Single hue for magnitude, where colour carries no identity. */
+    --chart-seq: 217 83% 53%;
+
     --sidebar-background: 215 84% 34%;
     --sidebar-foreground: 205 92% 94%;
     --sidebar-primary: 0 0% 100%;
@@ -198,6 +223,38 @@
 }
 
 @layer components {
+  /*
+   * ── Fluid display scale ──────────────────────────────────────
+   * Breakpoint-stepped headings jump a whole size at 640px, which
+   * on a 600px-wide phone means the largest type on the page is
+   * tuned for a screen nobody is holding. `clamp()` interpolates
+   * instead, so every width in between gets a size chosen for it.
+   *
+   * The middle term is viewport-relative with a rem floor added,
+   * so the text still responds to the reader's own font-size
+   * setting — a pure vw value silently ignores it, which is an
+   * accessibility failure disguised as a design decision.
+   */
+  .display-1 {
+    font-size: clamp(2.4rem, 1.4rem + 4.6vw, 4.5rem);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+  }
+  .display-2 {
+    font-size: clamp(1.9rem, 1.25rem + 2.9vw, 3.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.018em;
+  }
+  .display-3 {
+    font-size: clamp(1.35rem, 1.05rem + 1.35vw, 2rem);
+    line-height: 1.18;
+    letter-spacing: -0.012em;
+  }
+  .lead-copy {
+    font-size: clamp(1rem, 0.94rem + 0.4vw, 1.25rem);
+    line-height: 1.6;
+  }
+
   /* Editorial type scale */
   .font-display {
     font-family: "Fraunces", Georgia, "Times New Roman", serif;
@@ -211,17 +268,48 @@
   }
 
   /* ── Frosted glass ─────────────────────────────────────────── */
+  /* ── Frosted glass ──────────────────────────────────────────
+     Real frost is three things at once, and skipping any one of
+     them is what makes CSS glass look like flat translucent
+     plastic:
+
+       1. blur + saturation, so colour bleeds through rather than
+          just dimming;
+       2. a *brightness* lift, because frost scatters light forward
+          and a pane over dark content should still read as pale;
+       3. a lit top-left rim and a shadowed bottom-right one, which
+          is the cue that says "this has thickness".
+
+     The rim is drawn as two inset shadows on ::after rather than a
+     uniform border, since a border of one colour on all four sides
+     is exactly what a real edge never looks like.                */
+  .frost {
+    position: relative;
+    isolation: isolate;
+  }
+  .frost::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow:
+      inset 1px 1px 0 hsl(0 0% 100% / 0.75),
+      inset -1px -1px 0 hsl(var(--ink) / 0.07);
+  }
+
   .glass {
-    background: hsl(var(--glass-bg) / 0.62);
-    -webkit-backdrop-filter: blur(18px) saturate(1.5);
-    backdrop-filter: blur(18px) saturate(1.5);
+    background: hsl(var(--glass-bg) / 0.55);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7) brightness(1.06);
+    backdrop-filter: blur(20px) saturate(1.7) brightness(1.06);
     border: 1px solid hsl(var(--glass-border) / 0.55);
     box-shadow: var(--shadow-floating), var(--shadow-edge);
   }
   .glass-strong {
-    background: hsl(var(--glass-bg) / 0.78);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
-    backdrop-filter: blur(24px) saturate(1.6);
+    background: hsl(var(--glass-bg) / 0.7);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8) brightness(1.08);
+    backdrop-filter: blur(28px) saturate(1.8) brightness(1.08);
     border: 1px solid hsl(var(--glass-border) / 0.65);
     box-shadow: var(--shadow-deep), var(--shadow-edge);
   }
@@ -234,6 +322,7 @@
   }
   .glass-chip {
     @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold;
+    -webkit-backdrop-filter: blur(14px) saturate(1.6) brightness(1.05);
     background: hsl(var(--glass-bg) / 0.66);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
@@ -268,6 +357,25 @@
 }
 
 @layer utilities {
+  /*
+   * Lighter motion on small screens.
+   *
+   * A stagger step tuned for a wide grid becomes a queue on a phone, where
+   * the same items are stacked vertically and the last one waits for all the
+   * others. Two thirds of the delay and a shorter travel keeps the sequence
+   * legible without making the reader wait for it.
+   */
+  @media (max-width: 640px) {
+    .reveal {
+      transition-duration: var(--dur-normal);
+      transition-delay: calc(var(--reveal-delay, 0ms) * 0.6);
+    }
+    .reveal[data-variant="fade-up"],
+    .reveal[data-variant="fade-down"] {
+      --reveal-distance: 10px;
+    }
+  }
+
   /*
    * ── Honeycomb ────────────────────────────────────────────────
    *
@@ -407,10 +515,12 @@
     text-wrap: balance;
   }
   .container-site {
-    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8;
+    @apply mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-12;
   }
+  /* The reading measure is a typographic constraint, not a layout one: it
+     stays near 70 characters however wide the site container gets. */
   .container-article {
-    @apply mx-auto w-full max-w-[680px] px-5 sm:px-6;
+    @apply mx-auto w-full max-w-[720px] px-5 sm:px-6;
   }
 
   /* ── Newsprint / paper grain overlay ──────────────────────────

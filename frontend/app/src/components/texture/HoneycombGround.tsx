@@ -80,6 +80,10 @@ export function HoneycombGround({
 
   return (
     <div ref={ref} className={cn("honeycomb honeycomb-live", className)}>
+      {/* The blue bloom that follows the cursor. It is a sibling of the
+          content rather than a pseudo-element because the two pseudos on this
+          node are already the lattice and the lattice's glow. */}
+      <div className="comb-wash" aria-hidden />
       {children}
     </div>
   );

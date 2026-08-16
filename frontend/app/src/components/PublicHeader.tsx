@@ -5,7 +5,8 @@ import Link from "next/link";
 import { NavLink } from "@/components/nav/NavLink";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Bookmark, Search } from "lucide-react";
+import { Bookmark, Instagram, Search, Youtube } from "lucide-react";
+import { SOCIAL_ACCOUNTS } from "@/data/content";
 import { cn } from "@/lib/utils";
 import { bezier, sequence, stagger, seconds, transitions } from "@/lib/motion";
 import { useHeaderState } from "@/hooks/useHeaderState";
@@ -292,6 +293,37 @@ function MobileMenu({
                 </Link>
               </motion.li>
             </ul>
+
+            {/* The accounts, at the foot of the drawer. On a phone this is the
+                one screen where every route is already visible, so it is the
+                natural place to offer the two off-site ones too. */}
+            <motion.div
+              initial={reduced ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                ...transitions.normal,
+                delay: reduced ? 0 : 0.04 + (NAV.length + 1) * stagger.tight,
+              }}
+              className="mt-8 flex flex-wrap gap-2 border-t border-border pt-8"
+            >
+              {SOCIAL_ACCOUNTS.map((account) => (
+                <a
+                  key={account.label}
+                  href={account.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={onClose}
+                  className="surface-compact focus-ring tap group inline-flex items-center gap-2 rounded-full px-4 text-xs font-semibold text-muted-foreground transition-colors hover:border-accent/50 hover:text-primary"
+                >
+                  {account.label === "Instagram" ? (
+                    <Instagram className="icon-tilt h-4 w-4 text-accent" aria-hidden />
+                  ) : (
+                    <Youtube className="icon-tilt h-4 w-4 text-accent" aria-hidden />
+                  )}
+                  {account.handle}
+                </a>
+              ))}
+            </motion.div>
           </nav>
         </motion.div>
       )}

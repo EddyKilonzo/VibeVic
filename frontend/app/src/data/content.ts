@@ -32,6 +32,37 @@ export const PROFILE = {
   email: "hello@victorkiplimo.example",
 } as const;
 
+/**
+ * Where to follow the work.
+ *
+ * The Instagram URL is the plain profile address. The link as it was supplied
+ * carried an `igsh=` parameter — that is Instagram's share-tracking token,
+ * which identifies the account that shared the link and would follow every
+ * visitor who clicked it from here. It is stripped deliberately; a link on
+ * someone's own site should not be carrying a referral tag for them.
+ */
+export interface SocialAccount {
+  label: string;
+  handle: string;
+  url: string;
+}
+
+export const SOCIAL = {
+  youtube: {
+    label: "YouTube",
+    handle: CHANNEL.handle,
+    url: CHANNEL.url,
+  },
+  instagram: {
+    label: "Instagram",
+    handle: "@its_vickiplimo",
+    url: "https://www.instagram.com/its_vickiplimo/",
+  },
+} as const satisfies Record<string, SocialAccount>;
+
+/** Iteration order for follow rails: video first, because the work is video. */
+export const SOCIAL_ACCOUNTS: SocialAccount[] = [SOCIAL.youtube, SOCIAL.instagram];
+
 /* ── Written articles: PLACEHOLDER ─────────────────────────────── */
 
 let blockSeq = 0;

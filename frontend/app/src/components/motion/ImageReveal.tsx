@@ -30,6 +30,9 @@ export interface ImageRevealProps {
   fallbackSrc?: string;
 }
 
+/** How far outside the viewport a frame starts fetching. */
+const LOAD_MARGIN = "500px";
+
 /**
  * Editorial image entrance: the frame wipes open from the bottom edge while
  * the image relaxes out of a barely-perceptible 1.02 scale.
@@ -37,6 +40,16 @@ export interface ImageRevealProps {
  * Two conditions must both hold before it plays — in view *and* decoded. A
  * half-painted image sliding into place reads as broken rather than premium,
  * which is why this doesn't simply fire on intersection.
+ *
+ * ── Why the wipe is on a wrapper and not on the <img> ────────────────────
+ * It used to be on the image, and that was a deadlock rather than a style
+ * choice. `clip-path: inset(0 0 100% 0)` collapses an element's visible area
+ * to nothing, and Chrome's native lazy-loading will not fetch an image with no
+ * visible area. So the image waited for the reveal, the reveal waited for
+ * `onLoad`, and neither happened: below the fold, cards stayed as empty
+ * placeholder blocks until a reload put them above it. Clipping a wrapper
+ * instead leaves the image's own box untouched, so it loads exactly when the
+ * browser would otherwise load it.
  */
 export function ImageReveal({
   src,
@@ -61,6 +74,16 @@ export function ImageReveal({
     amount: viewport.amount,
   });
 
+  // A second, much earlier observer, and the whole reason this component owns
+  // its loading rather than leaving it to `loading="lazy"`: the wipe below is
+  // a clip-path, and a clipped element has no visible area, which is precisely
+  // the condition under which Chrome refuses to fetch a lazy image. Deciding
+  // here — 500px out, well before the frame is on screen — means the bytes are
+  // already in flight when the reveal plays, and nothing about the animation
+  // can starve the image that it is animating.
+  const near = useInView(ref, { once: true, margin: LOAD_MARGIN });
+  const shouldLoad = priority || immediate || near;
+
   const revealed = reduced || (loaded && (inView || immediate));
 
   return (
@@ -78,24 +101,8 @@ export function ImageReveal({
           loaded && "opacity-0",
         )}
       />
-      <motion.img
-        src={source}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
-        onLoad={() => setLoaded(true)}
-        onError={() => {
-          // Step down once, then give up — a broken image should still resolve
-          // its frame rather than hang hidden behind the placeholder.
-          if (fallbackSrc && source !== fallbackSrc) setSource(fallbackSrc);
-          else setLoaded(true);
-        }}
-        className={cn(
-          "absolute inset-0 h-full w-full object-cover",
-          hoverZoom && "media-zoom",
-          imgClassName,
-        )}
+      <motion.div
+        className="absolute inset-0"
         initial={reduced ? false : { clipPath: "inset(0% 0% 100% 0%)", scale: 1.02, opacity: 0 }}
         animate={
           revealed
@@ -107,7 +114,37 @@ export function ImageReveal({
               }
             : undefined
         }
-      />
+      >
+        <img
+          // Undefined until the frame is near, so nothing is requested for a
+          // card the reader may never scroll to. `eager` is correct once it is
+          // set: the decision has already been made here.
+          src={shouldLoad ? source : undefined}
+          alt={alt}
+          loading="eager"
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          onLoad={(event) => {
+            // A YouTube poster that does not exist is not an error — the CDN
+            // answers 200 with a 120×90 grey placeholder. So when a fallback
+            // was supplied, a suspiciously small image counts as a miss and
+            // steps down the same way a real failure would.
+            const width = event.currentTarget.naturalWidth;
+            if (fallbackSrc && source !== fallbackSrc && width > 0 && width < 200) {
+              setSource(fallbackSrc);
+              return;
+            }
+            setLoaded(true);
+          }}
+          onError={() => {
+            // Step down once, then give up — a broken image should still
+            // resolve its frame rather than hang hidden behind the placeholder.
+            if (fallbackSrc && source !== fallbackSrc) setSource(fallbackSrc);
+            else setLoaded(true);
+          }}
+          className={cn("h-full w-full object-cover", hoverZoom && "media-zoom", imgClassName)}
+        />
+      </motion.div>
     </div>
   );
 }

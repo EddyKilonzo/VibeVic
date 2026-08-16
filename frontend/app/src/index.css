@@ -138,7 +138,7 @@
        reader's cursor has actually been somewhere. */
     --comb-x: -50vw;
     --comb-y: -50vh;
-    --comb-glow: hsl(var(--accent) / 0.16);
+    --comb-glow: hsl(var(--accent) / 0.3);
     --comb-pool: radial-gradient(
       circle 320px at var(--comb-x) var(--comb-y),
       #000 0%,
@@ -611,6 +611,45 @@
     }
   }
   /*
+   * The blue that travels with the pointer.
+   *
+   * The layer above only tints the lattice *strokes*, which reads as the comb
+   * catching light but leaves the paper between the cells untouched. This is
+   * the other half: a wide, very low-alpha wash of brand blue in the cells'
+   * negative space, so the whole area around the cursor warms toward the brand
+   * colour instead of only its outlines.
+   *
+   * Two stops rather than one — a hard-edged circle of tint looks like a
+   * flashlight; the second stop at 45% is what makes it read as a bloom. It
+   * stays under 10% alpha because it passes behind body copy, and it is a real
+   * element rather than a third pseudo because `::before` and `::after` are
+   * both already spoken for.
+   */
+  .comb-wash {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-slow) var(--ease-out);
+    background: radial-gradient(
+      circle 420px at var(--comb-x) var(--comb-y),
+      hsl(var(--accent) / 0.1),
+      hsl(var(--accent) / 0.045) 45%,
+      transparent 72%
+    );
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .honeycomb-live[data-pointer] > .comb-wash {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .comb-wash {
+      display: none;
+    }
+  }
+  /*
    * Fades the lattice out toward the bottom so a textured band can meet
    * plain page without a hard seam.
    */
@@ -917,6 +956,67 @@
   .group:hover .nudge-x,
   .group:focus-visible .nudge-x {
     transform: translate3d(3px, 0, 0);
+  }
+
+  /* ── Icon micro-motion ──────────────────────────────────────
+     Lucide draws flat, stroked SVG — the right base, and completely
+     static. These give an icon that sits inside an interactive
+     `.group` one small move when the group is hovered or focused,
+     on the same tokens as everything else.
+
+     Rules they all keep to:
+       · one property, always `transform`, so they stay on the
+         compositor and cost nothing on the interaction path;
+       · the icon moves, the label does not — text that shifts
+         under the pointer reads as instability, not polish;
+       · `hover: hover` only, so a touch device never latches into
+         a state it has no way to leave;
+       · nothing here loops. A permanently animating icon is a
+         distraction on a page whose job is to be read. */
+  .icon-rise,
+  .icon-tilt,
+  .icon-lean,
+  .icon-pop {
+    transition: transform var(--dur-normal) var(--ease-spring);
+    transform-origin: center;
+  }
+
+  @media (hover: hover) {
+    /* Play, subscribe, listen — anything that starts something. */
+    .group:hover .icon-rise,
+    .group:focus-visible .icon-rise {
+      transform: translate3d(0, -2px, 0);
+    }
+    /* Social marks and channel badges: a small camera-tilt. */
+    .group:hover .icon-tilt,
+    .group:focus-visible .icon-tilt {
+      transform: rotate(-7deg) scale(1.08);
+    }
+    /* Facts and metadata icons: leans toward the text it labels. */
+    .group:hover .icon-lean,
+    .group:focus-visible .icon-lean {
+      transform: translate3d(2px, 0, 0) rotate(4deg);
+    }
+    /* Save, copy, confirm — a single beat, not a pulse. */
+    .group:hover .icon-pop,
+    .group:focus-visible .icon-pop {
+      transform: scale(1.14);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icon-rise,
+    .icon-tilt,
+    .icon-lean,
+    .icon-pop {
+      transition: none;
+    }
+    .group:hover .icon-rise,
+    .group:hover .icon-tilt,
+    .group:hover .icon-lean,
+    .group:hover .icon-pop {
+      transform: none;
+    }
   }
 
   /* Image inside a card: very subtle scale, never a zoom. */

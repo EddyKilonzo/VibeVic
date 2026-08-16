@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, GraduationCap, MapPin, Youtube } from "lucide-react";
-import { PROFILE, publishedStories } from "@/data/content";
-import { CHANNEL, TOPICS, longFormVideos, totalViews } from "@/data/videos";
+import { ArrowUpRight, GraduationCap, Headphones, Instagram, MapPin, Youtube } from "lucide-react";
+import { PROFILE, SOCIAL_ACCOUNTS, publishedStories } from "@/data/content";
+import { AGAINST_WALL, PORTRAIT, SHOOTING, WITH_CAMERA } from "@/data/portraits";
+import { CHANNEL, TOPICS, longFormVideos, totalViews, videosByTopic } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -92,8 +93,9 @@ export default function Home() {
                   rel="noreferrer noopener"
                   size="lg"
                   variant="outline"
+                  className="group"
                 >
-                  <Youtube className="h-4 w-4" aria-hidden />
+                  <Youtube className="icon-tilt h-4 w-4" aria-hidden />
                   Subscribe
                 </Button>
               </div>
@@ -159,80 +161,73 @@ export default function Home() {
           landed needs to know who is telling them this and what
           qualifies them to, before a grid of thumbnails asks them to
           spend twenty minutes. Every fact here is one we hold. */}
+      {/* The bento is a six-column field with three bands, and the spans are
+          chosen by weight rather than to look busy:
+
+            band 1   portrait (2, held across both bands) · biography (4)
+            band 2   the three facts (4, as their own row inside that cell)
+            band 3   the three reach figures (6)
+            band 4   the rest of the set (2 · 2 · 2)
+
+          Under `lg` every cell falls back to full width and the bento becomes
+          an ordinary column, which is the honest layout on a phone. */}
       <section className="container-site mt-20 sm:mt-24">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:gap-16">
-          <Reveal variant="fade-up">
+        <div className="grid gap-4 lg:grid-cols-6 lg:gap-5">
+          {/* A · Portrait, held down the left across two bands. */}
+          <Reveal
+            variant="fade-up"
+            className="relative overflow-hidden rounded-2xl shadow-primary lg:col-span-2 lg:row-span-2"
+          >
             <ImageReveal
-              src="/images/channels4_profile.jpg"
-              alt={`${PROFILE.name}, ${PROFILE.role}`}
-              ratio="1/1"
-              className="mx-auto max-w-[260px] rounded-2xl shadow-primary lg:mx-0"
-              imgClassName="object-cover"
+              src={PORTRAIT.src}
+              alt={PORTRAIT.alt}
+              ratio="3/4"
+              priority
+              className="h-full min-h-[320px] rounded-2xl lg:absolute lg:inset-0"
+              imgClassName="object-cover object-top"
             />
+            {/* The accounts sit on the portrait, on a scrim that only exists
+                where the text does — a full-card overlay would flatten the
+                photograph to make room for two links. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-brand-ink-deep/90 via-brand-ink-deep/55 to-transparent p-4 pt-16">
+              <div className="pointer-events-auto flex flex-wrap gap-2">
+                {SOCIAL_ACCOUNTS.map((account) => (
+                  <a
+                    key={account.label}
+                    href={account.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="focus-ring tap group inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 text-[11px] font-semibold text-white backdrop-blur-sm transition-colors duration-normal hover:border-white/60 hover:bg-white/20"
+                  >
+                    {account.label === "Instagram" ? (
+                      <Instagram className="icon-tilt h-3.5 w-3.5" aria-hidden />
+                    ) : (
+                      <Youtube className="icon-tilt h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {account.handle}
+                  </a>
+                ))}
+              </div>
+            </div>
           </Reveal>
 
-          <div>
-            <Reveal variant="fade-up" delay={60}>
-              <p className="rule-label">The journalist</p>
-              <h2 className="font-display display-2 mt-3 font-semibold text-balance">
-                {PROFILE.name}
-              </h2>
-              <p className="mt-5 max-w-[54ch] text-lg leading-relaxed text-muted-foreground">
-                A {PROFILE.role.toLowerCase()} based in {PROFILE.base} and a{" "}
-                {PROFILE.education} graduate. The reporting starts with what an institution
-                actually does, then asks the people it affects — and it is published as video,
-                first, on {CHANNEL.handle}.
-              </p>
-            </Reveal>
+          {/* B · Who he is. */}
+          <Reveal
+            variant="fade-up"
+            delay={60}
+            className="surface honeycomb honeycomb-strong overflow-hidden p-6 sm:p-8 lg:col-span-4"
+          >
+            <p className="rule-label">The journalist</p>
+            <h2 className="font-display display-2 mt-3 font-semibold text-balance">
+              {PROFILE.name}
+            </h2>
+            <p className="mt-5 max-w-[54ch] text-lg leading-relaxed text-muted-foreground">
+              A {PROFILE.role.toLowerCase()} based in {PROFILE.base} and a {PROFILE.education}{" "}
+              graduate. The reporting starts with what an institution actually does, then asks the
+              people it affects — and it is published as video, first, on {CHANNEL.handle}.
+            </p>
 
-            {/* The facts, as a list of facts. Nothing here is inferred. */}
-            <Stagger
-              className="mt-9 grid gap-3 sm:grid-cols-3"
-              step="tight"
-            >
-              {[
-                { icon: MapPin, label: "Based in", value: PROFILE.base },
-                { icon: GraduationCap, label: "Studied at", value: PROFILE.education },
-                { icon: Youtube, label: "Publishes on", value: CHANNEL.handle },
-              ].map((fact, i) => (
-                <StaggerItem key={fact.label} index={i}>
-                  <Reveal variant="fade-up" distance="sm" className="surface-compact h-full p-4">
-                    <fact.icon className="h-4 w-4 text-accent" aria-hidden />
-                    <p className="rule-label mt-3">{fact.label}</p>
-                    <p className="font-display mt-1 text-[15px] font-semibold leading-snug">
-                      {fact.value}
-                    </p>
-                  </Reveal>
-                </StaggerItem>
-              ))}
-            </Stagger>
-
-            {/* Reach, from the channel's own recorded figures. */}
-            <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
-              {[
-                { value: CHANNEL.videoCount, label: "Reports" },
-                { value: totalViews(), label: "Total views" },
-                { value: CHANNEL.subscribers, label: "Subscribers" },
-              ].map((stat, i) => (
-                <Reveal
-                  key={stat.label}
-                  variant="fade-up"
-                  delay={i * 70}
-                  className={cn(
-                    "surface honeycomb honeycomb-strong overflow-hidden p-4 sm:p-5",
-                    // The middle plate sits proud so the row has a centre.
-                    i === 1 && "sm:-translate-y-3",
-                  )}
-                >
-                  <p className="font-display text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
-                    <SpringCountUp to={stat.value} />
-                  </p>
-                  <p className="rule-label mt-1.5">{stat.label}</p>
-                </Reveal>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-7 flex flex-wrap gap-3">
               <Button as={Link} href="/about" variant="outline">
                 More about {PROFILE.name.split(" ")[0]}
                 <ArrowUpRight className="nudge-x h-4 w-4" aria-hidden />
@@ -241,53 +236,168 @@ export default function Home() {
                 Send a tip
               </Button>
             </div>
-          </div>
+          </Reveal>
+
+          {/* C · The facts, as a list of facts. Nothing here is inferred. */}
+          <Stagger className="grid gap-4 sm:grid-cols-3 lg:col-span-4 lg:gap-5" step="tight">
+            {[
+              { icon: MapPin, label: "Based in", value: PROFILE.base },
+              { icon: GraduationCap, label: "Studied at", value: PROFILE.education },
+              { icon: Youtube, label: "Publishes on", value: CHANNEL.handle },
+            ].map((fact, i) => (
+              <StaggerItem key={fact.label} index={i}>
+                <Reveal variant="fade-up" distance="sm" className="surface group h-full p-5">
+                  <fact.icon className="icon-lean h-4 w-4 text-accent" aria-hidden />
+                  <p className="rule-label mt-3">{fact.label}</p>
+                  <p className="font-display mt-1 text-[15px] font-semibold leading-snug">
+                    {fact.value}
+                  </p>
+                </Reveal>
+              </StaggerItem>
+            ))}
+          </Stagger>
+
+          {/* D · Reach, from the channel's own recorded figures. */}
+          {[
+            { value: CHANNEL.videoCount, label: "Reports" },
+            { value: totalViews(), label: "Total views" },
+            { value: CHANNEL.subscribers, label: "Subscribers" },
+          ].map((stat, i) => (
+            <Reveal
+              key={stat.label}
+              variant="fade-up"
+              delay={i * 70}
+              className="surface honeycomb honeycomb-strong overflow-hidden p-5 sm:p-6 lg:col-span-2"
+            >
+              <p className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
+                <SpringCountUp to={stat.value} />
+              </p>
+              <p className="rule-label mt-1.5">{stat.label}</p>
+            </Reveal>
+          ))}
+
+          {/* E · The rest of the set. Three equal cells so the band reads as a
+              contact sheet rather than three more feature cards. */}
+          {[WITH_CAMERA, SHOOTING, AGAINST_WALL].map((portrait, i) => (
+            <Reveal
+              key={portrait.src}
+              variant="fade-up"
+              delay={i * 70}
+              className="group relative overflow-hidden rounded-xl shadow-primary lg:col-span-2"
+            >
+              <ImageReveal
+                src={portrait.src}
+                alt={portrait.alt}
+                ratio="4/3"
+                hoverZoom
+                className="rounded-xl"
+                imgClassName="object-cover object-top"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-ink-deep/90 via-brand-ink-deep/30 to-transparent p-4 pt-10 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
+              >
+                {portrait.caption}
+              </span>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Wordmark band ────────────────────────────────────────
+          The hinge straight out of the biography: having just read who he is,
+          the reader gets his name and the line he works under, at scale. Full
+          bleed and dark, so it also breaks the page's near-white ground into
+          two halves — the person above, the work below. Drag it and it
+          scrubs. */}
+      <section className="relative mt-20 overflow-hidden border-y border-brand-ink-deep bg-brand-ink-deep py-4 text-white sm:mt-24 sm:py-6">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-ink-deep via-primary/70 to-brand-ink-deep"
+        />
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/15" />
+        <div className="relative">
+          <CurvedMarquee
+            text="Victor Kiplimo || Imago dei Lator · "
+            speed={1.1}
+            curveAmount={70}
+            className="text-white/90"
+          />
         </div>
       </section>
 
       {/* ── Beats ────────────────────────────────────────────────── */}
-      <section className="container-site mt-28 lg:pb-10">
+      {/* The tiles used to sit on alternating vertical offsets, which pushed
+          the lower row past the section's box and left cards half-hidden
+          under the next section. The bento spans below give the same broken
+          rhythm without any of them leaving the flow. */}
+      <section className="container-site mt-28">
         <SectionHeading
           label="Beats"
           title="What I cover"
           action={{ href: "/genres", label: "Every beat" }}
         />
-        {/* Comb rhythm: the tiles are separate raised cards and every second
-            one drops half a step, so the row interlocks the way cells in a
-            honeycomb do instead of sitting on one flat baseline. The offset
-            is desktop-only — on a phone the column is the layout. */}
-        <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" step="tight">
-          {TOPICS.map((topic, i) => (
-            <StaggerItem key={topic.slug} index={i}>
-              <Reveal variant="fade-up" distance="sm" className="h-full">
-                <Link
-                  href={`/videos?topic=${topic.slug}`}
-                  className={
-                    "surface surface-hover group focus-ring relative flex h-full flex-col overflow-hidden p-6 " +
-                    (i % 2 === 1 ? "lg:translate-y-7" : "")
-                  }
-                >
-                  <span
-                    aria-hidden
-                    className="absolute -right-6 -top-6 h-20 w-16 bg-accent/8 transition-colors duration-slow group-hover:bg-accent/16"
-                    style={{
-                      clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                    }}
-                  />
-                  <p className="font-display relative text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
-                    {topic.name}
-                  </p>
-                  <p className="relative mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                    {topic.description}
-                  </p>
-                  <ArrowUpRight
-                    className="nudge-x relative mt-5 h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
-                    aria-hidden
-                  />
-                </Link>
-              </Reveal>
-            </StaggerItem>
-          ))}
+        {/* A 6-column bento that alternates 4·2 / 2·4, so the four beats read
+            as a woven pair of rows rather than four identical columns — and
+            each wide cell has room for its description to breathe while the
+            narrow ones stay terse. The count is real: it is how many reports
+            are filed under that beat. */}
+        <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5" step="tight">
+          {TOPICS.map((topic, i) => {
+            const wide = i === 0 || i === 3;
+            const count = videosByTopic(topic.slug).length;
+
+            return (
+              <StaggerItem
+                key={topic.slug}
+                index={i}
+                className={wide ? "lg:col-span-4" : "lg:col-span-2"}
+              >
+                <Reveal variant="fade-up" distance="sm" className="h-full">
+                  <Link
+                    href={`/videos?topic=${topic.slug}`}
+                    className="surface surface-hover group focus-ring relative flex h-full flex-col overflow-hidden p-6 sm:p-7"
+                  >
+                    <span
+                      aria-hidden
+                      className="absolute -right-6 -top-6 h-20 w-16 bg-accent/8 transition-colors duration-slow group-hover:bg-accent/16"
+                      style={{
+                        clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                      }}
+                    />
+                    <div className="relative flex items-start justify-between gap-4">
+                      <p
+                        className={cn(
+                          "font-display font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none",
+                          wide ? "text-2xl sm:text-3xl" : "text-xl",
+                        )}
+                      >
+                        {topic.name}
+                      </p>
+                      <span className="font-display shrink-0 text-sm font-semibold tabular-nums text-primary">
+                        {count}
+                        <span className="ml-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          {count === 1 ? "report" : "reports"}
+                        </span>
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        "relative mt-3 flex-1 leading-relaxed text-muted-foreground",
+                        wide ? "max-w-[46ch] text-[0.95rem]" : "text-sm",
+                      )}
+                    >
+                      {topic.description}
+                    </p>
+                    <ArrowUpRight
+                      className="nudge-x relative mt-5 h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
+                      aria-hidden
+                    />
+                  </Link>
+                </Reveal>
+              </StaggerItem>
+            );
+          })}
         </Stagger>
       </section>
 
@@ -321,33 +431,50 @@ export default function Home() {
         </Stagger>
       </section>
 
-      {/* ── Curved band ──────────────────────────────────────────
-          A section break with a voice. It names what the reporting covers
-          and doubles as the hinge between the video grid and the beats,
-          which is a job a horizontal rule cannot do. */}
-      <section className="mt-24 overflow-hidden border-y border-border py-4">
-        <CurvedMarquee
-          text="Campus reporting · Kenyan culture · Student life · Features · "
-          speed={1.2}
-          curveAmount={90}
-        />
-      </section>
-
       {/* ── Written work ─────────────────────────────────────────── */}
       {written.length > 0 && (
         <section className="container-site mt-28">
           <SectionHeading
             label="In writing"
             title="Read or listen"
-            description="Written pieces can be read on the page or played aloud, with the paragraph being spoken highlighted as it goes."
             action={{ href: "/stories", label: "All writing" }}
           />
-          <Stagger className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          {/* The newest piece leads at four columns; everything after it takes
+              two. The narration tile closes the row — it is the section's
+              actual promise, and as a cell it fills the bento at any count
+              instead of leaving a hole when there is only one piece. */}
+          <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5">
             {written.map((story, i) => (
-              <StaggerItem key={story.id} index={i}>
-                <StoryCard story={story} />
+              <StaggerItem
+                key={story.id}
+                index={i}
+                className={cn("sm:col-span-2", i === 0 ? "lg:col-span-4" : "lg:col-span-2")}
+              >
+                <StoryCard story={story} variant={i === 0 ? "feature" : "default"} />
               </StaggerItem>
             ))}
+
+            <StaggerItem index={written.length} className="sm:col-span-2 lg:col-span-2">
+              <Reveal
+                variant="fade-up"
+                className="surface honeycomb honeycomb-strong group flex h-full flex-col overflow-hidden p-6 sm:p-7"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground shadow-raised">
+                  <Headphones className="icon-rise h-4 w-4" aria-hidden />
+                </span>
+                <p className="font-display mt-5 text-xl font-semibold tracking-tight">
+                  Every piece plays aloud
+                </p>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  Written work can be read on the page or narrated, with the paragraph being spoken
+                  highlighted as it goes. Nothing starts playing on its own.
+                </p>
+                <Button as={Link} href="/stories" variant="outline" size="sm" className="mt-6 self-start">
+                  All writing
+                  <ArrowUpRight className="nudge-x h-4 w-4" aria-hidden />
+                </Button>
+              </Reveal>
+            </StaggerItem>
           </Stagger>
         </section>
       )}
@@ -370,9 +497,9 @@ export default function Home() {
                 href={CHANNEL.url}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="mt-7"
+                className="group mt-7"
               >
-                <Youtube className="h-4 w-4" aria-hidden />
+                <Youtube className="icon-tilt h-4 w-4" aria-hidden />
                 Subscribe on YouTube
               </Button>
             </div>

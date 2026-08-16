@@ -1,5 +1,23 @@
+/*
+ * Three things in the library's original stylesheet made this band unusable
+ * here, and all three are fixed below rather than fought at the call site:
+ *
+ *   min-height: 100vh   The jacket claimed a whole screen, so the section
+ *                       around it opened into a screen-tall empty gap with a
+ *                       thin line of text floating in the middle of it.
+ *   fill: #ffffff       Hard-coded white. On this site's near-white ground the
+ *                       text was painted, correctly, and invisibly.
+ *   font-size: 6rem     96 of the viewBox's 120 units. The arc's baseline
+ *                       reaches y=40 at both ends, so glyphs that tall were
+ *                       cut off by the top edge for most of the band's width.
+ *
+ * The geometry, for anyone changing the size: the path runs
+ * `M-100,40 Q500,40+curve 1540,40` inside a 120-unit box. Cap height is about
+ * 0.7em, so the font size must stay under 40 / 0.7 ≈ 57 units (3.5rem) or the
+ * tops of the letters leave the box at the ends of the arc.
+ */
+
 .curved-loop-jacket {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7,17 +25,22 @@
 }
 
 .curved-loop-svg {
-  user-select: none;
-  width: 100%;
-  aspect-ratio: 100 / 12;
-  overflow: visible;
   display: block;
-  font-size: 6rem;
-  fill: #ffffff;
-  user-select: none;
-  -moz-user-select: none;
-  -webkit-user-select: none;
+  width: 100%;
+  aspect-ratio: 100 / 11;
+  overflow: visible;
+  /* The band is a wordmark, so it is set in the display face rather than the
+     UI sans — it reads as the masthead it is, not as a ticker. */
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  font-size: 3.25rem;
   font-weight: 700;
-  text-transform: uppercase;
   line-height: 1;
+  letter-spacing: -0.01em;
+  /* Inherited from the section, so the band can be dark-on-light or
+     light-on-dark without touching this file. */
+  fill: currentColor;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }

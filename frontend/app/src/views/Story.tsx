@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/data/api";
 import { PROFILE, genreName, relatedStories } from "@/data/content";
+import { PORTRAIT } from "@/data/portraits";
+import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { coverFor } from "@/lib/cover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -107,6 +109,14 @@ export default function Story({ slug }: { slug: string }) {
 
           <Reveal variant="fade-up" delay={160}>
             <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+              {/* Byline portrait. Decorative — the name beside it already
+                  carries the attribution, so it stays out of the reading
+                  order rather than repeating it to a screen reader. */}
+              <PortraitFrame
+                portrait={PORTRAIT}
+                size={40}
+                className="h-10 w-10 shrink-0 rounded-full shadow-raised ring-1 ring-border"
+              />
               <span className="font-medium text-foreground">{PROFILE.name}</span>
               <span aria-hidden className="h-3 w-px bg-border" />
               <time dateTime={story.publishedAt}>{formatDate(story.publishedAt)}</time>

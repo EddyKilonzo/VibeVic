@@ -1,27 +1,23 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useReducedMotion } from "motion/react";
+import { Children, useId, useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { transitions } from "@/lib/motion";
 
 // The React Bits sources are untyped JSX. Everything above this file imports
 // from here instead, so the product only ever sees typed props — and so the
 // reduced-motion and touch guards below cannot be forgotten at a call site.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import RbCurvedLoop from "./CurvedLoop.jsx";
-import RbGooeyNav from "./GooeyNav.jsx";
 import RbLineSidebar from "./LineSidebar.jsx";
 import RbScrollExpand from "./ScrollExpand.jsx";
-import RbScrollStack, { ScrollStackItem as RbScrollStackItem } from "./ScrollStack.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
 
 const CurvedLoopBase = RbCurvedLoop as any;
-const GooeyNavBase = RbGooeyNav as any;
 const LineSidebarBase = RbLineSidebar as any;
 const ScrollExpandBase = RbScrollExpand as any;
-const ScrollStackBase = RbScrollStack as any;
-const ScrollStackItemBase = RbScrollStackItem as any;
 const SpecularButtonBase = RbSpecularButton as any;
 const CountUpBase = RbCountUp as any;
 
@@ -42,14 +38,16 @@ export interface CurvedMarqueeProps {
  * disappearing — the words are content, the loop is decoration, and only the
  * decoration should be negotiable.
  *
- * `curveAmount` is capped: the component's viewBox is 120 units tall and the
- * arc's midpoint sits at 40 + curveAmount/2, so anything much past 140 sends
- * the text out of the box and the band renders blank.
+ * The band paints in `currentColor`, so the section around it sets the
+ * colour. `curveAmount` is capped: the viewBox is 120 units tall and the
+ * midpoint of the arc sits at 40 + curveAmount/2, so past about 140 the text
+ * leaves the box and the band renders blank. See `CurvedLoop.css` for the
+ * matching constraint on font size.
  */
 export function CurvedMarquee({
   text,
   speed = 1.4,
-  curveAmount = 90,
+  curveAmount = 70,
   direction = "left",
   className,
 }: CurvedMarqueeProps) {
@@ -57,8 +55,13 @@ export function CurvedMarquee({
 
   if (reduced) {
     return (
-      <p className={cn("rule-label overflow-hidden text-ellipsis whitespace-nowrap py-6", className)}>
-        {text}
+      <p
+        className={cn(
+          "font-display overflow-hidden text-ellipsis whitespace-nowrap py-4 text-center text-2xl font-semibold tracking-tight sm:text-4xl",
+          className,
+        )}
+      >
+        {text.replace(/\s*·\s*$/, "")}
       </p>
     );
   }
@@ -73,46 +76,89 @@ export function CurvedMarquee({
         interactive
       />
       {/* The band is decorative motion; the words are announced once here. */}
-      <span className="sr-only">{text}</span>
+      <span className="sr-only">{text.replace(/\s*·\s*$/, "")}</span>
     </div>
   );
 }
 
-/* ── Gooey nav ───────────────────────────────────────────────── */
+/* ── Pill nav ────────────────────────────────────────────────── */
 
-export interface GooeyNavItem {
+export interface PillNavItem {
   label: string;
   href: string;
 }
 
 /**
- * A pill nav whose active indicator liquefies between items.
+ * A jump nav whose active pill flows to whichever item you pick.
  *
- * The particle burst is pure decoration, so reduced motion drops to a plain
- * indicator by way of `particleCount: 0` — the navigation keeps working
- * identically, which is the part that matters.
+ * ── Why this is not React Bits' GooeyNav ─────────────────────────────────
+ * That component draws its indicator as a metaball: a white rectangle and a
+ * white pill, blurred, pushed through `contrast(100)` to threshold them into a
+ * single blob, then composited with `mix-blend-mode: lighten` so the black
+ * backdrop drops out. It is a lovely trick and it only holds together inside
+ * the exact compositing environment it was written for. Dropped into this
+ * page it leaked, twice and differently: first a purple bloom over the pale
+ * hero panel, then — once the surface was made dark enough for the blend to
+ * work — the 150px black backdrop rectangle showing through beside the rail,
+ * with the label doubled because the effect layer carries its own copy of the
+ * active item's text and positions it independently.
+ *
+ * A shared `layoutId` does the same job — one pill, moving between items —
+ * with no blend modes, no filters and no second copy of the text. It is one
+ * element, it inherits the palette, and it cannot go wrong against a
+ * background it was not designed for. Under reduced motion the pill jumps
+ * instead of sliding; the navigation is identical either way.
  */
-export function GooeyNav({
+export function PillNav({
   items,
   activeIndex = 0,
   className,
 }: {
-  items: GooeyNavItem[];
+  items: PillNavItem[];
   activeIndex?: number;
   className?: string;
 }) {
   const reduced = useReducedMotion();
+  const [active, setActive] = useState(activeIndex);
+  const layout = useId();
 
   return (
-    <nav className={cn("gooey-nav-host", className)}>
-      <GooeyNavBase
-        items={items}
-        initialActiveIndex={activeIndex}
-        particleCount={reduced ? 0 : 12}
-        animationTime={reduced ? 1 : 520}
-        particleDistances={[70, 8]}
-        particleR={80}
-      />
+    <nav
+      aria-label="Jump to a beat"
+      className={cn(
+        "inline-flex max-w-full rounded-full bg-sidebar p-1.5 shadow-lifted",
+        className,
+      )}
+    >
+      <ul className="flex flex-wrap items-center justify-center gap-0.5">
+        {items.map((item, i) => {
+          const current = i === active;
+
+          return (
+            <li key={item.href} className="relative">
+              <a
+                href={item.href}
+                onClick={() => setActive(i)}
+                aria-current={current ? "true" : undefined}
+                className={cn(
+                  "focus-ring tap relative inline-flex items-center rounded-full px-4 text-[13px] font-semibold transition-colors duration-normal",
+                  current ? "text-primary" : "text-white/70 hover:text-white",
+                )}
+              >
+                {current && (
+                  <motion.span
+                    aria-hidden
+                    layoutId={`pill-${layout}`}
+                    className="absolute inset-0 rounded-full bg-white shadow-raised"
+                    transition={reduced ? { duration: 0 } : transitions.sheet}
+                  />
+                )}
+                <span className="relative">{item.label}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
@@ -202,15 +248,27 @@ export function ScrollExpandMedia({
 /* ── Scroll stack ────────────────────────────────────────────── */
 
 /**
- * Cards that stack and scale as they scroll past a pin point.
+ * Cards that pin and stack as the next one scrolls over them.
  *
- * The library drives this with its own Lenis instance. `useWindowScroll` is
- * deliberately left off so that instance is scoped to this component's own
- * scroller — a page-level Lenis would take over the document's scrolling and
- * fight both GSAP's ScrollTriggers and the voice player's follow-along.
+ * ── Why this is `position: sticky` and not the library component ─────────
+ * React Bits' ScrollStack pins by putting the cards inside its *own* scroll
+ * container (`overflow-y: auto; overscroll-behavior: contain`) and driving it
+ * with a scoped Lenis instance. That works in isolation and is wrong on a
+ * page: while the pointer is anywhere over the stack, the wheel scrolls the
+ * inner box instead of the document, and `overscroll-behavior: contain` stops
+ * the scroll from ever chaining back out. On `/genres` that read exactly as
+ * the page freezing part way down. Its stylesheet also forced every card to
+ * `height: 20rem; padding: 3rem; border-radius: 40px`, which is why the cards
+ * ignored the padding and radius they were given.
  *
- * Under reduced motion the stack is skipped entirely and the cards render as
- * an ordinary column, because the effect *is* the scroll animation.
+ * Sticky positioning gives the same effect with none of that: the page keeps
+ * one scroller, each card parks under the header at a slightly lower offset
+ * than the one before it, and the next card slides over the top. It needs no
+ * JavaScript, no scroll listener and no smooth-scroll library, so it cannot
+ * fight GSAP's ScrollTriggers or the voice player's follow-along either.
+ *
+ * The cards must be opaque for the overlap to read — every call site passes
+ * `surface`, which is.
  */
 export function ScrollStack({
   children,
@@ -219,16 +277,32 @@ export function ScrollStack({
   children: ReactNode;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-
-  if (reduced) {
-    return <div className={cn("flex flex-col gap-6", className)}>{children}</div>;
-  }
+  const items = Children.toArray(children);
+  const last = items.length - 1;
 
   return (
-    <ScrollStackBase className={className} itemDistance={90} baseScale={0.88} itemScale={0.025}>
-      {children}
-    </ScrollStackBase>
+    <div className={cn("relative", className)}>
+      {items.map((child, i) => (
+        <div
+          key={i}
+          className="sticky"
+          style={{
+            // 5.5rem clears the masthead; each card then parks 14px lower than
+            // the one under it, so a stack of four fans rather than hiding.
+            top: `calc(5.5rem + ${i * 14}px)`,
+            zIndex: i + 1,
+            // The gap is padding rather than margin so it belongs to the
+            // sticky box and does not collapse against the next card. It has
+            // to be generous: the gap is the distance the reader scrolls
+            // between one card parking and the next arriving, and too small a
+            // value makes every card stick at once and simply pile up.
+            paddingBottom: i === last ? 0 : "5rem",
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -239,7 +313,7 @@ export function ScrollStackItem({
   children: ReactNode;
   className?: string;
 }) {
-  return <ScrollStackItemBase itemClassName={className}>{children}</ScrollStackItemBase>;
+  return <div className={className}>{children}</div>;
 }
 
 /* ── Specular button ─────────────────────────────────────────── */

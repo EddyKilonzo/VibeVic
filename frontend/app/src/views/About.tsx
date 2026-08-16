@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { GraduationCap, MapPin, Youtube } from "lucide-react";
-import { PROFILE } from "@/data/content";
-import { CHANNEL, TOPICS, VIDEOS, posterFor, totalViews } from "@/data/videos";
-import { CountUp, ImageReveal, Parallax, Reveal, TextReveal } from "@/components/motion";
+import { GraduationCap, Instagram, MapPin, Youtube } from "lucide-react";
+import { PROFILE, SOCIAL } from "@/data/content";
+import { GALLERY, SHOOTING } from "@/data/portraits";
+import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
+import {
+  CountUp,
+  ImageReveal,
+  Parallax,
+  Reveal,
+  Stagger,
+  StaggerItem,
+  TextReveal,
+} from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -77,15 +86,26 @@ export default function About() {
                 <MapPin className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                 <span>{PROFILE.base}</span>
               </li>
-              <li className="flex items-center gap-3">
-                <Youtube className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+              <li className="group flex items-center gap-3">
+                <Youtube className="icon-tilt h-4 w-4 shrink-0 text-accent" aria-hidden />
                 <a
-                  href={CHANNEL.url}
+                  href={SOCIAL.youtube.url}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="underline-grow"
                 >
-                  {CHANNEL.handle}
+                  {SOCIAL.youtube.handle}
+                </a>
+              </li>
+              <li className="group flex items-center gap-3">
+                <Instagram className="icon-tilt h-4 w-4 shrink-0 text-accent" aria-hidden />
+                <a
+                  href={SOCIAL.instagram.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline-grow"
+                >
+                  {SOCIAL.instagram.handle}
                 </a>
               </li>
             </ul>
@@ -101,18 +121,21 @@ export default function About() {
           </Reveal>
 
           <Reveal variant="fade-left">
+            {/* A photograph of him, not a frame from a report. The distinction
+                matters on a page that is about the person: a video still here
+                would be the work standing in for its author. */}
             <Parallax amount={18}>
               <ImageReveal
-                src={posterFor(VIDEOS[0].id)}
-                      fallbackSrc={posterFor(VIDEOS[0].id, "hq")}
-                alt={`Still from ${VIDEOS[0].title}`}
-                ratio="4/5"
-                className="rounded-lg shadow-lifted"
+                src={SHOOTING.src}
+                alt={SHOOTING.alt}
+                ratio="3/4"
+                immediate
+                className="rounded-xl shadow-primary"
                 imgClassName="object-cover"
               />
             </Parallax>
-            <p className="mt-3 text-xs text-muted-foreground">
-              From “{VIDEOS[0].title}”.
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+              He reports, shoots and edits every piece himself.
             </p>
           </Reveal>
         </div>
@@ -128,6 +151,76 @@ export default function About() {
             </Reveal>
           ))}
         </div>
+
+        {/* ── Portraits ──────────────────────────────────────────
+            Three frames from the same set, on the comb rhythm the rest of the
+            site uses: every second plate drops half a step from `lg` up, so the
+            row interlocks instead of sitting on one flat baseline. On a phone
+            it is a plain column, which is the right answer there. */}
+        <section className="mt-24 sm:mt-28">
+          <p className="rule-label">Portraits</p>
+          <Stagger className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5" step="normal">
+            {GALLERY.map((portrait, i) => (
+              <StaggerItem key={portrait.src} index={i}>
+                <figure className={i % 2 === 1 ? "lg:translate-y-8" : ""}>
+                  <ImageReveal
+                    src={portrait.src}
+                    alt={portrait.alt}
+                    ratio="3/4"
+                    className="rounded-xl shadow-primary"
+                    imgClassName="object-cover"
+                  />
+                  <figcaption className="rule-label mt-3">{portrait.caption}</figcaption>
+                </figure>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
+
+        {/* ── Follow ─────────────────────────────────────────────
+            The end of a biography is where a reader decides whether to keep
+            up with someone, so the two accounts sit here rather than only in
+            the footer. */}
+        <Reveal
+          variant="fade-up"
+          className="surface honeycomb honeycomb-strong mt-24 overflow-hidden p-7 sm:p-10 lg:mt-32"
+        >
+          <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="rule-label">Follow the work</p>
+              <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+                Reports land on YouTube first.
+              </h2>
+              <p className="mt-3 max-w-[46ch] leading-relaxed text-muted-foreground">
+                Instagram is where the stills and the between-shoots material go.
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap gap-3">
+              <Button
+                as="a"
+                href={SOCIAL.youtube.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="group"
+              >
+                <Youtube className="icon-tilt h-4 w-4" aria-hidden />
+                {SOCIAL.youtube.handle}
+              </Button>
+              <Button
+                as="a"
+                href={SOCIAL.instagram.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                variant="outline"
+                className="group"
+              >
+                <Instagram className="icon-tilt h-4 w-4" aria-hidden />
+                {SOCIAL.instagram.handle}
+              </Button>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </div>
   );

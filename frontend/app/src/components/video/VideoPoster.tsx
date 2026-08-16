@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils";
  * The step-down happens once per id and is invisible: the element keeps its
  * box the whole time, so a fallback never moves the layout.
  */
+/**
+ * A real `maxresdefault` is 1280×720. YouTube's "no such frame" placeholder is
+ * 120×90 and arrives with a 200, so anything this small is the placeholder and
+ * not a poster.
+ */
+const PLACEHOLDER_MAX_WIDTH = 200;
+
 export function VideoPoster({
   id,
   alt = "",
@@ -35,12 +42,25 @@ export function VideoPoster({
       src={posterFor(id, size)}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       // Reserving the intrinsic ratio keeps the box stable before the bytes
       // land, which is what stops a grid of these from settling as it loads.
       width={1280}
       height={720}
+      // `onError` alone was not enough, and this is why some posters were
+      // rendering as a grey smear: a missing `maxresdefault` does not 404, it
+      // returns a 120×90 grey placeholder with a 200, which loads perfectly
+      // and then gets scaled up into a 16:9 card. The size of what actually
+      // arrived is the only signal there is.
+      onLoad={(event) => {
+        const width = event.currentTarget.naturalWidth;
+        if (size === "max" && width > 0 && width < PLACEHOLDER_MAX_WIDTH) setSize("hq");
+      }}
       onError={() => setSize((s) => (s === "max" ? "hq" : s))}
+      // `object-cover` is doing real work on the fallback: `hqdefault` is 4:3
+      // with black bars, and covering a 16:9 box crops exactly the 12.5% at
+      // each edge that the bars occupy.
       className={cn("h-full w-full object-cover", className)}
     />
   );

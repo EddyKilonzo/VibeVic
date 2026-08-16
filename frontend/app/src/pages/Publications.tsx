@@ -1,0 +1,60 @@
+"use client";
+
+import { ArrowUpRight } from "lucide-react";
+import { PUBLICATIONS } from "@/data/content";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion";
+
+export default function Publications() {
+  return (
+    <div className="container-site pt-32 sm:pt-40">
+      <Reveal variant="fade-up">
+        <p className="rule-label">Where the work runs</p>
+        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+          Platforms
+        </h1>
+        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          Where the reporting is published, and where it was trained.
+        </p>
+      </Reveal>
+
+      {/* A quiet stagger: entries fade up in sequence, nothing slides. */}
+      <Stagger className="mt-16" step="normal">
+        {PUBLICATIONS.map((publication, i) => (
+          <StaggerItem key={publication.name} index={i}>
+            <Reveal variant="fade-up" as="article">
+              <div className="grid gap-4 border-t border-border py-8 sm:grid-cols-[1fr_2fr]">
+                <div>
+                  <h2 className="font-display text-2xl font-semibold tracking-tight">
+                    {publication.url ? (
+                      <a
+                        href={publication.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="focus-ring group inline-flex items-start gap-1.5"
+                      >
+                        <span className="underline-grow">{publication.name}</span>
+                        <ArrowUpRight
+                          className="nudge-x mt-1.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-accent"
+                          aria-hidden
+                        />
+                      </a>
+                    ) : (
+                      publication.name
+                    )}
+                  </h2>
+                  <p className="rule-label mt-2">{publication.period}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-primary">{publication.role}</p>
+                  <p className="mt-2 max-w-2xl leading-relaxed text-muted-foreground">
+                    {publication.description}
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </div>
+  );
+}

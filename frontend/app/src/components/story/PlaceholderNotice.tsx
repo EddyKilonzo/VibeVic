@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { PencilRuler } from "lucide-react";
 import { Reveal } from "@/components/motion";
 
@@ -12,7 +11,7 @@ import { Reveal } from "@/components/motion";
  * placeholder text can never be mistaken for Victor's reporting. Clearing the
  * `placeholder` flag on a story removes it.
  */
-export function PlaceholderNotice({ storyId }: { storyId?: string }) {
+export function PlaceholderNotice() {
   return (
     <Reveal variant="fade" distance="sm">
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-accent/50 bg-secondary/60 px-4 py-3 text-sm shadow-raised">
@@ -22,14 +21,10 @@ export function PlaceholderNotice({ storyId }: { storyId?: string }) {
           the site to demonstrate the editor and the listen feature — it is not published
           reporting.
         </p>
-        {storyId && (
-          <Link
-            href={`/admin/stories/${storyId}`}
-            className="focus-ring underline-grow shrink-0 font-semibold text-primary"
-          >
-            Rewrite it
-          </Link>
-        )}
+        {/* No link into the workspace from here. This banner renders on a
+            public article, and advertising the admin route to every reader is
+            the opposite of keeping it private — the journalist reaches their
+            own drafts from the workspace, which they are already signed in to. */}
       </div>
     </Reveal>
   );

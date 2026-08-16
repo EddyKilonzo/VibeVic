@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/data/api";
@@ -15,6 +15,8 @@ import { ImageReveal, Reveal, ScrollProgress, Stagger, StaggerItem } from "@/com
 import { ArticleActionBar } from "@/components/story/ArticleActionBar";
 import { ArticleBody } from "@/components/story/ArticleBody";
 import { ArticleIndex } from "@/components/story/ArticleIndex";
+import { SectionSheet } from "@/components/story/SectionSheet";
+import { ReadingControls, useReadingScale } from "@/components/story/ReadingControls";
 import { PlaceholderNotice } from "@/components/story/PlaceholderNotice";
 import { StoryCard } from "@/components/story/StoryCard";
 import { ArticleSkeleton } from "@/components/ui/Skeleton";
@@ -24,6 +26,8 @@ import { SectionHeading } from "@/components/SectionHeading";
 
 export default function Story({ slug }: { slug: string }) {
   const articleRef = useRef<HTMLElement>(null);
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+  const scale = useReadingScale();
 
   const { data: story, loading, error, reload } = useAsync(() => api.story(slug), [slug]);
 
@@ -71,6 +75,7 @@ export default function Story({ slug }: { slug: string }) {
           and related rail should not count as reading. */}
       <ScrollProgress target={articleRef} />
       <ArticleIndex story={story} />
+      <SectionSheet story={story} open={sectionsOpen} onClose={() => setSectionsOpen(false)} />
 
       <article
         ref={articleRef}
@@ -116,13 +121,19 @@ export default function Story({ slug }: { slug: string }) {
             </div>
 
             <ArticleActionBar story={story} />
+
+            {/* Reader controls sit with the actions, not floating over the
+                prose: they are set once and then wanted out of the way. */}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <ReadingControls story={story} onOpenSections={() => setSectionsOpen(true)} />
+            </div>
           </Reveal>
 
           {/* Template pieces say so, above the fold, before a reader has
               invested any time in them. */}
           {story.placeholder && (
             <div className="mt-8">
-              <PlaceholderNotice storyId={story.id} />
+              <PlaceholderNotice />
             </div>
           )}
         </header>
@@ -137,7 +148,10 @@ export default function Story({ slug }: { slug: string }) {
           />
         </figure>
 
-        <div className="container-article mt-14">
+        <div
+          className="paper container-article mt-14 py-2 sm:mt-16 sm:px-12 sm:py-14 lg:px-16"
+          style={{ "--reading-scale": scale } as React.CSSProperties}
+        >
           <ArticleBody story={story} />
 
           <Reveal variant="fade-up" className="mt-14 border-t border-border pt-6">

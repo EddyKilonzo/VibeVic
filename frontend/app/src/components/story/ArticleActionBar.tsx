@@ -31,6 +31,36 @@ export function ArticleActionBar({ story }: { story: Story }) {
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
+  /**
+   * Prefer the platform's own share sheet where it exists.
+   *
+   * On a phone, `navigator.share` opens the list of apps the reader actually
+   * uses — including the ones this product has never heard of — and it is the
+   * only route to a native "Save to Files" or an AirDrop. Our own sheet is the
+   * fallback for desktop browsers, which mostly do not implement it.
+   *
+   * A dismissed native sheet rejects with AbortError; that is the reader
+   * saying no, not a failure, so it opens nothing in its place.
+   */
+  const share = async () => {
+    const path = `/stories/${story.slug}`;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: story.title,
+          text: story.dek,
+          url: `${window.location.origin}${path}`,
+        });
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === "AbortError") return;
+        // Anything else — a permissions policy block, an unsupported payload —
+        // falls through to the sheet we control.
+      }
+    }
+    setShareOpen(true);
+  };
+
   const listening = state === "playing" || state === "paused";
   const expanded = mode === "listen";
 
@@ -90,7 +120,7 @@ export function ArticleActionBar({ story }: { story: Story }) {
 
         <button
           type="button"
-          onClick={() => setShareOpen(true)}
+          onClick={share}
           className="focus-ring press inline-flex h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-semibold transition-colors duration-normal hover:border-primary hover:text-primary"
         >
           <Share2 className="h-4 w-4" aria-hidden />

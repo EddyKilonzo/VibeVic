@@ -130,12 +130,13 @@ export default function Stories() {
           <motion.div
             layout={!reduced}
             transition={transitions.layout}
-            className="grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:auto-rows-auto lg:grid-cols-6"
           >
             <AnimatePresence mode="popLayout" initial={false}>
               {stories.map((story, i) => (
                 <motion.div
                   key={story.id}
+                  className={bentoSpan(i)}
                   layout={!reduced}
                   initial={reduced ? false : { opacity: 0, y: 12 }}
                   animate={{
@@ -149,7 +150,7 @@ export default function Stories() {
                   exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
                   transition={transitions.normal}
                 >
-                  <StoryCard story={story} />
+                  <StoryCard story={story} variant={i === 0 ? "feature" : "default"} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -159,6 +160,25 @@ export default function Stories() {
       </div>
     </>
   );
+}
+
+/**
+ * Bento spans for the archive.
+ *
+ * A uniform three-column grid says every piece matters equally, which is the
+ * one thing an archive should never say. The lead runs full width, the next
+ * two take halves, and the rest fall into thirds — the rhythm repeats every
+ * six so a long list stays composed rather than turning into one wide row
+ * followed by wallpaper.
+ *
+ * Only from `lg:` up. Below that the column is the layout, and imposing spans
+ * on a single-column stack achieves nothing but a bigger stylesheet.
+ */
+function bentoSpan(index: number): string {
+  const position = index % 6;
+  if (position === 0) return "lg:col-span-6";
+  if (position === 1 || position === 2) return "lg:col-span-3";
+  return "lg:col-span-2";
 }
 
 function FilterChip({

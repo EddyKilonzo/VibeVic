@@ -1,0 +1,614 @@
+// VibeVic data model.
+//
+// Two halves that must not be confused with one another:
+//
+//   * Public content — Story, Genre, Publication, Award. Mirrors
+//     frontend/app/src/data/types.ts. Readable without authentication.
+//   * The newsroom — everything behind a published story. Mirrors
+//     frontend/app/src/data/newsroom/types.ts. Never readable without
+//     authentication, and never serialisable onto a public response.
+//
+// Visibility is a property of the record, not of the screen showing it, so it
+// lives on the table. `CONFIDENTIAL` is stronger than `PRIVATE`: for those rows
+// even the *existence* of the record is protected, which is why the read path
+// filters them out of queries rather than fetching and then hiding them (see
+// AccessPolicyService.visibilityFilter). A 403 on a confidential id would
+// confirm the id exists; the API returns 404 instead.
+//
+// Every table carries createdAt/updatedAt. updatedAt is not decoration: it is
+// the optimistic-concurrency token. Postgres timestamps here are millisecond
+// precision (Prisma's default `timestamp(3)`), which matches the ISO strings
+// the client round-trips, so an equality check on it is exact.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* ── Enums ─────────────────────────────────────────────────────────────── */
+
+enum Visibility {
+  CONFIDENTIAL
+  PRIVATE
+  PUBLISHABLE
+}
+
+enum StoryStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum IdeaStage {
+  SPARK
+  RESEARCHING
+  PITCHED
+  COMMISSIONED
+  DROPPED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SourceStatus {
+  UNVERIFIED
+  VERIFYING
+  VERIFIED
+  DISPUTED
+}
+
+enum EntityKind {
+  PERSON
+  ORGANISATION
+  LOCATION
+  PROJECT
+  DOCUMENT
+}
+
+enum PortfolioClass {
+  STANDARD
+  SIGNATURE
+  INVESTIGATION
+  AWARD_SUBMISSION
+}
+
+/* ── Accounts ──────────────────────────────────────────────────────────── */
+
+/// The journalist's account. Deliberately minimal: no credential column yet,
+/// because the auth module does not issue credentials yet and an unused
+/// password field invites someone to write a login against it before the rest
+/// of the story (hashing, rotation, lockout) exists.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  /// Scope strings as understood by AccessPolicyService, e.g. "newsroom:read".
+  /// A separate table would be tidier; this is a scaffold and the list is short.
+  scopes    String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+/* ── Public content ────────────────────────────────────────────────────── */
+
+model Story {
+  id             String      @id @default(cuid())
+  slug           String      @unique
+  title          String
+  /// Standfirst / deck.
+  dek            String
+  genreSlug      String
+  tags           String[]    @default([])
+  status         StoryStatus @default(DRAFT)
+  publishedAt    DateTime?
+  readingMinutes Int         @default(0)
+  featured       Boolean     @default(false)
+  /// Template text shipped with the site, not authored reporting. Rendered with
+  /// a visible label so it can never be mistaken for published work.
+  placeholder    Boolean     @default(false)
+  /// Where it originally ran, if syndicated.
+  publication    String?
+
+  /// Ordered list of typed blocks, stored as JSON rather than HTML so the
+  /// editor can reorder blocks and the voice engine can pick which ones to
+  /// read. The union is validated in the application layer (StoryBlockDto);
+  /// a relational block table would buy nothing here and cost a join per read.
+  body Json @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Restrict, not Cascade or SetNull: deleting a genre must never delete
+  // published work, and genreSlug is required, so it cannot be nulled either.
+  genre     Genre      @relation(fields: [genreSlug], references: [slug], onDelete: Restrict)
+  stats     StoryStats?
+  portfolio PortfolioEntry?
+
+  ideas      Idea[]
+  pitches    Pitch[]
+  notes      Note[]
+  deadlines  Deadline[]
+
+  sources    StorySource[]
+  quotes     StoryQuote[]
+  interviews StoryInterview[]
+  evidence   StoryEvidence[]
+  timeline   StoryTimelineEvent[]
+  collections CollectionStory[]
+
+  @@index([status, publishedAt])
+  @@index([genreSlug])
+  @@map("stories")
+}
+
+/// Split from Story so a public read never has to select around it, and so
+/// counters can be written on a hot path without touching the article row.
+model StoryStats {
+  storyId          String   @id
+  views            Int      @default(0)
+  reads            Int      @default(0)
+  /// Listens via the voice player.
+  listens          Int      @default(0)
+  avgListenSeconds Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("story_stats")
+}
+
+model Genre {
+  slug        String   @id
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stories Story[]
+
+  @@map("genres")
+}
+
+model Publication {
+  id          String   @id @default(cuid())
+  name        String
+  role        String
+  period      String
+  description String
+  url         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("publications")
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  year        String
+  title       String
+  body        String
+  description String
+  /// "Winner" | "Finalist" | "Shortlisted" | "Honourable mention".
+  result      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("awards")
+}
+
+/* ── Curation ──────────────────────────────────────────────────────────── */
+
+/// Collections and portfolio classes are the two pieces of newsroom state the
+/// journalist chose to make visible, which is why they are the only ones the
+/// public curation payload can carry (see toPublicNewsroomPayload).
+model Collection {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  coverStoryId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stories CollectionStory[]
+
+  @@map("collections")
+}
+
+/// Ordered join — the order *is* the curation, so position is data, not a
+/// display preference, and must survive a round trip.
+model CollectionStory {
+  collectionId String
+  storyId      String
+  position     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  story      Story      @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, storyId])
+  @@unique([collectionId, position])
+  @@map("collection_stories")
+}
+
+/// How the journalist rates a piece — kept apart from StoryStats on purpose.
+/// A signature investigation with modest traffic is still the signature
+/// investigation, and merging the two would let traffic overwrite judgement.
+model PortfolioEntry {
+  storyId   String         @id
+  class     PortfolioClass @default(STANDARD)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_entries")
+}
+
+/// House style: preferred term → terms to avoid.
+model StyleGuideEntry {
+  id        String   @id @default(cuid())
+  preferred String
+  avoid     String[] @default([])
+  why       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("style_guide_entries")
+}
+
+/* ── Newsroom: ideas and pitches ───────────────────────────────────────── */
+
+/// Ideas and pitches carry no visibility column: the whole collection is
+/// private, so there is no per-row decision to make and no column that could be
+/// set to PUBLISHABLE by mistake.
+model Idea {
+  id        String    @id @default(cuid())
+  title     String
+  note      String    @default("")
+  tags      String[]  @default([])
+  genre     String
+  /// The journalist's own ranking. Never computed — an invented priority score
+  /// would be a machine pretending to know what matters.
+  priority  Priority  @default(MEDIUM)
+  stage     IdeaStage @default(SPARK)
+  storyId   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  story   Story?  @relation(fields: [storyId], references: [id], onDelete: SetNull)
+  pitches Pitch[]
+
+  @@index([stage])
+  @@map("ideas")
+}
+
+model Pitch {
+  id                String   @id @default(cuid())
+  ideaId            String?
+  title             String
+  /// The specific angle, not the subject area.
+  angle             String
+  whyItMatters      String   @default("")
+  whatIsKnown       String   @default("")
+  whatIsUnknown     String   @default("")
+  targetPublication String?
+  deadline          DateTime?
+  storyId           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  idea    Idea?         @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  story   Story?        @relation(fields: [storyId], references: [id], onDelete: SetNull)
+  /// Sources stay a reference, never a copy: a pitch that inlined contact
+  /// details would become a second place responsible for protecting them.
+  sources PitchSource[]
+
+  @@map("pitches")
+}
+
+model PitchSource {
+  pitchId   String
+  sourceId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pitch  Pitch  @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@id([pitchId, sourceId])
+  @@map("pitch_sources")
+}
+
+/* ── Newsroom: sources, quotes, interviews ─────────────────────────────── */
+
+model Source {
+  id           String       @id @default(cuid())
+  /// May be a pseudonym when visibility is CONFIDENTIAL.
+  name         String
+  role         String?
+  organisation String?
+  url          String?
+  /// ISO date the URL was last actually opened — not a guess.
+  accessedAt   DateTime?
+  notes        String       @default("")
+  status       SourceStatus @default(UNVERIFIED)
+  visibility   Visibility   @default(CONFIDENTIAL)
+
+  /// Real identity behind a pseudonym. Separate column so a screen, an export
+  /// or a query can load the record without it; nothing in the serialisation
+  /// layer will ever place this field on a response, public or not, without an
+  /// explicit read of `Source.protectedIdentity` by name.
+  protectedIdentity String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stories  StorySource[]
+  quotes   Quote[]
+  evidence EvidenceItem[]
+  pitches  PitchSource[]
+
+  @@index([visibility])
+  @@map("sources")
+}
+
+model Quote {
+  id          String       @id @default(cuid())
+  text        String
+  speaker     String
+  speakerRole String?
+  /// When it was said, which is not when it was written down.
+  saidAt      DateTime?
+  sourceId    String?
+  interviewId String?
+  /// Whether the interview counts this among its key quotes. Modelled as a
+  /// flag rather than a second join table because a key quote is by definition
+  /// one of that interview's quotes — a join could disagree with itself.
+  keyQuote    Boolean      @default(false)
+  status      SourceStatus @default(UNVERIFIED)
+  visibility  Visibility   @default(PRIVATE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  source    Source?      @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  interview Interview?   @relation(fields: [interviewId], references: [id], onDelete: SetNull)
+  stories   StoryQuote[]
+
+  @@index([visibility])
+  @@map("quotes")
+}
+
+model Interview {
+  id          String     @id @default(cuid())
+  interviewee String
+  role        String?
+  purpose     String     @default("")
+  conductedAt DateTime?
+  /// Free notes. Transcripts, if a recording is ever made, live here too.
+  notes       String     @default("")
+  /// Ordered list of open questions still to put to this interviewee.
+  followUps   String[]   @default([])
+  visibility  Visibility @default(CONFIDENTIAL)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  quotes  Quote[]
+  stories StoryInterview[]
+
+  @@index([visibility])
+  @@map("interviews")
+}
+
+/* ── Newsroom: evidence, entities, timeline ────────────────────────────── */
+
+model Entity {
+  id         String     @id @default(cuid())
+  kind       EntityKind
+  name       String
+  /// Other spellings and acronyms seen in the copy. A list rather than a single
+  /// alias because the terminology check reads all of them.
+  aliases    String[]   @default([])
+  note       String     @default("")
+  visibility Visibility @default(PRIVATE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  evidence EvidenceEntity[]
+  timeline TimelineEventEntity[]
+
+  @@index([visibility])
+  @@map("entities")
+}
+
+model EvidenceItem {
+  id         String     @id @default(cuid())
+  title      String
+  /// What this actually demonstrates — the claim it supports.
+  supports   String     @default("")
+  sourceId   String?
+  /// Free-text link or file reference. There is no upload pipeline, and a fake
+  /// one would imply documents are stored here when they are not.
+  reference  String?
+  visibility Visibility @default(PRIVATE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  source   Source?               @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  entities EvidenceEntity[]
+  stories  StoryEvidence[]
+  timeline TimelineEventEvidence[]
+
+  @@index([visibility])
+  @@map("evidence_items")
+}
+
+model TimelineEvent {
+  id         String   @id @default(cuid())
+  /// The date of the event itself, not of the note about it.
+  occurredAt DateTime
+  what       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  entities TimelineEventEntity[]
+  evidence TimelineEventEvidence[]
+  stories  StoryTimelineEvent[]
+
+  @@index([occurredAt])
+  @@map("timeline_events")
+}
+
+/* ── Newsroom: working notes and deadlines ─────────────────────────────── */
+
+model Note {
+  id         String     @id @default(cuid())
+  title      String
+  body       String     @default("")
+  storyId    String?
+  visibility Visibility @default(PRIVATE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  story Story? @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  @@index([visibility])
+  @@map("notes")
+}
+
+model Deadline {
+  id        String   @id @default(cuid())
+  storyId   String?
+  label     String
+  dueAt     DateTime
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  story Story? @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  @@index([dueAt])
+  @@map("deadlines")
+}
+
+/* ── Story ↔ record joins ──────────────────────────────────────────────── */
+//
+// Explicit join tables rather than implicit many-to-many. Two reasons that
+// matter here: the link between a story and a confidential source is itself
+// sensitive (it says who a story talked to), so it deserves a row that can be
+// audited and deleted on its own; and an explicit table leaves room for the
+// per-link fields this will grow — when the link was made, by whom.
+
+model StorySource {
+  storyId   String
+  sourceId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  story  Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, sourceId])
+  @@map("story_sources")
+}
+
+model StoryQuote {
+  storyId   String
+  quoteId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, quoteId])
+  @@map("story_quotes")
+}
+
+model StoryInterview {
+  storyId     String
+  interviewId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  story     Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, interviewId])
+  @@map("story_interviews")
+}
+
+model StoryEvidence {
+  storyId    String
+  evidenceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  story    Story        @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  evidence EvidenceItem @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, evidenceId])
+  @@map("story_evidence")
+}
+
+model StoryTimelineEvent {
+  storyId         String
+  timelineEventId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  story         Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  timelineEvent TimelineEvent @relation(fields: [timelineEventId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, timelineEventId])
+  @@map("story_timeline_events")
+}
+
+model EvidenceEntity {
+  evidenceId String
+  entityId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  evidence EvidenceItem @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  entity   Entity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, entityId])
+  @@map("evidence_entities")
+}
+
+model TimelineEventEntity {
+  timelineEventId String
+  entityId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  timelineEvent TimelineEvent @relation(fields: [timelineEventId], references: [id], onDelete: Cascade)
+  entity        Entity        @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([timelineEventId, entityId])
+  @@map("timeline_event_entities")
+}
+
+model TimelineEventEvidence {
+  timelineEventId String
+  evidenceId      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  timelineEvent TimelineEvent @relation(fields: [timelineEventId], references: [id], onDelete: Cascade)
+  evidence      EvidenceItem  @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([timelineEventId, evidenceId])
+  @@map("timeline_event_evidence")
+}

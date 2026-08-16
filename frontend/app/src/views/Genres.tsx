@@ -4,8 +4,8 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TOPICS, posterFor, videosByTopic } from "@/data/videos";
 import { storiesByGenre } from "@/data/content";
-import { ImageReveal, Reveal, Stagger, StaggerItem } from "@/components/motion";
-import { GooeyNav } from "@/components/reactbits";
+import { ImageReveal } from "@/components/motion";
+import { GooeyNav, ScrollStack, ScrollStackItem } from "@/components/reactbits";
 import { PageHero } from "@/components/hero/PageHero";
 
 export default function Genres() {
@@ -22,19 +22,22 @@ export default function Genres() {
       />
 
       <div className="container-site">
-      <Stagger className="mt-14 space-y-px" step="normal">
-        {TOPICS.map((topic, i) => {
+      {/* Each beat is a page that pins and stacks as the next arrives — the
+          four subjects are an ordered, finite set, which is the shape this
+          reads well at. Under reduced motion it falls back to a plain column,
+          because the sequence *is* the effect. */}
+      <ScrollStack className="mt-14">
+        {TOPICS.map((topic) => {
           const videos = videosByTopic(topic.slug);
           const written = storiesByGenre(topic.slug);
           const lead = videos[0];
 
           return (
-            <StaggerItem key={topic.slug} index={i}>
-              <Reveal variant="fade-up" as="section">
+            <ScrollStackItem key={topic.slug} className="surface p-6 sm:p-8">
+              <section id={topic.slug} className="scroll-mt-28">
                 <Link
-                  id={topic.slug}
                   href={`/videos?topic=${topic.slug}`}
-                  className="group focus-ring grid scroll-mt-28 items-center gap-6 border-t border-border py-8 transition-colors duration-normal hover:border-primary sm:grid-cols-[180px_1fr_auto]"
+                  className="group focus-ring grid items-center gap-6 sm:grid-cols-[200px_1fr_auto]"
                 >
                   {lead ? (
                     <ImageReveal
@@ -72,11 +75,11 @@ export default function Genres() {
                     </span>
                   </div>
                 </Link>
-              </Reveal>
-            </StaggerItem>
+              </section>
+            </ScrollStackItem>
           );
         })}
-      </Stagger>
+      </ScrollStack>
       </div>
     </>
   );

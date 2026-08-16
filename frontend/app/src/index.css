@@ -331,20 +331,160 @@
   }
 
   /* Article body typography */
+  /*
+   * Article typography.
+   *
+   * The base size is fluid *and* reader-adjustable: `--reading-scale` is set
+   * by the reading controls and multiplies a clamped base. Everything below
+   * sizes in `em`, so one variable moves headings, quotes and the drop cap
+   * together and the article never ends up with 22px body under a 26px
+   * heading.
+   */
+  /*
+   * ── Article typography: set like a book ───────────────────────
+   *
+   * The reference is a printed page, not a blog post. Concretely
+   * that means four things the web usually skips:
+   *
+   *  1. **Indented paragraphs, tight leading between them.** Books
+   *     mark a new paragraph by indenting, not by a blank line. The
+   *     gap here is small rather than absent, because the voice
+   *     player washes the paragraph being read and two touching
+   *     washes would be unreadable — this is the one place the
+   *     print convention is bent, and for a stated reason.
+   *  2. **The first paragraph of a section is flush.** An indent
+   *     after a heading indents nothing: there is no preceding line
+   *     to be distinguished from.
+   *  3. **Old-style numerals and real ligatures.** Lining figures
+   *     shout inside running prose; old-style ones sit on the
+   *     x-height where they belong.
+   *  4. **Hyphenated justification, from `sm:` up.** Justified text
+   *     without hyphenation opens rivers of white space, which is
+   *     why print never separates the two. On a narrow measure it
+   *     is all rivers, so phones stay ragged-right.
+   *
+   * The base size is fluid *and* reader-adjustable: `--reading-scale`
+   * multiplies a clamped base, and everything below sizes in `em`, so
+   * one variable moves headings, quotes and the drop cap together.
+   */
   .article-body {
-    @apply font-display text-[1.075rem] leading-[1.85] text-foreground/90;
+    @apply font-display text-foreground/90;
+    font-size: calc(var(--reading-scale, 1) * clamp(1.05rem, 1rem + 0.28vw, 1.2rem));
+    line-height: 1.78;
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    font-feature-settings: "liga" 1, "dlig" 1, "kern" 1;
+    hanging-punctuation: first last;
   }
+
   .article-body p {
-    @apply mb-7;
+    @apply mb-3;
+    text-indent: 1.4em;
   }
+  @media (min-width: 640px) {
+    .article-body p {
+      text-align: justify;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+  }
+
+  .article-body > p:first-of-type,
+  .article-body h2 + p,
+  .article-body blockquote + p,
+  .article-body figure + p,
+  .article-body ul + p,
+  .article-body ol + p,
+  .article-body hr + p {
+    text-indent: 0;
+  }
+
+  /* The opening line, set like a book: drop cap, then small caps. */
   .article-body > p:first-of-type::first-letter {
-    @apply font-display float-left mr-3 mt-1 text-[4.6rem] font-semibold leading-[0.8] text-primary;
+    @apply font-display float-left mr-3 mt-1 font-semibold text-primary;
+    font-size: 4.2em;
+    line-height: 0.78;
   }
+  .article-body > p:first-of-type::first-line {
+    font-variant-caps: small-caps;
+    letter-spacing: 0.03em;
+  }
+  /* A drop cap beside two words is a novelty, not typography. */
+  @media (max-width: 480px) {
+    .article-body > p:first-of-type::first-letter {
+      font-size: 3.1em;
+    }
+  }
+
+  /* Chapter-style headings: centred small caps over a hairline. */
   .article-body h2 {
-    @apply font-display mt-12 mb-5 text-[1.65rem] font-semibold leading-snug text-foreground;
+    @apply font-display mb-6 mt-14 text-center font-semibold text-foreground;
+    font-size: 1.16em;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    scroll-margin-top: 96px;
   }
+  .article-body h2::after {
+    content: "";
+    display: block;
+    width: 3.5rem;
+    height: 1px;
+    margin: 0.85rem auto 0;
+    background: hsl(var(--ink) / 0.28);
+  }
+
+  /*
+   * Displayed quotations are centred on a shorter measure with a
+   * mark above them. A rule down the left edge is a web convention;
+   * in a book a pulled quotation is centred, smaller, with air.
+   */
   .article-body blockquote {
-    @apply my-10 border-l-2 border-accent pl-6 font-display text-[1.35rem] italic leading-relaxed text-primary;
+    @apply relative my-12 border-0 px-6 text-center font-display italic leading-relaxed text-primary;
+    font-size: 1.2em;
+    max-width: 34ch;
+    margin-inline: auto;
+    text-indent: 0;
+  }
+  .article-body blockquote p {
+    text-indent: 0;
+    text-align: center;
+    margin-bottom: 0;
+  }
+  .article-body blockquote::before {
+    content: "“";
+    display: block;
+    font-size: 2.4em;
+    line-height: 0.6;
+    margin-bottom: 0.12em;
+    color: hsl(var(--accent) / 0.45);
+  }
+
+  /* An asterism — the printer's section break — instead of a rule. */
+  .article-body hr {
+    @apply my-14 border-0 text-center;
+    height: auto;
+  }
+  .article-body hr::before {
+    content: "⁂";
+    display: block;
+    font-size: 1.05em;
+    letter-spacing: 0.4em;
+    color: hsl(var(--ink) / 0.4);
+  }
+
+  .article-body ul,
+  .article-body ol {
+    @apply my-7 pl-7;
+  }
+  .article-body li {
+    @apply mb-2;
+    text-indent: 0;
+  }
+
+  .article-body figcaption {
+    font-variant-caps: small-caps;
+    letter-spacing: 0.05em;
+    text-indent: 0;
   }
   .article-body a {
     @apply text-accent underline decoration-brand-sky underline-offset-4 hover:text-primary;

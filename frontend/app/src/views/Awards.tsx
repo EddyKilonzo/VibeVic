@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { AWARDS } from "@/data/content";
 import { cn } from "@/lib/utils";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { EmptyState } from "@/components/ui/States";
-import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/hero/PageHero";
 import { AtmosphereBand } from "@/components/ui/AtmosphereBand";
 import { RECOGNITION_ATMOSPHERE } from "@/data/imagery";
@@ -42,11 +40,6 @@ export default function Awards() {
             icon={<Trophy className="h-5 w-5" aria-hidden />}
             title="Nothing listed yet"
             description="Awards and nominations will appear here once they're added. Nothing has been listed that hasn't been won."
-            action={
-              <Button as={Link} href="/admin/awards" variant="outline" size="sm">
-                Add an award
-              </Button>
-            }
           />
         </div>
       ) : (

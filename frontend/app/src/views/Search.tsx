@@ -9,6 +9,7 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { StoryCard } from "@/components/story/StoryCard";
 import { StoryGridSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/States";
+import { PageHero } from "@/components/hero/PageHero";
 
 export default function Search() {
   const { get, setParams } = useQueryParams();
@@ -39,13 +40,10 @@ export default function Search() {
   const searching = debounced.trim().length > 0;
 
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Search</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight sm:text-6xl">
-          Find a story
-        </h1>
-      </Reveal>
+    <>
+      <PageHero label="Search" title="Find a story" />
+
+      <div className="container-site mt-14">
 
       <Reveal variant="fade-up" delay={70} className="mt-10">
         <div className="flex items-center gap-3 border-b-2 border-border pb-3 transition-colors duration-normal focus-within:border-accent">
@@ -87,7 +85,8 @@ export default function Search() {
             ))}
           </Stagger>
         ) : null}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
+import { PageHero } from "@/components/hero/PageHero";
 
 /**
  * Awards.
@@ -17,16 +18,14 @@ import { Button } from "@/components/ui/Button";
  */
 export default function Awards() {
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Recognition</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Awards
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          Nominations, prizes and recognition for the reporting.
-        </p>
-      </Reveal>
+    <>
+      <PageHero
+        label="Recognition"
+        title="Awards"
+        lead="Nominations, prizes and recognition for the reporting."
+      />
+
+      <div className="container-site mt-16">
 
       {AWARDS.length === 0 ? (
         <div className="mt-16">
@@ -88,6 +87,7 @@ export default function Awards() {
           ))}
         </Stagger>
       )}
-    </div>
+      </div>
+    </>
   );
 }

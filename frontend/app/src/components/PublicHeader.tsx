@@ -75,15 +75,30 @@ export function PublicHeader() {
             ? { duration: 0 }
             : { duration: seconds.normal, ease: bezier.easeOut, delay: sequence.nav },
         }}
-        className={cn(
-          "fixed inset-x-0 top-0 z-50",
-          "transition-[background-color,border-color,box-shadow,backdrop-filter] duration-slow ease-editorial",
-          scrolled
-            ? "border-b border-border/70 bg-background/85 shadow-raised backdrop-blur-xl"
-            : "border-b border-transparent bg-transparent",
-        )}
+        className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5"
       >
-        <div className="container-site flex h-[68px] items-center justify-between gap-6 md:h-[76px]">
+        {/*
+          A floating capsule rather than a full-width bar.
+          It sits over the inset hero panel, so it needs its own edges to read
+          as an object; at the top of the page it is barely tinted and lets the
+          gradient through, and past the fold it firms up into frosted glass so
+          body copy stays readable underneath. The rounding and the border are
+          always present — a bar that grows a shape on scroll looks like it is
+          assembling itself.
+        */}
+        <div
+          className={cn(
+            // Not `container-site`: that utility carries its own horizontal
+            // padding, and which of the two wins depends on stylesheet order
+            // rather than on the class list. The width is spelled out instead.
+            "mx-auto flex h-[60px] w-full max-w-[1200px] items-center justify-between gap-6 rounded-full px-4 sm:px-5 md:h-[68px]",
+            "transition-[background-color,border-color,box-shadow,backdrop-filter] duration-slow ease-editorial",
+            "border",
+            scrolled
+              ? "border-white/70 bg-background/80 shadow-floating backdrop-blur-xl"
+              : "border-white/45 bg-white/35 shadow-raised backdrop-blur-md",
+          )}
+        >
           <Link
             href="/"
             className="focus-ring font-display tap inline-flex shrink-0 items-center text-lg font-semibold tracking-tight"

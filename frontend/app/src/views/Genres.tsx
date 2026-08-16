@@ -6,28 +6,22 @@ import { TOPICS, posterFor, videosByTopic } from "@/data/videos";
 import { storiesByGenre } from "@/data/content";
 import { ImageReveal, Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { GooeyNav } from "@/components/reactbits";
+import { PageHero } from "@/components/hero/PageHero";
 
 export default function Genres() {
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Beats</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          What I cover
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          Four beats, one method: start with what the institution actually does, then ask the
-          people it affects.
-        </p>
-      </Reveal>
+    <>
+      {/* The jump nav lives in the hero rail. Each beat has an anchor further
+          down the page, so this is real navigation rather than a decorative
+          row — which is the only reason it earns an effect this loud. */}
+      <PageHero
+        label="Beats"
+        title="What I cover"
+        lead="Four beats, one method: start with what the institution actually does, then ask the people it affects."
+        rail={<GooeyNav items={TOPICS.map((t) => ({ label: t.name, href: `#${t.slug}` }))} />}
+      />
 
-      {/* Jump nav. Each beat has an anchor further down the page, so this is
-          real navigation rather than a decorative row — which is the only
-          reason it earns an effect this loud. */}
-      <div className="mt-12">
-        <GooeyNav items={TOPICS.map((t) => ({ label: t.name, href: `#${t.slug}` }))} />
-      </div>
-
+      <div className="container-site">
       <Stagger className="mt-14 space-y-px" step="normal">
         {TOPICS.map((topic, i) => {
           const videos = videosByTopic(topic.slug);
@@ -82,6 +76,7 @@ export default function Genres() {
           );
         })}
       </Stagger>
-    </div>
+      </div>
+    </>
   );
 }

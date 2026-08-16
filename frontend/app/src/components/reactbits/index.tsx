@@ -41,11 +41,15 @@ export interface CurvedMarqueeProps {
  * Under reduced motion it renders the same words as a static line rather than
  * disappearing — the words are content, the loop is decoration, and only the
  * decoration should be negotiable.
+ *
+ * `curveAmount` is capped: the component's viewBox is 120 units tall and the
+ * arc's midpoint sits at 40 + curveAmount/2, so anything much past 140 sends
+ * the text out of the box and the band renders blank.
  */
 export function CurvedMarquee({
   text,
   speed = 1.4,
-  curveAmount = 320,
+  curveAmount = 90,
   direction = "left",
   className,
 }: CurvedMarqueeProps) {
@@ -64,7 +68,7 @@ export function CurvedMarquee({
       <CurvedLoopBase
         marqueeText={text}
         speed={speed}
-        curveAmount={curveAmount}
+        curveAmount={Math.min(curveAmount, 130)}
         direction={direction}
         interactive
       />

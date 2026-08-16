@@ -237,7 +237,10 @@ const SpecularButton = ({
         '--sb-tint': tint,
         '--sb-tint-opacity': tintOpacity,
         '--sb-blur': `${blur}px`,
-        '--sb-text-color': textColor
+        '--sb-text-color': textColor,
+        // Mirrors the shader uniform, so the CSS fallback fill matches the
+        // colour the canvas paints once it is running.
+        '--sb-base-color': baseColor
       }}
     >
       <span ref={fxRef} className="specular-button__fx" aria-hidden="true" />

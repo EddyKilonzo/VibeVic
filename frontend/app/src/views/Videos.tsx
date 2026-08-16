@@ -12,6 +12,7 @@ import { Reveal } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
+import { PageHero } from "@/components/hero/PageHero";
 
 export default function Videos() {
   const { get, setParams } = useQueryParams();
@@ -29,17 +30,16 @@ export default function Videos() {
   const setFilter = (key: string, value: string | null) => setParams({ [key]: value });
 
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Reports</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Every report
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          {VIDEOS.length} pieces published on {CHANNEL.handle}, from campus systems to cultural
-          week. Each one plays here — nothing loads from YouTube until you press play.
-        </p>
-      </Reveal>
+    <>
+      <PageHero
+        label="Reports"
+        title="Every report"
+        badge={`${VIDEOS.length} published on ${CHANNEL.handle}`}
+        badgeIcon={<Youtube className="h-3.5 w-3.5" aria-hidden />}
+        lead="From campus systems to cultural week. Each one plays here — nothing loads from YouTube until you press play."
+      />
+
+      <div className="container-site">
 
       <Reveal variant="fade-up" delay={80} className="mt-10 border-y border-border py-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -128,7 +128,8 @@ export default function Videos() {
           </Button>
         </div>
       </Reveal>
-    </div>
+      </div>
+    </>
   );
 }
 

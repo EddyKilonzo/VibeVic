@@ -55,11 +55,11 @@ export function HoneycombGround({
     };
 
     const onMove = (e: PointerEvent) => {
-      const rect = node.getBoundingClientRect();
-      x = e.clientX - rect.left;
-      // Page-relative, so the pool stays under the cursor as the reader
-      // scrolls rather than sliding away up the document.
-      y = e.clientY - rect.top;
+      // Viewport coordinates, because the layer they drive is `position:
+      // fixed`. Reading them straight off the event also avoids a
+      // `getBoundingClientRect()` — a forced layout — on every pointer move.
+      x = e.clientX;
+      y = e.clientY;
       if (!frame) frame = requestAnimationFrame(paint);
       node.dataset.pointer = "1";
     };

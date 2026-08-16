@@ -9,6 +9,7 @@ import { useCopy } from "@/hooks/useCopy";
 import { notify } from "@/lib/toast";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
+import { PageHero } from "@/components/hero/PageHero";
 
 const EMAIL = "tips@maraellison.example";
 const SIGNAL = "+44 7700 900112";
@@ -37,17 +38,14 @@ export default function Contact() {
   };
 
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Contact</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Tips and corrections
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          If you have seen something that should be reported, I would like to hear from you. If I
-          have got something wrong, I would like to hear that faster.
-        </p>
-      </Reveal>
+    <>
+      <PageHero
+        label="Contact"
+        title="Tips and corrections"
+        lead="If you have seen something that should be reported, I would like to hear from you. If I have got something wrong, I would like to hear that faster."
+      />
+
+      <div className="container-site">
 
       <div className="mt-16 grid gap-14 lg:grid-cols-[1fr_1.1fr]">
         <Reveal variant="fade-right">
@@ -117,7 +115,8 @@ export default function Contact() {
           </form>
         </Reveal>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

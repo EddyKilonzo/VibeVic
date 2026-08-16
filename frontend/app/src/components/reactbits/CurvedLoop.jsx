@@ -7,7 +7,9 @@ const CurvedLoop = ({
   marqueeText = '',
   speed = 2,
   className,
-  curveAmount = 400,
+  // Clamped by the caller; see the note in CurvedMarquee. The viewBox is
+  // only 120 units tall, so large values push the arc out of view.
+  curveAmount = 90,
   direction = 'left',
   interactive = true
 }) => {
@@ -31,15 +33,29 @@ const CurvedLoop = ({
   const velRef = useRef(0);
 
   const textLength = spacing;
+  const REPEAT_CAP = 24;
   const totalText = textLength
-    ? Array(Math.ceil(1800 / textLength) + 2)
+    ? Array(Math.min(REPEAT_CAP, Math.ceil(1800 / textLength) + 2))
         .fill(text)
         .join('')
     : text;
   const ready = spacing > 0;
 
   useEffect(() => {
-    if (measureRef.current) setSpacing(measureRef.current.getComputedTextLength());
+    if (!measureRef.current) return;
+    const measure = () => {
+      const len = measureRef.current?.getComputedTextLength() ?? 0;
+      // Below ~8px the text has not really been laid out yet (usually the
+      // display font is still loading); treat it as not ready rather than
+      // dividing by it.
+      if (len > 8) setSpacing(len);
+    };
+    measure();
+    // Re-measure once webfonts settle, so the band fills correctly on a cold
+    // load instead of staying at its fallback-font width.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(measure).catch(() => {});
+    }
   }, [text, className]);
 
   useEffect(() => {
@@ -64,8 +80,9 @@ const CurvedLoop = ({
         if (newOffset <= -wrapPoint) newOffset += wrapPoint;
         if (newOffset > 0) newOffset -= wrapPoint;
 
+        // Attribute only — no setState. Re-rendering React every frame here
+        // rebuilt the repeated string 60 times a second for no visual gain.
         textPathRef.current.setAttribute('startOffset', newOffset + 'px');
-        setOffset(newOffset);
       }
       frame = requestAnimationFrame(step);
     };

@@ -15,6 +15,7 @@ import { StoryGridSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/motion";
+import { PageHero } from "@/components/hero/PageHero";
 
 export default function Stories() {
   const { get, setParams } = useQueryParams();
@@ -37,18 +38,18 @@ export default function Stories() {
   const setFilter = (next: Record<string, string | null>) => setParams(next);
 
   return (
-    <div className="container-site pt-32 sm:pt-40">
-      <Reveal variant="fade-up">
-        <p className="rule-label">Archive</p>
-        <h1 className="font-display mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          {savedOnly ? "Saved stories" : "All stories"}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          {savedOnly
+    <>
+      <PageHero
+        label="Archive"
+        title={savedOnly ? "Saved stories" : "All stories"}
+        lead={
+          savedOnly
             ? "Everything you've kept for later, stored on this device."
-            : "Investigations, profiles and essays. Every piece can be read or listened to."}
-        </p>
-      </Reveal>
+            : "Investigations, profiles and essays. Every piece can be read or listened to."
+        }
+      />
+
+      <div className="container-site">
 
       {/* Filters */}
       <Reveal variant="fade-up" delay={80} className="mt-10 border-y border-border py-4">
@@ -155,7 +156,8 @@ export default function Stories() {
           </motion.div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

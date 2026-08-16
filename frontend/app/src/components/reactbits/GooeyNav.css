@@ -1,3 +1,11 @@
+/*
+ * Retinted for this product.
+ *
+ * The upstream component is black-and-white; every colour below now reads a
+ * brand token instead, so the nav re-tints with the theme rather than being a
+ * black slab on a pale blue panel. Only colours were changed — the geometry
+ * and the particle timing are untouched, so upstream updates still merge.
+ */
 :root {
   --linear-ease: linear(
     0,
@@ -45,8 +53,7 @@
   margin: 0;
   position: relative;
   z-index: 3;
-  color: white;
-  text-shadow: 0 1px 1px hsl(205deg 30% 10% / 0.2);
+  color: hsl(var(--muted-foreground));
 }
 
 .gooey-nav-container nav ul li {
@@ -58,7 +65,9 @@
     color 0.3s ease,
     box-shadow 0.3s ease;
   box-shadow: 0 0 0.5px 1.5px transparent;
-  color: white;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .gooey-nav-container nav ul li a {
@@ -67,15 +76,15 @@
 }
 
 .gooey-nav-container nav ul li:focus-within:has(:focus-visible) {
-  box-shadow: 0 0 0.5px 1.5px white;
+  box-shadow: 0 0 0.5px 2px hsl(var(--ring));
 }
 
 .gooey-nav-container nav ul li::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 10px;
-  background: white;
+  border-radius: 100vw;
+  background: hsl(var(--primary));
   opacity: 0;
   transform: scale(0);
   transition: all 0.3s ease;
@@ -83,7 +92,7 @@
 }
 
 .gooey-nav-container nav ul li.active {
-  color: black;
+  color: hsl(var(--primary-foreground));
   text-shadow: none;
 }
 
@@ -106,12 +115,12 @@
 }
 
 .gooey-nav-container .effect.text {
-  color: white;
+  color: hsl(var(--primary-foreground));
   transition: color 0.3s ease;
 }
 
 .gooey-nav-container .effect.text.active {
-  color: black;
+  color: hsl(var(--primary));
 }
 
 .gooey-nav-container .effect.filter {
@@ -124,14 +133,14 @@
   position: absolute;
   inset: -75px;
   z-index: -2;
-  background: black;
+  background: hsl(var(--primary));
 }
 
 .gooey-nav-container .effect.filter::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: white;
+  background: hsl(var(--primary));
   transform: scale(0);
   opacity: 0;
   z-index: -1;

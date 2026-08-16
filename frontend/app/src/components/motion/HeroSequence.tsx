@@ -76,6 +76,20 @@ export function HeroSequence({ children }: { children: ReactNode }) {
             sequence.decor,
           );
 
+        /*
+         * Content must never depend on an animation having run.
+         *
+         * A background tab suspends `requestAnimationFrame`, so the timeline
+         * would never advance and every element would sit in its `from` state
+         * — which for the hero means invisible — until the reader focused the
+         * tab. Opening a link in a new tab is an ordinary thing to do, so the
+         * entrance is skipped outright when the page starts hidden and the
+         * hero is simply there when the reader arrives.
+         */
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+          tl.progress(1);
+        }
+
         return () => tl.kill();
       });
 

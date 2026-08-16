@@ -44,7 +44,10 @@ export function VideoCard({
       >
         <div
           className={cn(
-            "relative overflow-hidden rounded-sm bg-muted",
+            // The poster is the card's object: rounds and elevation sit on
+            // this plate, and deepen on hover so the whole tile lifts as one.
+            "relative overflow-hidden rounded-lg bg-muted shadow-card",
+            "transition-shadow duration-normal ease-editorial group-hover:shadow-card-hover",
             video.format === "short" ? "aspect-[9/16]" : "aspect-video",
           )}
         >

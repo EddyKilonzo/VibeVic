@@ -87,6 +87,18 @@ export default {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        // The elevation scale. Values live in src/index.css so the whole
+        // system can be retuned in one place; these are the Tailwind names
+        // that reach for them.
+        raised: "var(--shadow-raised)",
+        lifted: "var(--shadow-lifted)",
+        floating: "var(--shadow-floating)",
+        deep: "var(--shadow-deep)",
+        edge: "var(--shadow-edge)",
+        // A raised surface with its lit top edge, which is what most cards
+        // actually want.
+        card: "var(--shadow-edge), var(--shadow-raised)",
+        "card-hover": "var(--shadow-edge), var(--shadow-lifted)",
       },
       keyframes: {
         "accordion-down": {

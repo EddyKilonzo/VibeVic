@@ -53,12 +53,25 @@ export interface StaggerItemProps {
   index: number;
   /** Caps cumulative delay so the last item of a long list never feels late. */
   max?: number;
+  /**
+   * Grid placement for this item — `lg:col-span-3` and the like.
+   *
+   * Supplying it makes the item render a real wrapper element. Without it the
+   * component stays purely a context provider and adds nothing to the DOM,
+   * which is what keeps it usable inside a grid whose children must be direct
+   * descendants.
+   */
+  className?: string;
 }
 
-export function StaggerItem({ children, index, max = 8 }: StaggerItemProps) {
+export function StaggerItem({ children, index, max = 8, className }: StaggerItemProps) {
   const ctx = useContext(StepContext);
   const parent = useContext(DelayContext);
   const delay = ctx ? ctx.base + Math.min(index, max) * ctx.step : parent;
 
-  return <DelayContext.Provider value={delay}>{children}</DelayContext.Provider>;
+  return (
+    <DelayContext.Provider value={delay}>
+      {className ? <div className={className}>{children}</div> : children}
+    </DelayContext.Provider>
+  );
 }

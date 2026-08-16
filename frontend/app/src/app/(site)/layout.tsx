@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
+import { HoneycombGround } from "@/components/texture/HoneycombGround";
 
 /**
  * The public shell.
@@ -11,12 +12,15 @@ import { PublicFooter } from "@/components/PublicFooter";
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    // The lattice lives on the page ground itself, so every route sits on the
+    // same stock and no page has to remember to ask for it. `HoneycombGround`
+    // adds the pointer response on top of the same layer.
+    <HoneycombGround className="flex min-h-screen flex-col">
       <PublicHeader />
       <main id="main" className="flex-1">
         {children}
       </main>
       <PublicFooter />
-    </div>
+    </HoneycombGround>
   );
 }

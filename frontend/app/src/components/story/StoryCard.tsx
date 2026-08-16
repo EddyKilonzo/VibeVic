@@ -75,7 +75,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           ratio={isFeature ? "16/9" : "16/10"}
           hoverZoom
           priority={isFeature}
-          className="mb-5"
+          className="mb-5 rounded-lg shadow-card transition-shadow duration-normal group-hover:shadow-card-hover"
         />
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

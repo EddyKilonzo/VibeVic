@@ -24,7 +24,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
     <Reveal variant="fade-up" distance="sm">
       <div
         className={cn(
-          "flex flex-col items-center justify-center border border-dashed border-border bg-card/60 px-6 py-20 text-center",
+          "honeycomb honeycomb-strong flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/60 px-6 py-20 text-center",
           className,
         )}
       >
@@ -63,7 +63,7 @@ export function ErrorState({
       <div
         role="alert"
         className={cn(
-          "flex flex-col items-center justify-center border border-border bg-card px-6 py-16 text-center",
+          "surface flex flex-col items-center justify-center px-6 py-16 text-center",
           className,
         )}
       >

@@ -48,6 +48,70 @@
     --glass-bg: 0 0% 100%;
     --glass-border: 0 0% 100%;
 
+    /* ── Elevation ────────────────────────────────────────────────
+       Shadows are tinted with the brand navy rather than pure black.
+       A neutral-black shadow over a blue-white ground reads as grey
+       dirt; carrying the hue through keeps the page feeling lit by
+       one light rather than assembled from parts.
+
+       Four steps, each with a real job:
+         raised  — sits on the page (cards at rest, inputs)
+         lifted  — reacts to a pointer (card and button hover)
+         floating— overlays the page (menus, popovers, sheets)
+         deep    — owns the screen (modals, the search overlay)
+       Every step pairs a tight contact shadow with a wide ambient
+       one; a single blur always looks like a sticker.            */
+    --shadow-raised:
+      0 1px 2px hsl(var(--ink) / 0.05),
+      0 2px 8px -2px hsl(var(--ink) / 0.06);
+    --shadow-lifted:
+      0 2px 4px hsl(var(--ink) / 0.06),
+      0 12px 28px -8px hsl(var(--ink) / 0.14);
+    --shadow-floating:
+      0 4px 10px hsl(var(--ink) / 0.08),
+      0 24px 48px -12px hsl(var(--ink) / 0.18);
+    --shadow-deep:
+      0 8px 20px hsl(var(--ink) / 0.10),
+      0 40px 80px -16px hsl(var(--ink) / 0.24);
+    /* Inset hairline that reads as a lit top edge on raised surfaces. */
+    --shadow-edge: inset 0 1px 0 hsl(0 0% 100% / 0.7);
+
+    /* ── Honeycomb ────────────────────────────────────────────────
+       Cell geometry lives here so the texture can be retuned in one
+       place.
+
+       Two numbers do all the work. The cell is large (72px) and the
+       ink is very low (2.2%), which is what separates a *surface* from
+       a *pattern*: at these values the lattice is something you notice
+       about the paper, not something you read past to reach the text.
+       An earlier pass at 56px and 4.5% was legible enough to compete
+       with body copy, which is exactly the failure mode.               */
+    --comb-size: 72px;
+    --comb-ink: hsl(var(--ink) / 0.022);
+    --comb-ink-strong: hsl(var(--ink) / 0.04);
+    /*
+       One hex cell of a pointy-top lattice, on an exact √3 : 3 unit so
+       the tile repeats seamlessly in both axes. Drawn as a hairline
+       stroke rather than a filled path — a filled honeycomb thickens as
+       the cell grows, while a 1-unit stroke in a 52-unit box stays
+       roughly a pixel at any sensible cell size.
+
+       Used as a mask, so the stroke colour here is irrelevant; only its
+       alpha is read, and the tint comes from `--comb-ink`.             */
+    --comb-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='51.96' height='90' viewBox='0 0 51.96 90'%3E%3Cpath d='M25.98 0 L51.96 15 L51.96 45 L25.98 60 L0 45 L0 15 Z M25.98 60 L25.98 90' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
+
+    /* Pointer pool. Defaults park it off-canvas so nothing shows until the
+       reader's cursor has actually been somewhere. */
+    --comb-x: -50vw;
+    --comb-y: -50vh;
+    --comb-glow: hsl(var(--accent) / 0.16);
+    --comb-pool: radial-gradient(
+      circle 320px at var(--comb-x) var(--comb-y),
+      #000 0%,
+      rgb(0 0 0 / 0.55) 45%,
+      transparent 78%
+    );
+
     --sidebar-background: 215 84% 34%;
     --sidebar-foreground: 205 92% 94%;
     --sidebar-primary: 0 0% 100%;
@@ -69,6 +133,24 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Entrance transforms must not create a scrollbar.
+   *
+   * `Reveal`'s horizontal variants start the element offset by up to 28px.
+   * Off-screen content keeps that offset until it scrolls into view, which on
+   * a 320px screen is enough to push the page sideways — measured at 21px on
+   * the contact form before this rule.
+   *
+   * `clip` rather than `hidden`: `overflow: hidden` on an ancestor silently
+   * breaks `position: sticky`, which the masthead and the mini-player both
+   * rely on. Vertical scrolling is untouched, and genuine layout overflow
+   * still shows up as clipped content rather than being scrolled to.
+   */
+  html,
+  body {
+    overflow-x: clip;
   }
   ::selection {
     background: hsl(var(--sky) / 0.55);
@@ -95,14 +177,14 @@
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
     backdrop-filter: blur(18px) saturate(1.5);
     border: 1px solid hsl(var(--glass-border) / 0.55);
-    box-shadow: 0 8px 32px hsl(var(--ink) / 0.07), inset 0 1px 0 hsl(0 0% 100% / 0.6);
+    box-shadow: var(--shadow-floating), var(--shadow-edge);
   }
   .glass-strong {
     background: hsl(var(--glass-bg) / 0.78);
     -webkit-backdrop-filter: blur(24px) saturate(1.6);
     backdrop-filter: blur(24px) saturate(1.6);
     border: 1px solid hsl(var(--glass-border) / 0.65);
-    box-shadow: 0 12px 40px hsl(var(--ink) / 0.1), inset 0 1px 0 hsl(0 0% 100% / 0.7);
+    box-shadow: var(--shadow-deep), var(--shadow-edge);
   }
   .glass-dark {
     background: hsl(var(--ink-deep) / 0.55);
@@ -147,6 +229,125 @@
 }
 
 @layer utilities {
+  /*
+   * ── Honeycomb ────────────────────────────────────────────────
+   *
+   * The house texture: an interlocking hex lattice, drawn once as an SVG
+   * and painted through a CSS mask rather than baked into the image. That
+   * indirection is the point — the cell colour stays a token, so the
+   * pattern re-tints with the theme instead of shipping a second asset.
+   *
+   * It is deliberately near the floor of visibility. A texture you notice
+   * on an article page is a texture competing with the article; this one
+   * should register as paper stock, not as pattern. `--comb-ink-strong`
+   * exists for the few places that carry no body copy — the hero ground,
+   * section bands, empty states — where it can be read a little louder.
+   *
+   * Always rendered in a `::before` so it never inherits into text and
+   * never intercepts a click.
+   */
+  .honeycomb {
+    position: relative;
+    isolation: isolate;
+  }
+  .honeycomb::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--comb-ink);
+    -webkit-mask-image: var(--comb-mask);
+    mask-image: var(--comb-mask);
+    -webkit-mask-size: var(--comb-size) auto;
+    mask-size: var(--comb-size) auto;
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+  }
+  /* Louder cells, for grounds that carry no body copy. */
+  .honeycomb-strong::before {
+    background-color: var(--comb-ink-strong);
+  }
+
+  /*
+   * Pointer response.
+   *
+   * A second lattice layer, masked twice: once by the hex cells and once by a
+   * wide radial pool at the cursor. Intersecting the two means only the cells
+   * near the pointer take the extra ink — the lattice appears to warm up
+   * locally rather than a blob sliding across the page.
+   *
+   * The radius is large (320px) and the tint low on purpose. A tight, bright
+   * spotlight is the version of this that pulls the eye away from the writing,
+   * which is the opposite of what a reading site wants.
+   *
+   * Coordinates come from `HoneycombGround`; the resting default sits it
+   * off-canvas so nothing shows before the first pointer event.
+   */
+  .honeycomb-live::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    background-color: var(--comb-glow);
+    transition: opacity var(--dur-slow) var(--ease-out);
+    -webkit-mask-image: var(--comb-mask), var(--comb-pool);
+    mask-image: var(--comb-mask), var(--comb-pool);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    -webkit-mask-size: var(--comb-size) auto, 100% 100%;
+    mask-size: var(--comb-size) auto, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .honeycomb-live[data-pointer]::after {
+      opacity: 1;
+    }
+  }
+  /*
+   * Fades the lattice out toward the bottom so a textured band can meet
+   * plain page without a hard seam.
+   */
+  .honeycomb-fade::before {
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    -webkit-mask-image: var(--comb-mask), linear-gradient(to bottom, #000 20%, transparent 100%);
+    mask-image: var(--comb-mask), linear-gradient(to bottom, #000 20%, transparent 100%);
+    -webkit-mask-size: var(--comb-size) auto, 100% 100%;
+    mask-size: var(--comb-size) auto, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+  }
+
+  /*
+   * Touch targets.
+   *
+   * The mobile brief sets a 44px floor for anything tappable. Expressed as a
+   * `min-height` so a component keeps its own visual height token and still
+   * clears the floor on a phone — the alternative, rewriting every height for
+   * mobile, would drift out of sync the first time a token changed.
+   *
+   * From `sm:` up the floor lifts: a mouse is aiming by then, and a 44px
+   * filter chip on a desktop toolbar just looks unfinished.
+   */
+  .tap {
+    min-height: 44px;
+  }
+  .tap-square {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  @media (min-width: 640px) {
+    .tap,
+    .tap-square {
+      min-height: 0;
+      min-width: 0;
+    }
+  }
+
   .text-balance {
     text-wrap: balance;
   }
@@ -256,6 +457,36 @@
   /* ── Interaction primitives ───────────────────────────────────── */
 
   /* Lift on hover, press back down on tap. Restrained by design. */
+  /* ── Elevation surfaces ─────────────────────────────────────────
+     `.surface` is the standard raised panel: a card, a filter bar, a
+     player. It pairs the shadow with a lit top edge so the object looks
+     lifted off the page rather than stamped onto it. `.surface-hover`
+     adds the pointer response, which is a shadow change and 2px of
+     travel — enough to read as "this is pressable", small enough that a
+     grid of twelve cards does not ripple as the cursor crosses it.   */
+  .surface {
+    @apply rounded-lg border border-border bg-card;
+    box-shadow: var(--shadow-edge), var(--shadow-raised);
+  }
+  .surface-hover {
+    transition:
+      transform var(--dur-normal) var(--ease-out),
+      box-shadow var(--dur-normal) var(--ease-out),
+      border-color var(--dur-normal) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .surface-hover:hover {
+      transform: translate3d(0, -2px, 0);
+      border-color: hsl(var(--accent) / 0.4);
+      box-shadow: var(--shadow-edge), var(--shadow-lifted);
+    }
+  }
+  .surface-hover:active {
+    transform: translate3d(0, 0, 0);
+    box-shadow: var(--shadow-edge), var(--shadow-raised);
+    transition-duration: var(--dur-fast);
+  }
+
   .hover-lift {
     transition:
       transform var(--dur-normal) var(--ease-out),
@@ -264,7 +495,7 @@
   @media (hover: hover) {
     .hover-lift:hover {
       transform: translate3d(0, -3px, 0);
-      box-shadow: 0 14px 34px hsl(var(--ink) / 0.11);
+      box-shadow: var(--shadow-lifted);
     }
   }
   .hover-lift:active {
@@ -440,6 +671,7 @@
     .reveal-shown,
     .mask-shown,
     .hover-lift,
+    .surface-hover,
     .media-zoom,
     .nudge-x,
     .underline-grow::after,
@@ -447,7 +679,11 @@
       transition-duration: 1ms !important;
       transition-delay: 0ms !important;
     }
+    /* The shadow still changes — that is the information. Only the travel
+       is removed, because translation is the part that causes trouble. */
     .hover-lift:hover,
+    .surface-hover:hover,
+    .surface-hover:active,
     .group:hover .media-zoom,
     .group:hover .nudge-x {
       transform: none !important;

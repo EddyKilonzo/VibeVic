@@ -93,7 +93,7 @@ export default function Dashboard() {
       </Stagger>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Reveal variant="fade-up" className="rounded-lg border border-border bg-card p-5">
+        <Reveal variant="fade-up" className="surface p-5">
           <p className="rule-label">Views by report</p>
           <p className="mt-1 text-sm text-muted-foreground">
             As published on {CHANNEL.handle}.
@@ -137,7 +137,7 @@ export default function Dashboard() {
         </Reveal>
 
         {/* Audio analytics — real recorded playback only. */}
-        <Reveal variant="fade-up" delay={80} className="rounded-lg border border-border bg-card p-5">
+        <Reveal variant="fade-up" delay={80} className="surface p-5">
           <p className="rule-label">Listening on this device</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Recorded as written pieces are played aloud.

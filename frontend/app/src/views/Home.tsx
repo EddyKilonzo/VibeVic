@@ -30,10 +30,13 @@ export default function Home() {
           One GSAP timeline drives the whole entrance; elements opt in
           with data-seq. Nothing here blocks interaction. */}
       <HeroSequence>
-        <section className="relative overflow-hidden pb-20 pt-32 sm:pb-28 sm:pt-40">
+        <section className="honeycomb honeycomb-strong honeycomb-fade relative overflow-hidden pb-20 pt-32 sm:pb-28 sm:pt-40">
           <div data-seq="texture" className="aurora absolute inset-0 -z-10" aria-hidden />
 
           <div className="container-site">
+            {/* Asymmetric on purpose: the column split is 1.15/1 and the
+                poster hangs below the baseline of the text column, so the two
+                halves interlock rather than sitting in matching boxes. */}
             <div className="grid items-end gap-12 lg:grid-cols-[1.15fr_1fr]">
               <div>
                 <p data-seq="eyebrow" className="kicker">
@@ -86,11 +89,23 @@ export default function Home() {
 
               {/* Lead poster: masked reveal, then a few px of parallax as it
                   scrolls. Enough to feel dimensional, not enough to notice. */}
-              <Parallax amount={22} className="relative">
+              {/* Offset with margin, not a translate: `Parallax` drives this
+                  element's transform from GSAP, and a Tailwind translate on
+                  the same node gets overwritten on the first scroll tick. */}
+              <Parallax amount={22} className="relative lg:mt-10">
+                {/* A hex plate offset behind the poster. It is the honeycomb
+                    motif at object scale — the same shape as the ground
+                    texture, used once, large, so the two read as one idea. */}
+                <span
+                  data-seq="decor"
+                  aria-hidden
+                  className="absolute -right-5 -top-6 hidden h-28 w-24 bg-brand-sky/25 lg:block"
+                  style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                />
                 <Link
                   href={lead ? `/videos/${lead.id}` : "/videos"}
                   data-seq="image"
-                  className="group focus-ring relative block aspect-[4/5] overflow-hidden rounded-sm bg-brand-ink-deep"
+                  className="group focus-ring relative block aspect-[4/5] overflow-hidden rounded-lg bg-brand-ink-deep shadow-floating ring-1 ring-white/40"
                 >
                   {lead && (
                     <img
@@ -117,7 +132,7 @@ export default function Home() {
 
                 <div
                   data-seq="decor"
-                  className="glass-chip absolute -bottom-4 -left-4 text-primary shadow-lg"
+                  className="glass-chip absolute -bottom-4 -left-4 text-primary shadow-floating"
                 >
                   {CHANNEL.videoCount} reports published
                 </div>
@@ -126,7 +141,7 @@ export default function Home() {
 
             <div
               data-seq="decor"
-              className="mt-20 flex items-center gap-6 border-t border-border pt-6"
+              className="mt-24 flex items-center gap-6 border-t border-border pt-6 lg:mt-32"
             >
               <span className="rule-label">Scroll</span>
               <span aria-hidden className="animate-scrollpulse h-8 w-px bg-accent" />
@@ -152,9 +167,16 @@ export default function Home() {
           </div>
         )}
 
-        <Stagger className="mt-16 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3" step="normal">
+        {/* Broken grid: the first two after the lead run wide, the rest fall
+            into thirds. A uniform 3×N wall of thumbnails reads as a catalogue;
+            an editorial page should say which pieces matter most. */}
+        <Stagger className="mt-16 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-6" step="normal">
           {rest.map((video, i) => (
-            <StaggerItem key={video.id} index={i}>
+            <StaggerItem
+              key={video.id}
+              index={i}
+              className={i < 2 ? "lg:col-span-3" : "lg:col-span-2"}
+            >
               <VideoCard video={video} />
             </StaggerItem>
           ))}
@@ -162,28 +184,42 @@ export default function Home() {
       </section>
 
       {/* ── Beats ────────────────────────────────────────────────── */}
-      <section className="container-site mt-28">
+      <section className="container-site mt-28 lg:pb-10">
         <SectionHeading
           label="Beats"
           title="What I cover"
           action={{ href: "/genres", label: "Every beat" }}
         />
-        <Stagger className="mt-12 grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4" step="tight">
+        {/* Comb rhythm: the tiles are separate raised cards and every second
+            one drops half a step, so the row interlocks the way cells in a
+            honeycomb do instead of sitting on one flat baseline. The offset
+            is desktop-only — on a phone the column is the layout. */}
+        <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" step="tight">
           {TOPICS.map((topic, i) => (
             <StaggerItem key={topic.slug} index={i}>
-              <Reveal variant="fade-up" distance="sm">
+              <Reveal variant="fade-up" distance="sm" className="h-full">
                 <Link
                   href={`/videos?topic=${topic.slug}`}
-                  className="group focus-ring block h-full bg-background p-6 transition-colors duration-normal hover:bg-secondary/60"
+                  className={
+                    "surface surface-hover group focus-ring relative flex h-full flex-col overflow-hidden p-6 " +
+                    (i % 2 === 1 ? "lg:translate-y-7" : "")
+                  }
                 >
-                  <p className="font-display text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
+                  <span
+                    aria-hidden
+                    className="absolute -right-6 -top-6 h-20 w-16 bg-accent/8 transition-colors duration-slow group-hover:bg-accent/16"
+                    style={{
+                      clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                    }}
+                  />
+                  <p className="font-display relative text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
                     {topic.name}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="relative mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
                     {topic.description}
                   </p>
                   <ArrowUpRight
-                    className="nudge-x mt-4 h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
+                    className="nudge-x relative mt-5 h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
                     aria-hidden
                   />
                 </Link>
@@ -237,14 +273,24 @@ export default function Home() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-3 gap-px self-start bg-border">
+            {/* Three raised plates rather than one hairline-divided block —
+                the middle one sits proud, so the row has a centre. */}
+            <div className="grid grid-cols-3 gap-3 self-start sm:gap-4">
               {[
                 { value: CHANNEL.videoCount, label: "Reports" },
                 { value: totalViews(), label: "Total views" },
                 { value: CHANNEL.subscribers, label: "Subscribers" },
               ].map((stat, i) => (
-                <Reveal key={stat.label} variant="fade-up" delay={i * 70} className="bg-background p-5">
-                  <p className="font-display text-3xl font-semibold tracking-tight text-primary">
+                <Reveal
+                  key={stat.label}
+                  variant="fade-up"
+                  delay={i * 70}
+                  className={
+                    "surface honeycomb honeycomb-strong overflow-hidden p-4 sm:p-5 " +
+                    (i === 1 ? "sm:-translate-y-4 sm:shadow-lifted" : "")
+                  }
+                >
+                  <p className="font-display text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
                     <CountUp value={stat.value} />
                   </p>
                   <p className="rule-label mt-1.5">{stat.label}</p>

@@ -293,11 +293,47 @@ export const storiesByGenre = (slug: string): Story[] =>
 
 export const genreName = (slug: string): string => genreBySlug(slug)?.name ?? slug;
 
+/**
+ * What to read next.
+ *
+ * ── Why this stopped being "same beat first" ─────────────────────────────
+ * It partitioned the archive into same-genre and everything-else, then took
+ * the first three in publication order. With five pieces across seven beats
+ * that is close to a random three: four of the seven beats hold exactly one
+ * story, so the same-genre bucket is usually empty and the result is just
+ * "the three most recent", which the site already shows on every other page.
+ *
+ * Tags are the finer signal. Two pieces sharing "mental health" belong
+ * together whether one is filed under Science & health and the other under
+ * Student life — and that cross-beat pairing is the one a reader could not
+ * have found on their own, which is the only thing a related rail is for.
+ *
+ * Scoring, not bucketing: a shared tag is worth more than a shared beat,
+ * because a beat is one of seven and a tag is specific. Recency breaks ties
+ * so an unrelated filler slot is at least the newest thing available, and
+ * stories with nothing in common are still returned rather than leaving a
+ * short rail — three cards is the layout, and two is a gap.
+ */
 export const relatedStories = (story: Story, limit = 3): Story[] => {
-  const pool = publishedStories().filter((s) => s.id !== story.id);
-  const sameGenre = pool.filter((s) => s.genre === story.genre);
-  const rest = pool.filter((s) => s.genre !== story.genre);
-  return [...sameGenre, ...rest].slice(0, limit);
+  const tags = new Set(story.tags.map((t) => t.toLowerCase()));
+
+  return publishedStories()
+    .filter((s) => s.id !== story.id)
+    .map((candidate) => {
+      const shared = candidate.tags.filter((t) => tags.has(t.toLowerCase())).length;
+      return {
+        story: candidate,
+        // 3 a tag, 1 a beat: two shared tags should outrank a beat match, and
+        // one shared tag plus the same beat should outrank one tag alone.
+        score: shared * 3 + (candidate.genre === story.genre ? 1 : 0),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score || b.story.publishedAt.localeCompare(a.story.publishedAt),
+    )
+    .slice(0, limit)
+    .map((entry) => entry.story);
 };
 
 /** Plain-text search across written work and video titles alike. */

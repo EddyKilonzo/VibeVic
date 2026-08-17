@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight, Headphones } from "lucide-react";
 import type { Story } from "@/data/types";
 import { genreName } from "@/data/content";
-import { coverFor } from "@/lib/cover";
+import { storyCover } from "@/lib/cover";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ImageReveal, Reveal } from "@/components/motion";
@@ -90,7 +90,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
         aria-label={`Read ${story.title}`}
       >
         <ImageReveal
-          src={coverFor(story.slug)}
+          src={storyCover(story)}
           alt=""
           ratio="16/10"
           hoverZoom
@@ -184,3 +184,4 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
     </Reveal>
   );
 }
+

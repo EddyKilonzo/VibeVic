@@ -39,7 +39,8 @@ export const PROFILE = {
   /** Every report on the channel to date has been filed from Eldoret. */
   base: "Eldoret, Kenya",
   channel: CHANNEL,
-  email: "hello@victorkiplimo.example",
+  /** His real address, as published on his own site. */
+  email: "vickiplimo901@gmail.com",
 } as const;
 
 /**
@@ -98,8 +99,19 @@ export const SOCIAL = {
  * `tel:` and `wa.me` both require; the spaced form is only ever displayed.
  */
 export const CONTACT = {
-  /** Still a placeholder domain. Replace before this site goes live. */
   email: PROFILE.email,
+  /**
+   * ⚠ Two different numbers have been supplied for this.
+   *
+   * The WhatsApp instruction gave …376007; his own site lists …375 007. One
+   * digit apart, which is exactly the shape of a typo, and there is no way to
+   * tell from here which one is the typo. What is below is the number that was
+   * given explicitly for WhatsApp, because that is the route the contact form
+   * hands off to and a dead WhatsApp link fails loudly rather than silently.
+   *
+   * This needs confirming before launch. A wrong number on a tips page does
+   * not bounce — it rings somebody else.
+   */
   phone: "+254 704 376 007",
   phoneDigits: "254704376007",
   /**
@@ -108,6 +120,35 @@ export const CONTACT = {
    * screen, and the opening line should not be the part worth reading.
    */
   whatsappMessage: "Hello Victor — I have something I'd like to share with you for a story.",
+} as const;
+
+/**
+ * How he introduces himself, in his own words.
+ *
+ * Lifted verbatim from Vic Unfiltered rather than rewritten. An About page
+ * written *about* someone in a house voice always reads a shade like a press
+ * release; his own sentences say what the site is for in a way a third party
+ * paraphrasing him cannot, and they are the ones he chose.
+ */
+export const ABOUT_INTRO = {
+  greeting:
+    "Greetings, esteemed visitor! I am Victor Kiplimo, and welcome to the world of Vic Unfiltered.",
+  lines: [
+    "This is a vibrant gallery of what I see, hear, and feel each day.",
+    "Latest news, town talk, faith, science, nature… I write, you choose.",
+  ],
+} as const;
+
+/**
+ * The quote he runs on his own site.
+ *
+ * Kept as data with its attribution attached, so it is impossible to render
+ * the words without the name — the failure mode for a pull quote on a
+ * journalist's site is an unattributed line that reads as his own.
+ */
+export const QUOTE_OF_THE_WEEK = {
+  text: "Everything that irritates us about others can lead us to an understanding of ourselves.",
+  author: "Carl Gustav Jung",
 } as const;
 
 /** Iteration order for follow rails: video first, because the work is video. */

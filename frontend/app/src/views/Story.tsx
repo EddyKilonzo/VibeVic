@@ -8,7 +8,7 @@ import { api } from "@/data/api";
 import { PROFILE, genreName, relatedStories } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
-import { coverFor } from "@/lib/cover";
+import { storyCover } from "@/lib/cover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
@@ -207,7 +207,7 @@ export default function Story({ slug }: { slug: string }) {
                   is not there". */}
               <Reveal variant="fade-scale" delay={180}>
                 <ImageReveal
-                  src={coverFor(story.slug)}
+                  src={storyCover(story)}
                   alt=""
                   ratio="16/10"
                   priority
@@ -329,3 +329,4 @@ export default function Story({ slug }: { slug: string }) {
     </>
   );
 }
+

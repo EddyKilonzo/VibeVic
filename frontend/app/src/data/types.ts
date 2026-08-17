@@ -89,6 +89,12 @@ export interface Story {
    * can see which is which rather than having to trust this copy.
    */
   sourceUrl?: string;
+  /**
+   * A real cover photograph. When absent the site falls back to generated
+   * art keyed off the slug, which is deliberately abstract — it is decoration
+   * standing in for a picture, and must never be mistaken for one.
+   */
+  cover?: string;
   body: Block[];
   /** Analytics, only meaningful for published work. */
   stats?: {

@@ -75,6 +75,17 @@ ${shapes.join("")}
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\n/g, ""))}`;
 }
 
+/**
+ * A story's cover: its own photograph where it has one, generated art where
+ * it does not.
+ *
+ * Callers should use this rather than `coverFor` directly, so a piece that
+ * arrives with a real picture never keeps the abstract stand-in.
+ */
+export function storyCover(story: { slug: string; cover?: string }): string {
+  return story.cover ?? coverFor(story.slug);
+}
+
 /** Square variant for avatars and list thumbnails. */
 export function thumbFor(slug: string): string {
   return coverFor(slug, 400, 400);

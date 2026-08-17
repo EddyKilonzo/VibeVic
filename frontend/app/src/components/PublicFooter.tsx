@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import { GENRES, PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { SocialIcon } from "@/components/social/SocialIcon";
-import { TOPICS } from "@/data/videos";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 
 const COLUMNS = [
@@ -40,8 +39,12 @@ export function PublicFooter() {
             into a tall stack the reader has to scroll past; paired, they read
             at a glance. The identity block and the subject list both span the
             full width — one because it carries a portrait and a paragraph,
-            the other because four beat names sit better as a 2×2 than as a
-            narrow column beside nothing. */}
+            the other because seven subject names sit better as two columns
+            than as one long list beside nothing.
+
+            Subjects link into `/genres`, not into a filtered video feed —
+            three of the seven have no video at all, so a `?topic=` link would
+            have landed the reader on an empty archive. */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-x-8 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-12">
           <Reveal variant="fade-up" distance="sm" className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-4">
@@ -119,11 +122,11 @@ export function PublicFooter() {
               step="tight"
               className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 md:grid-cols-1"
             >
-              {TOPICS.map((topic, i) => (
+              {GENRES.map((topic, i) => (
                 <StaggerItem key={topic.slug} index={i}>
                   <Reveal variant="fade" as="li">
                     <Link
-                      href={`/videos?topic=${topic.slug}`}
+                      href={`/genres#${topic.slug}`}
                       className="focus-ring underline-grow tap inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
                       {topic.name}

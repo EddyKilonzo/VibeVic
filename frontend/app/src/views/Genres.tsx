@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { TOPICS, videosByTopic } from "@/data/videos";
-import { storiesByGenre } from "@/data/content";
+import { VIDEOS } from "@/data/videos";
+import { GENRES, storiesByGenre } from "@/data/content";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { StoryCard } from "@/components/story/StoryCard";
@@ -30,6 +30,14 @@ import { PageHero } from "@/components/hero/PageHero";
  *
  * The pills in the hero jump between the sections below rather than
  * navigating away, so the nav is the page's table of contents.
+ *
+ * ── It runs on genres, not on video topics ───────────────────────────────
+ * It used to iterate the four video topics, which meant that the moment the
+ * written archive arrived, three whole beats — science and health, the
+ * environment, politics — existed in the filters on `/stories` and were
+ * invisible on the page whose entire job is to show what he covers. Reading
+ * from `GENRES` means a subject appears here because work exists under it,
+ * whether that work is filmed or written.
  */
 export default function Genres() {
   return (
@@ -37,12 +45,14 @@ export default function Genres() {
       <PageHero
         label="Beats"
         title="What I cover"
-        lead="Four beats, one method: start with what the institution actually does, then ask the people it affects. Everything filed under each one is below — reports and writing together."
-        rail={<PillNav items={TOPICS.map((t) => ({ label: t.name, href: `#${t.slug}` }))} />}
+        lead="Everything filed under each subject is below — reports and writing together. The filmed work centres on his college; the writing ranges wider."
+        rail={<PillNav items={GENRES.map((g) => ({ label: g.name, href: `#${g.slug}` }))} />}
       />
 
-      {TOPICS.map((topic, index) => {
-        const videos = videosByTopic(topic.slug);
+      {GENRES.map((topic, index) => {
+        // Compared as plain strings: the written-only genres are not video
+        // topics, so this is legitimately empty for three of the seven.
+        const videos = VIDEOS.filter((video) => video.topic === topic.slug);
         const written = storiesByGenre(topic.slug);
 
         return (
@@ -55,7 +65,7 @@ export default function Genres() {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <p className="rule-label">
-                    Beat {index + 1} of {TOPICS.length}
+                    Beat {index + 1} of {GENRES.length}
                   </p>
                   <h2 className="font-display display-2 mt-3 font-semibold text-balance">
                     {topic.name}
@@ -99,15 +109,17 @@ export default function Genres() {
                 ))}
               </Stagger>
             ) : (
-              <Reveal
-                variant="fade-up"
-                className="surface mt-10 border-dashed p-8 text-center text-muted-foreground"
-              >
-                <p className="leading-relaxed">
-                  Nothing filed under this beat yet. It is a subject he covers, not a promise that
-                  something is already published.
-                </p>
-              </Reveal>
+              written.length === 0 && (
+                <Reveal
+                  variant="fade-up"
+                  className="surface mt-10 border-dashed p-8 text-center text-muted-foreground"
+                >
+                  <p className="leading-relaxed">
+                    Nothing filed under this beat yet. It is a subject he covers, not a promise
+                    that something is already published.
+                  </p>
+                </Reveal>
+              )
             )}
 
             {written.length > 0 && (

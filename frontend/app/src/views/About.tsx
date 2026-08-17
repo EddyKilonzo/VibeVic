@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
-import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import { ABOUT_INTRO, PROFILE, QUOTE_OF_THE_WEEK, SOCIAL_ACCOUNTS } from "@/data/content";
 import {
   AGAINST_WALL,
   FIELD_CLIP,
@@ -151,6 +151,15 @@ export default function About() {
         <div className="grid gap-14 lg:grid-cols-[1.1fr_1fr]">
           <Reveal variant="fade-right">
             <div className="space-y-6 text-[1.05rem] leading-[1.8] text-foreground/90">
+              {/* His own introduction, verbatim from Vic Unfiltered. A house
+                  voice writing *about* him always reads a shade like a press
+                  release; these are the sentences he chose. */}
+              <p className="font-display text-[1.2rem] font-semibold leading-[1.5] text-foreground">
+                {ABOUT_INTRO.greeting}
+              </p>
+              {ABOUT_INTRO.lines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
               <p>
                 I'm a journalist based in {PROFILE.base}, and a {PROFILE.educationStatus} at{" "}
                 <span className="font-semibold text-primary">{PROFILE.education}</span>. I report,
@@ -333,6 +342,28 @@ export default function About() {
             </div>
           </div>
         </section>
+
+        {/* ── Quote ──────────────────────────────────────────────
+            The line he runs on his own site, carried across with its
+            attribution attached. It is set as a quotation and credited in the
+            markup as well as visually — on a journalist's page an
+            unattributed line in large italics reads as something he said. */}
+        <Reveal
+          variant="fade-up"
+          className="honeycomb honeycomb-strong mt-24 overflow-clip rounded-2xl border border-border p-8 sm:p-12 lg:mt-28"
+        >
+          <p className="rule-label">Quote of the week</p>
+          <figure className="mt-5">
+            <blockquote cite="https://en.wikipedia.org/wiki/Carl_Jung">
+              <p className="font-display max-w-[34ch] text-balance text-2xl font-semibold leading-[1.35] text-primary sm:text-[2rem]">
+                “{QUOTE_OF_THE_WEEK.text}”
+              </p>
+            </blockquote>
+            <figcaption className="mt-5 text-sm text-muted-foreground">
+              — <cite className="not-italic font-semibold">{QUOTE_OF_THE_WEEK.author}</cite>
+            </figcaption>
+          </figure>
+        </Reveal>
 
         {/* ── Follow ─────────────────────────────────────────────
             The end of a biography is where a reader decides whether to keep

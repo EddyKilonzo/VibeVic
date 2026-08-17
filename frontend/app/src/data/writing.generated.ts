@@ -11,7 +11,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "id": "w-155",
     "slug": "odm-leader-condemns-derogatory-remarks-at-odm-rally",
     "title": "ODM leader condemns derogatory remarks at ODM rally",
-    "dek": "In Summary Orange Democratic Movement party leader Oburu Oginga has strongly denounced the use of sexually offensive language at ODM’s party rally in Ragumo, Kisumu County, on Wednesday. The remarks were made by well-known comedian Richard Odhiambo, also known as Makamu wa Makamu, who appeared to denigrate women. The controversial figure is known for giving",
+    "dek": "In Summary Orange Democratic Movement party leader Oburu Oginga has strongly denounced the use of sexually offensive language at ODM’s party rally in Ragumo, Kisumu County, on Wednesday.",
     "genre": "politics",
     "tags": [
       "Catherine Omenya",
@@ -25,6 +25,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "readingMinutes": 2,
     "publication": "Vic Unfiltered",
     "sourceUrl": "https://vicunfiltered.wordpress.com/2026/02/27/odm-leader-condemns-derogatory-remarks-at-odm-rally/",
+    "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/02/screenshot-2026-02-23-120140.png",
     "body": [
       {
         "id": "w1",
@@ -120,7 +121,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "id": "w-164",
     "slug": "the-age-of-kenyas-tech-powered-conservation",
     "title": "The Age of Kenya’s Tech-Powered Conservation",
-    "dek": "For millennia, humans and wildlife have had an unstable relationship, with human civilizations constantly encroaching on animal territories while the wild struggles to fight the losing battle. Besides causing an imbalance in the ecosystem by destroying wildlife habitats, humans also hunted down millions of wild species, striking terror as they went. The motives behind the",
+    "dek": "For millennia, humans and wildlife have had an unstable relationship, with human civilizations constantly encroaching on animal territories while the wild struggles to fight the losing…",
     "genre": "environment",
     "tags": [
       "animals",
@@ -134,6 +135,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "readingMinutes": 5,
     "publication": "Vic Unfiltered",
     "sourceUrl": "https://vicunfiltered.wordpress.com/2026/03/19/the-age-of-kenyas-tech-powered-conservation/",
+    "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/pexels-photo-247431.jpeg",
     "body": [
       {
         "id": "w18",
@@ -346,7 +348,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "id": "w-190",
     "slug": "from-imposter-syndrome-to-breakthroughs-the-untold-human-side-of-internships-in-kenya",
     "title": "From Imposter Syndrome to Breakthroughs: The Untold Human Side of Internships in Kenya",
-    "dek": "As the Kenyan professional landscape continues to evolve, young talents are stepping into the ring, eager to carve their paths. Internships have become a rite of passage, a space where textbook knowledge meets real-world challenges. But what’s it really like? I spoke to my fellow young interns to uncover the human side of their internship",
+    "dek": "As the Kenyan professional landscape continues to evolve, young talents are stepping into the ring, eager to carve their paths.",
     "genre": "student-life",
     "tags": [
       "imposter-syndrome",
@@ -360,6 +362,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "readingMinutes": 2,
     "publication": "Vic Unfiltered",
     "sourceUrl": "https://vicunfiltered.wordpress.com/2026/04/16/from-imposter-syndrome-to-breakthroughs-the-untold-human-side-of-internships-in-kenya/",
+    "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/04/screenshot-2026-04-09-112929.png",
     "body": [
       {
         "id": "w59",
@@ -457,7 +460,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "id": "w-226",
     "slug": "drug-misuse-and-microbial-resistance-in-poultry-farming",
     "title": "Drug misuse and microbial resistance in poultry farming",
-    "dek": "My aunt and uncle recently ventured into poultry farming. They bought over 50 chickens and built a standard housing structure for semi-intensive rearing, where the chickens have access to the outdoors but in a fenced setting. The chickens fared well in their new habitation, but a mysterious disease hit them two months later, killing about",
+    "dek": "My aunt and uncle recently ventured into poultry farming.",
     "genre": "science",
     "tags": [
       "Agriculture",
@@ -471,6 +474,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "readingMinutes": 2,
     "publication": "Vic Unfiltered",
     "sourceUrl": "https://vicunfiltered.wordpress.com/2026/07/27/drug-misuse-and-microbial-resistance-in-poultry-farming/",
+    "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-19972937.jpeg",
     "body": [
       {
         "id": "w77",
@@ -568,7 +572,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "id": "w-242",
     "slug": "the-fear-of-metacognition-and-why-you-should-face-it",
     "title": "The fear of metacognition, and why you should face it",
-    "dek": "We all have this experience where you are by yourself in a quiet room, idle, then your mind starts replaying your thoughts, and a sudden fear grips you. You then rush for something to keep your mind busy. Doomscrolling is largely the most used escape. The psychological term for this phenomenon is known as autophobia.",
+    "dek": "We all have this experience where you are by yourself in a quiet room, idle, then your mind starts replaying your thoughts, and a sudden fear grips you.",
     "genre": "science",
     "tags": [
       "deep thinking",
@@ -582,6 +586,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "readingMinutes": 3,
     "publication": "Vic Unfiltered",
     "sourceUrl": "https://vicunfiltered.wordpress.com/2026/07/28/the-fear-of-metacognition-and-why-you-should-face-it/",
+    "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-8458906.jpeg",
     "body": [
       {
         "id": "w95",

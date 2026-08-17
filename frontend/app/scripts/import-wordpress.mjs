@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const SITE = "vicunfiltered.wordpress.com";
-const API = `https://public-api.wordpress.com/rest/v1.1/sites/${SITE}/posts/?number=50&fields=ID,title,slug,date,excerpt,content,categories,tags,URL`;
+const API = `https://public-api.wordpress.com/rest/v1.1/sites/${SITE}/posts/?number=50&fields=ID,title,slug,date,excerpt,content,categories,tags,URL,featured_image,post_thumbnail,attachments`;
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "writing.generated.ts");
 
@@ -136,7 +136,52 @@ function genreFor(categories) {
   return hits.find((g) => g !== "features") ?? hits[0] ?? "features";
 }
 
-const quote = (s) => JSON.stringify(s);
+/**
+ * A standfirst made of whole sentences.
+ *
+ * Takes sentences until it has enough to be worth reading and stops at the
+ * last full stop before the limit — never mid-clause. Aiming a little under
+ * 200 characters keeps it to about three lines on a card, which is the point
+ * at which a summary stops selling the piece and starts replacing it.
+ */
+function summarise(source, limit = 190) {
+  const clean = source.replace(/\s+/g, " ").trim();
+  if (clean.length <= limit) return clean;
+
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) ?? [];
+  let out = "";
+  for (const sentence of sentences) {
+    if ((out + sentence).trim().length > limit) break;
+    out += sentence;
+  }
+
+  // A single sentence longer than the limit: cut on a word and mark the cut,
+  // which is honest about being an extract rather than pretending to end.
+  if (!out) return `${clean.slice(0, clean.lastIndexOf(" ", limit))}…`;
+  return out.trim();
+}
+
+/**
+ * The best available cover for a post.
+ *
+ * WordPress exposes the same picture in several places depending on how the
+ * post was written, and `featured_image` is empty far more often than people
+ * expect. Falling through to the first attachment, then to the first image in
+ * the body, means a piece that plainly has a picture gets it rather than
+ * dropping to generated art on a technicality.
+ */
+function coverFor(post) {
+  if (post.featured_image) return post.featured_image;
+  if (post.post_thumbnail?.URL) return post.post_thumbnail.URL;
+
+  const attachment = Object.values(post.attachments ?? {}).find((a) =>
+    (a.mime_type ?? "").startsWith("image/"),
+  );
+  if (attachment?.URL) return attachment.URL;
+
+  const inline = post.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return inline ? inline[1] : undefined;
+}
 
 const response = await fetch(API);
 if (!response.ok) throw new Error(`WordPress API returned ${response.status}`);
@@ -156,11 +201,18 @@ for (const post of posts.slice().reverse()) {
   // sometimes followed by "Continue reading". Both are furniture from a theme
   // this site does not have; a standfirst that trails off into someone else's
   // read-more link is not a standfirst.
-  const dek = text(post.excerpt)
+  const excerpt = text(post.excerpt)
     .replace(/\s*\[[….]+\]\s*$/, "")
     .replace(/\s*Continue reading.*$/i, "")
     .replace(/[…]+$/, "")
     .trim();
+
+  // WordPress cuts excerpts at a word count, so they routinely stop mid-clause
+  // — the card then ends on "and a" and the reader has been given half a
+  // thought rather than a reason to click. `summarise` takes whole sentences
+  // instead, from the excerpt where there is one and from the opening of the
+  // piece otherwise.
+  const dek = summarise(excerpt || blocks[0].text);
 
   stories.push({
     id: `w-${post.ID}`,
@@ -178,6 +230,7 @@ for (const post of posts.slice().reverse()) {
     readingMinutes: Math.max(1, Math.round(words(blocks) / 220)),
     publication: "Vic Unfiltered",
     sourceUrl: post.URL,
+    cover: coverFor(post),
     body: blocks,
   });
 }

@@ -114,15 +114,19 @@
        Cell geometry lives here so the texture can be retuned in one
        place.
 
-       Two numbers do all the work. The cell is large (72px) and the
-       ink is very low (2.2%), which is what separates a *surface* from
-       a *pattern*: at these values the lattice is something you notice
-       about the paper, not something you read past to reach the text.
-       An earlier pass at 56px and 4.5% was legible enough to compete
-       with body copy, which is exactly the failure mode.               */
+       Two numbers do all the work: the cell size and the ink. The cell
+       stays large (72px) — that is what keeps this a *surface* rather
+       than a *pattern*, because a small cell turns into something the
+       eye tries to read. The ink is what controls how present it is,
+       and it is drawn in brand blue rather than in neutral ink so that
+       raising it warms the page toward the palette instead of greying
+       it: at 2.2% neutral the lattice was invisible on most screens,
+       and simply darkening that would have put a grey mesh behind blue
+       type. 5.5% of the primary hue is visible on a laptop panel and
+       still well under body copy, which is the line that matters.      */
     --comb-size: 72px;
-    --comb-ink: hsl(var(--ink) / 0.022);
-    --comb-ink-strong: hsl(var(--ink) / 0.04);
+    --comb-ink: hsl(var(--primary) / 0.055);
+    --comb-ink-strong: hsl(var(--primary) / 0.095);
     /*
        One hex cell of a pointy-top lattice, on an exact √3 : 3 unit so
        the tile repeats seamlessly in both axes. Drawn as a hairline

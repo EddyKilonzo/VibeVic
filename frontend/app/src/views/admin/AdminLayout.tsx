@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   BarChart3,
-  BookMarked,
   FileText,
   Image,
   LayoutDashboard,
@@ -33,7 +32,6 @@ const NAV = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/readers", label: "Readers", icon: Users },
   { href: "/admin/genres", label: "Genres & tags", icon: Tags },
-  { href: "/admin/publications", label: "Publications", icon: BookMarked },
   { href: "/admin/awards", label: "Awards", icon: Trophy },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

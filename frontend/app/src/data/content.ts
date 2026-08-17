@@ -35,33 +35,53 @@ export const PROFILE = {
 /**
  * Where to follow the work.
  *
- * The Instagram URL is the plain profile address. The link as it was supplied
- * carried an `igsh=` parameter — that is Instagram's share-tracking token,
- * which identifies the account that shared the link and would follow every
- * visitor who clicked it from here. It is stripped deliberately; a link on
- * someone's own site should not be carrying a referral tag for them.
+ * ── The URLs are cleaned on purpose ──────────────────────────────────────
+ * Both links arrived with tracking on them: `igsh=` on the Instagram one and
+ * `utm_source`/`utm_medium`/`r=` on the Substack one. Those identify the
+ * account that shared the link and the app it was shared from, and they would
+ * ride along on every visitor who clicked through from here. A link on
+ * someone's own site should not be carrying a referral tag for them, so what
+ * is stored below is the plain profile address in each case.
  */
 export interface SocialAccount {
+  id: "youtube" | "instagram" | "substack";
   label: string;
   handle: string;
   url: string;
+  /** What actually goes there — so a follow rail says more than a logo. */
+  note: string;
 }
 
 export const SOCIAL = {
   youtube: {
+    id: "youtube",
     label: "YouTube",
     handle: CHANNEL.handle,
     url: CHANNEL.url,
+    note: "Every report, published here first",
   },
   instagram: {
+    id: "instagram",
     label: "Instagram",
     handle: "@its_vickiplimo",
     url: "https://www.instagram.com/its_vickiplimo/",
+    note: "Stills and work between shoots",
+  },
+  substack: {
+    id: "substack",
+    label: "Substack",
+    handle: "@victorkiplimo",
+    url: "https://substack.com/@victorkiplimo",
+    note: "Longer writing, straight to your inbox",
   },
 } as const satisfies Record<string, SocialAccount>;
 
 /** Iteration order for follow rails: video first, because the work is video. */
-export const SOCIAL_ACCOUNTS: SocialAccount[] = [SOCIAL.youtube, SOCIAL.instagram];
+export const SOCIAL_ACCOUNTS: SocialAccount[] = [
+  SOCIAL.youtube,
+  SOCIAL.substack,
+  SOCIAL.instagram,
+];
 
 /* ── Written articles: PLACEHOLDER ─────────────────────────────── */
 

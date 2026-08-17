@@ -5,8 +5,9 @@ import Link from "next/link";
 import { NavLink } from "@/components/nav/NavLink";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Bookmark, Instagram, Search, Youtube } from "lucide-react";
+import { Bookmark, Search } from "lucide-react";
 import { SOCIAL_ACCOUNTS } from "@/data/content";
+import { SocialIcon } from "@/components/social/SocialIcon";
 import { cn } from "@/lib/utils";
 import { bezier, sequence, stagger, seconds, transitions } from "@/lib/motion";
 import { useHeaderState } from "@/hooks/useHeaderState";
@@ -17,7 +18,6 @@ const NAV = [
   { href: "/videos", label: "Reports" },
   { href: "/stories", label: "Writing" },
   { href: "/genres", label: "Beats" },
-  { href: "/publications", label: "Platforms" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -315,12 +315,8 @@ function MobileMenu({
                   onClick={onClose}
                   className="surface-compact focus-ring tap group inline-flex items-center gap-2 rounded-full px-4 text-xs font-semibold text-muted-foreground transition-colors hover:border-accent/50 hover:text-primary"
                 >
-                  {account.label === "Instagram" ? (
-                    <Instagram className="icon-tilt h-4 w-4 text-accent" aria-hidden />
-                  ) : (
-                    <Youtube className="icon-tilt h-4 w-4 text-accent" aria-hidden />
-                  )}
-                  {account.handle}
+                  <SocialIcon id={account.id} className="icon-tilt h-4 w-4 text-accent" />
+                  {account.label}
                 </a>
               ))}
             </motion.div>

@@ -37,19 +37,36 @@ export function VideoCard({
   const isFeature = variant === "feature";
 
   return (
-    <Reveal variant="fade-up" as="article" className={cn("group", className)}>
+    <Reveal variant="fade-up" as="article" className={cn("group h-full", className)}>
+      {/* The same shape as the story card, deliberately: one surface, the
+          media running to its own edges, the words on a padded sheet with a
+          hairline floor. Video and writing are one body of work and should
+          not look like two sections built by different people.
+
+          The feature runs across rather than down. A full-width 16:9 poster
+          is most of a screen of thumbnail before the title, which is a lot of
+          room to spend on a frame the reader is about to replace with the
+          video anyway. */}
       <Link
         href={`/videos/${video.id}`}
-        className="focus-ring press block"
+        className={cn(
+          "surface surface-hover focus-ring press h-full overflow-hidden",
+          isFeature ? "grid sm:grid-cols-[minmax(0,46%)_minmax(0,1fr)]" : "flex flex-col",
+        )}
         aria-label={`Watch ${video.title}`}
       >
+        {/* One plate shape for every report, Shorts included.
+            Shorts used to get a 9:16 box, which produced a 700px-tall tile
+            beside 230px ones and broke the grid — and it did not even show
+            the vertical frame, because YouTube's poster for a Short is a
+            landscape image, so a 9:16 box just cropped its sides away. The
+            badge is what says "Short"; the plate does not need to.
+            The height cap stops a card that lands wide in the bento from
+            becoming 400px of thumbnail before its title. */}
         <div
           className={cn(
-            // The poster is the card's object: rounds and elevation sit on
-            // this plate, and deepen on hover so the whole tile lifts as one.
-            "relative overflow-hidden rounded-lg bg-muted shadow-card",
-            "transition-shadow duration-normal ease-editorial group-hover:shadow-card-hover",
-            video.format === "short" ? "aspect-[9/16]" : "aspect-video",
+            "relative aspect-video max-h-[300px] overflow-hidden bg-brand-ink-deep",
+            isFeature && "sm:aspect-auto sm:h-full sm:max-h-none",
           )}
         >
           <VideoPoster
@@ -77,27 +94,41 @@ export function VideoCard({
           )}
         </div>
 
-        <p className="kicker mt-4">{topicName(video.topic)}</p>
-
-        <h3
+        <div
           className={cn(
-            "font-display mt-2 font-semibold leading-[1.2] tracking-tight text-balance",
-            "transition-transform duration-normal ease-entrance",
-            "group-hover:translate-x-[3px] motion-reduce:transform-none",
-            isFeature ? "text-2xl sm:text-4xl" : "text-lg sm:text-xl",
+            "flex flex-1 flex-col p-5",
+            isFeature ? "justify-center sm:p-7 lg:px-9 lg:py-8" : "sm:p-6",
           )}
         >
-          {video.title}
-        </h3>
+          <p className="kicker">{topicName(video.topic)}</p>
 
-        <div className="mt-3 flex items-center gap-3 text-[13px] text-muted-foreground">
-          <span>{publishedLabel(video.published)}</span>
-          <span aria-hidden className="h-3 w-px bg-border" />
-          <span>{formatCompact(video.views)} views</span>
-          <ArrowUpRight
-            className="nudge-x ml-auto h-4 w-4 transition-colors group-hover:text-accent"
-            aria-hidden
-          />
+          <h3
+            className={cn(
+              "font-display font-semibold tracking-tight text-balance",
+              "transition-transform duration-normal ease-entrance",
+              "group-hover:translate-x-[3px] motion-reduce:transform-none",
+              isFeature
+                ? "mt-3 text-[1.6rem] leading-[1.12] sm:text-[1.9rem] lg:text-[2.3rem]"
+                : "mt-2.5 flex-1 text-lg leading-[1.2] sm:text-xl",
+            )}
+          >
+            {video.title}
+          </h3>
+
+          <div
+            className={cn(
+              "flex items-center gap-3 border-t border-border pt-4 text-[13px] text-muted-foreground",
+              isFeature ? "mt-7" : "mt-5",
+            )}
+          >
+            <span>{publishedLabel(video.published)}</span>
+            <span aria-hidden className="h-3 w-px bg-border" />
+            <span className="tabular-nums">{formatCompact(video.views)} views</span>
+            <ArrowUpRight
+              className="nudge-x ml-auto h-4 w-4 transition-colors group-hover:text-accent"
+              aria-hidden
+            />
+          </div>
         </div>
       </Link>
     </Reveal>

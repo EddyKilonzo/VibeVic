@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Instagram, Youtube } from "lucide-react";
-import { PROFILE, SOCIAL } from "@/data/content";
+import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
+import { SocialIcon } from "@/components/social/SocialIcon";
 import { TOPICS } from "@/data/videos";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 
@@ -15,7 +15,7 @@ const COLUMNS = [
       { href: "/videos", label: "All reports" },
       { href: "/stories", label: "Written work" },
       { href: "/genres", label: "Beats" },
-      { href: "/publications", label: "Platforms" },
+      { href: "/awards", label: "Recognition" },
     ],
   },
   {
@@ -59,26 +59,34 @@ export function PublicFooter() {
               life — published as video, and written up here.
             </p>
 
-            <div className="mt-5 flex flex-col gap-3">
-              <a
-                href={SOCIAL.youtube.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="focus-ring group inline-flex items-center gap-2 text-sm font-semibold text-primary"
-              >
-                <Youtube className="icon-tilt h-4 w-4" aria-hidden />
-                <span className="underline-grow">{SOCIAL.youtube.handle}</span>
-              </a>
-              <a
-                href={SOCIAL.instagram.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="focus-ring group inline-flex items-center gap-2 text-sm font-semibold text-primary"
-              >
-                <Instagram className="icon-tilt h-4 w-4" aria-hidden />
-                <span className="underline-grow">{SOCIAL.instagram.handle}</span>
-              </a>
-            </div>
+            {/* Each account says what is on it. Three logos in a row tells a
+                reader where he is; a line each tells them which one they
+                actually want. */}
+            <ul className="mt-6 space-y-3">
+              {SOCIAL_ACCOUNTS.map((account) => (
+                <li key={account.id}>
+                  <a
+                    href={account.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="focus-ring group flex items-start gap-2.5 text-sm"
+                  >
+                    <SocialIcon
+                      id={account.id}
+                      className="icon-tilt mt-0.5 h-4 w-4 shrink-0 text-primary"
+                    />
+                    <span>
+                      <span className="underline-grow font-semibold text-primary">
+                        {account.handle}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {account.note}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </Reveal>
 
           {COLUMNS.map((column, ci) => (

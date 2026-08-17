@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, GraduationCap, Headphones, Instagram, MapPin, Youtube } from "lucide-react";
+import { ArrowUpRight, GraduationCap, Headphones, MapPin, Youtube } from "lucide-react";
 import { PROFILE, SOCIAL_ACCOUNTS, publishedStories } from "@/data/content";
 import { AGAINST_WALL, PORTRAIT, SHOOTING, WITH_CAMERA } from "@/data/portraits";
+import { SocialIcon } from "@/components/social/SocialIcon";
 import { CHANNEL, TOPICS, longFormVideos, totalViews, videosByTopic } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,24 @@ import { HeroBadge, HeroPanel } from "@/components/hero/HeroPanel";
 import { HeroNote } from "@/components/hero/HeroNote";
 import { LeadMark } from "@/components/hero/PageHero";
 import { CurvedMarquee, SpecularButton, SpringCountUp } from "@/components/reactbits";
+
+/**
+ * Bento spans for the report grid, on a twelve-column field.
+ *
+ * The cycle is 7·5 / 4·4·4 — a wide-and-narrow pair, then an even trio — so a
+ * run of reports reads as composed rows instead of a catalogue. It repeats
+ * every five, which means the layout holds at any length rather than looking
+ * deliberate for the first row and arbitrary after it.
+ *
+ * `lg:` only. Below that the one- and two-column stacks are the layout, and
+ * imposing spans on them buys nothing.
+ */
+function reportSpan(index: number): string {
+  const position = index % 5;
+  if (position === 0) return "lg:col-span-7";
+  if (position === 1) return "lg:col-span-5";
+  return "lg:col-span-4";
+}
 
 export default function Home() {
   const router = useRouter();
@@ -197,14 +216,11 @@ export default function Home() {
                     href={account.url}
                     target="_blank"
                     rel="noreferrer noopener"
+                    title={account.note}
                     className="focus-ring tap group inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 text-[11px] font-semibold text-white backdrop-blur-sm transition-colors duration-normal hover:border-white/60 hover:bg-white/20"
                   >
-                    {account.label === "Instagram" ? (
-                      <Instagram className="icon-tilt h-3.5 w-3.5" aria-hidden />
-                    ) : (
-                      <Youtube className="icon-tilt h-3.5 w-3.5" aria-hidden />
-                    )}
-                    {account.handle}
+                    <SocialIcon id={account.id} className="icon-tilt h-3.5 w-3.5" />
+                    {account.label}
                   </a>
                 ))}
               </div>
@@ -415,16 +431,17 @@ export default function Home() {
           </div>
         )}
 
-        {/* Broken grid: the first two after the lead run wide, the rest fall
-            into thirds. A uniform 3×N wall of thumbnails reads as a catalogue;
-            an editorial page should say which pieces matter most. */}
-        <Stagger className="mt-16 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-6" step="normal">
+        {/* Twelve columns, so the rhythm can be 7·5 then 4·4·4 rather than a
+            wall of identical thirds. A uniform grid says every report matters
+            the same amount, which is the one thing an editorial page should
+            never say — and at twelve the pattern repeats every five cards, so
+            it stays composed however many there are. */}
+        <Stagger
+          className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5"
+          step="normal"
+        >
           {rest.map((video, i) => (
-            <StaggerItem
-              key={video.id}
-              index={i}
-              className={i < 2 ? "lg:col-span-3" : "lg:col-span-2"}
-            >
+            <StaggerItem key={video.id} index={i} className={reportSpan(i)}>
               <VideoCard video={video} />
             </StaggerItem>
           ))}

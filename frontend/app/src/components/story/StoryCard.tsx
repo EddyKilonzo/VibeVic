@@ -42,7 +42,9 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           href={`/stories/${story.slug}`}
           className="group focus-ring press flex items-baseline gap-5 border-b border-border py-5 transition-colors duration-normal hover:border-primary"
         >
-          <span className="rule-label w-24 shrink-0 tabular-nums">
+          {/* Wide enough for "Aug 1, 2026" at this tracking — at `w-24` the
+              year wrapped onto its own line and the row lost its baseline. */}
+          <span className="rule-label w-[7.5rem] shrink-0 whitespace-nowrap tabular-nums">
             {formatShortDate(story.publishedAt)}
           </span>
           <span className="min-w-0 flex-1">
@@ -69,33 +71,56 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
       as="article"
       className={cn("group relative h-full", className)}
     >
-      {/* The card is a real surface now: the cover runs to the card's own
-          edges and the text sits on a padded sheet below it, so a lone story
-          in a grid reads as a published object rather than as a paragraph
-          that happens to have a picture above it. `h-full` plus the column
-          flex is what keeps the meta bar on the card's floor when cards of
-          different lengths sit side by side. */}
+      {/* The card is a real surface: the cover runs to the card's own edges
+          and the text sits on a padded sheet.
+
+          The lead runs *across* rather than down. Stacked, a full-width
+          feature put a 16:9 cover at the container's whole width — most of a
+          screen of decorative gradient before a single word of the piece.
+          Side by side, the cover is a third of the width and the card's
+          height is set by its text, which is the thing worth reading. Below
+          `sm` it falls back to the stacked layout, where a column is the only
+          honest arrangement anyway. */}
       <Link
         href={`/stories/${story.slug}`}
-        className="surface surface-hover focus-ring press flex h-full flex-col overflow-hidden"
+        className={cn(
+          "surface surface-hover focus-ring press h-full overflow-hidden",
+          isFeature ? "grid sm:grid-cols-[minmax(0,38%)_minmax(0,1fr)]" : "flex flex-col",
+        )}
         aria-label={`Read ${story.title}`}
       >
         <ImageReveal
           src={coverFor(story.slug)}
           alt=""
-          ratio={isFeature ? "16/9" : "16/10"}
+          ratio="16/10"
           hoverZoom
           priority={isFeature}
-          className="shrink-0"
+          // From `sm` the cover is a grid cell that stretches to the row, so
+          // an explicit height takes over from the ratio and the picture is
+          // exactly as tall as the words beside it. Below `sm` the layout is
+          // stacked and the ratio does the work.
+          className={cn("shrink-0", isFeature && "sm:h-full")}
         />
 
-        <div className={cn("flex flex-1 flex-col p-5", isFeature ? "sm:p-8" : "sm:p-6")}>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {/* On the feature the column centres its content instead of pushing
+            the meta to the floor. The cover sets the row height, so pinning
+            the meta down left a band of empty card between the standfirst and
+            the date — a gap that reads as something failing to load rather
+            than as space. On the stacked card the floor is right, because
+            there the text sets the height and neighbouring cards need their
+            meta on one line. */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col p-5",
+            isFeature ? "justify-center sm:p-7 lg:px-9 lg:py-8" : "sm:p-6",
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p className="kicker">{genreName(story.genre)}</p>
             {/* Template pieces are labelled in the listing too, so a reader
                 knows before they click rather than after. */}
             {story.placeholder && (
-              <span className="rounded-full border border-dashed border-accent/50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent">
+              <span className="rounded-full border border-dashed border-accent/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
                 Template
               </span>
             )}
@@ -103,10 +128,12 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
 
           <h3
             className={cn(
-              "font-display mt-2.5 font-semibold leading-[1.18] tracking-tight text-balance",
+              "font-display font-semibold tracking-tight text-balance",
               "transition-transform duration-normal ease-entrance",
               "group-hover:translate-x-[3px] motion-reduce:transform-none",
-              isFeature ? "text-2xl sm:text-[2.1rem]" : "text-xl",
+              isFeature
+                ? "mt-3 text-[1.6rem] leading-[1.12] sm:text-[1.75rem] lg:text-[2.1rem]"
+                : "mt-2.5 text-xl leading-[1.18]",
             )}
           >
             {story.title}
@@ -114,8 +141,10 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
 
           <p
             className={cn(
-              "mt-3 flex-1 leading-relaxed text-muted-foreground",
-              isFeature ? "max-w-[54ch] text-[1.02rem]" : "text-[0.94rem]",
+              "text-pretty text-muted-foreground",
+              isFeature
+                ? "mt-4 max-w-[50ch] text-[1.02rem] leading-[1.65]"
+                : "mt-3 flex-1 text-[0.94rem] leading-relaxed",
             )}
           >
             {story.dek}
@@ -123,7 +152,12 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
 
           {/* Metadata holds still on hover — only the arrow moves. It sits on
               a hairline so the card has a floor. */}
-          <div className="mt-6 flex items-center gap-3 border-t border-border pt-4 text-[13px] text-muted-foreground">
+          <div
+            className={cn(
+              "flex items-center gap-3 border-t border-border text-[13px] text-muted-foreground",
+              isFeature ? "mt-7 pt-4" : "mt-6 pt-4",
+            )}
+          >
             <time dateTime={story.publishedAt}>{formatShortDate(story.publishedAt)}</time>
             <span aria-hidden className="h-3 w-px bg-border" />
             <span>{story.readingMinutes} min read</span>

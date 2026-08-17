@@ -2,115 +2,149 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { TOPICS, posterFor, videosByTopic } from "@/data/videos";
+import { TOPICS, videosByTopic } from "@/data/videos";
 import { storiesByGenre } from "@/data/content";
-import { formatCompact } from "@/lib/format";
-import { ImageReveal } from "@/components/motion";
-import { PillNav, ScrollStack, ScrollStackItem } from "@/components/reactbits";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { VideoCard } from "@/components/video/VideoCard";
+import { StoryCard } from "@/components/story/StoryCard";
+import { Button } from "@/components/ui/Button";
+import { PillNav } from "@/components/reactbits";
 import { PageHero } from "@/components/hero/PageHero";
 
+/**
+ * The subject index.
+ *
+ * ── What this page is for ────────────────────────────────────────────────
+ * It used to be four cards that each linked to `/videos?topic=…`, which made
+ * it a menu in front of another page — a click the reader had to spend to get
+ * somewhere they could have gone directly from the nav. So it does the actual
+ * job instead: everything filed under a beat, on one screen, with the reports
+ * and the written pieces together.
+ *
+ * That is the split with `/videos`, and it is worth stating because the two
+ * pages hold the same reports:
+ *
+ *   /videos   the feed — every report, newest first, filterable.
+ *   /genres   the subject — one beat at a time, video *and* writing, which
+ *             the video archive cannot show because it only holds video.
+ *
+ * The pills in the hero jump between the sections below rather than
+ * navigating away, so the nav is the page's table of contents.
+ */
 export default function Genres() {
   return (
     <>
-      {/* The jump nav lives in the hero rail. Each beat has an anchor further
-          down the page, so this is real navigation rather than a decorative
-          row. */}
       <PageHero
         label="Beats"
         title="What I cover"
-        lead="Four beats, one method: start with what the institution actually does, then ask the people it affects."
+        lead="Four beats, one method: start with what the institution actually does, then ask the people it affects. Everything filed under each one is below — reports and writing together."
         rail={<PillNav items={TOPICS.map((t) => ({ label: t.name, href: `#${t.slug}` }))} />}
       />
 
-      <div className="container-site">
-        {/* Each beat parks under the masthead and the next one slides over it,
-            so the four read as a short, ordered sequence rather than a list —
-            the page turn of a book, which is the shape a finite set of four
-            subjects wants. Sticky positioning, so the page keeps one scroller
-            and nothing captures the wheel. */}
-        <ScrollStack className="mt-14 pb-8">
-          {TOPICS.map((topic) => {
-            const videos = videosByTopic(topic.slug);
-            const written = storiesByGenre(topic.slug);
-            const lead = videos[0];
+      {TOPICS.map((topic, index) => {
+        const videos = videosByTopic(topic.slug);
+        const written = storiesByGenre(topic.slug);
 
-            return (
-              <ScrollStackItem key={topic.slug} className="surface overflow-hidden">
-                <section id={topic.slug} className="scroll-mt-28">
-                  <Link
-                    href={`/videos?topic=${topic.slug}`}
-                    className="group focus-ring grid gap-6 p-5 sm:grid-cols-[minmax(0,300px)_minmax(0,1fr)] sm:gap-8 sm:p-7"
-                  >
-                    {lead ? (
-                      <ImageReveal
-                        src={posterFor(lead.id)}
-                        fallbackSrc={posterFor(lead.id, "hq")}
-                        alt=""
-                        ratio="16/10"
-                        hoverZoom
-                        className="rounded-xl shadow-primary"
-                      />
-                    ) : (
-                      <div className="aspect-[16/10] rounded-xl bg-muted shadow-primary" />
-                    )}
+        return (
+          <section
+            key={topic.slug}
+            id={topic.slug}
+            className="container-site mt-20 scroll-mt-28 sm:mt-24"
+          >
+            <Reveal variant="fade-up" className="border-t border-border pt-8">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="rule-label">
+                    Beat {index + 1} of {TOPICS.length}
+                  </p>
+                  <h2 className="font-display display-2 mt-3 font-semibold text-balance">
+                    {topic.name}
+                  </h2>
+                  <p className="mt-4 max-w-[56ch] text-lg leading-relaxed text-muted-foreground">
+                    {topic.description}
+                  </p>
+                </div>
 
-                    <div className="flex min-w-0 flex-col">
-                      <div className="flex items-start justify-between gap-5">
-                        {/* The whole card is the link, so the arrow sits with
-                            the beat's name rather than as a separate line at
-                            the card's foot — where the next card in the stack
-                            would slide over it and cut it in half. */}
-                        <h2 className="font-display display-3 inline-flex items-start gap-2 font-semibold transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
-                          {topic.name}
-                          <ArrowUpRight
-                            className="nudge-x mt-1.5 h-5 w-5 shrink-0 text-muted-foreground transition-colors group-hover:text-accent"
-                            aria-hidden
-                          />
-                        </h2>
-                        <span className="shrink-0 text-right">
-                          <span className="font-display block text-3xl font-semibold tabular-nums leading-none text-primary">
-                            {videos.length}
-                          </span>
-                          <span className="rule-label mt-1 block">
-                            {videos.length === 1 ? "report" : "reports"}
-                            {written.length > 0 && ` · ${written.length} written`}
-                          </span>
-                        </span>
-                      </div>
+                {/* Real counts, from the archive — not a badge for the sake of
+                    one. Both halves are named because a beat with three
+                    reports and no writing is a different thing from a beat
+                    with one of each. */}
+                <div className="flex shrink-0 gap-6 sm:gap-8">
+                  <div>
+                    <p className="font-display text-3xl font-semibold tabular-nums leading-none text-primary sm:text-4xl">
+                      {videos.length}
+                    </p>
+                    <p className="rule-label mt-1.5">
+                      {videos.length === 1 ? "report" : "reports"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-display text-3xl font-semibold tabular-nums leading-none text-primary sm:text-4xl">
+                      {written.length}
+                    </p>
+                    <p className="rule-label mt-1.5">
+                      {written.length === 1 ? "written piece" : "written pieces"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
 
-                      <p className="mt-3 max-w-[52ch] leading-relaxed text-muted-foreground">
-                        {topic.description}
-                      </p>
+            {videos.length > 0 ? (
+              <Stagger className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                {videos.map((video, i) => (
+                  <StaggerItem key={video.id} index={i}>
+                    <VideoCard video={video} />
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            ) : (
+              <Reveal
+                variant="fade-up"
+                className="surface mt-10 border-dashed p-8 text-center text-muted-foreground"
+              >
+                <p className="leading-relaxed">
+                  Nothing filed under this beat yet. It is a subject he covers, not a promise that
+                  something is already published.
+                </p>
+              </Reveal>
+            )}
 
-                      {/* The two most recent pieces on the beat, by name. A
-                          count tells a reader how much there is; a title tells
-                          them whether they want it. */}
-                      {videos.length > 0 && (
-                        <ul className="mt-5 space-y-2 border-t border-border pt-4">
-                          {videos.slice(0, 2).map((video) => (
-                            <li
-                              key={video.id}
-                              className="flex items-baseline gap-3 text-sm text-muted-foreground"
-                            >
-                              <span className="font-display line-clamp-1 flex-1 font-semibold text-foreground">
-                                {video.title}
-                              </span>
-                              <span className="shrink-0 tabular-nums text-xs">
-                                {formatCompact(video.views)} views
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+            {written.length > 0 && (
+              <div className="mt-14">
+                <p className="rule-label">Written on this beat</p>
+                <ul className="mt-2">
+                  {written.map((story, i) => (
+                    <StoryCard key={story.id} story={story} variant="compact" delay={i * 60} />
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        );
+      })}
 
-                    </div>
-                  </Link>
-                </section>
-              </ScrollStackItem>
-            );
-          })}
-        </ScrollStack>
-      </div>
+      <section className="container-site mt-24">
+        <Reveal
+          variant="fade-up"
+          className="surface honeycomb honeycomb-strong flex flex-col gap-6 overflow-hidden p-7 sm:flex-row sm:items-center sm:justify-between sm:p-10"
+        >
+          <div>
+            <p className="rule-label">Not by subject</p>
+            <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+              Everything, newest first.
+            </h2>
+            <p className="mt-3 max-w-[48ch] leading-relaxed text-muted-foreground">
+              This page groups the work by what it is about. The archive lists it by when it was
+              published.
+            </p>
+          </div>
+          <Button as={Link} href="/videos" className="shrink-0 self-start sm:self-auto">
+            All reports
+            <ArrowUpRight className="nudge-x h-4 w-4" aria-hidden />
+          </Button>
+        </Reveal>
+      </section>
     </>
   );
 }

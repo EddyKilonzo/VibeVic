@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { GraduationCap, Instagram, MapPin, Youtube } from "lucide-react";
-import { PROFILE, SOCIAL } from "@/data/content";
+import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
+import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
 import { GALLERY, SHOOTING } from "@/data/portraits";
+import { SocialIcon } from "@/components/social/SocialIcon";
 import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
 import {
   CountUp,
@@ -86,28 +87,20 @@ export default function About() {
                 <MapPin className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                 <span>{PROFILE.base}</span>
               </li>
-              <li className="group flex items-center gap-3">
-                <Youtube className="icon-tilt h-4 w-4 shrink-0 text-accent" aria-hidden />
-                <a
-                  href={SOCIAL.youtube.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline-grow"
-                >
-                  {SOCIAL.youtube.handle}
-                </a>
-              </li>
-              <li className="group flex items-center gap-3">
-                <Instagram className="icon-tilt h-4 w-4 shrink-0 text-accent" aria-hidden />
-                <a
-                  href={SOCIAL.instagram.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline-grow"
-                >
-                  {SOCIAL.instagram.handle}
-                </a>
-              </li>
+              {SOCIAL_ACCOUNTS.map((account) => (
+                <li key={account.id} className="group flex items-center gap-3">
+                  <SocialIcon id={account.id} className="icon-tilt h-4 w-4 shrink-0 text-accent" />
+                  <a
+                    href={account.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="underline-grow"
+                  >
+                    {account.handle}
+                  </a>
+                  <span className="text-muted-foreground">· {account.label}</span>
+                </li>
+              ))}
             </ul>
 
             <div className="mt-10 flex flex-wrap gap-3">
@@ -179,48 +172,50 @@ export default function About() {
 
         {/* ── Follow ─────────────────────────────────────────────
             The end of a biography is where a reader decides whether to keep
-            up with someone, so the two accounts sit here rather than only in
-            the footer. */}
-        <Reveal
-          variant="fade-up"
-          className="surface honeycomb honeycomb-strong mt-24 overflow-hidden p-7 sm:p-10 lg:mt-32"
-        >
-          <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="rule-label">Follow the work</p>
-              <h2 className="font-display display-3 mt-3 font-semibold text-balance">
-                Reports land on YouTube first.
-              </h2>
-              <p className="mt-3 max-w-[46ch] leading-relaxed text-muted-foreground">
-                Instagram is where the stills and the between-shoots material go.
-              </p>
-            </div>
+            up with someone, so the accounts sit here rather than only in the
+            footer — one card each, saying what is on it, because three logos
+            in a row do not tell anybody which one they want. */}
+        <section className="mt-24 lg:mt-32">
+          <p className="rule-label">Follow the work</p>
+          <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+            Three places, three different things.
+          </h2>
 
-            <div className="flex shrink-0 flex-wrap gap-3">
-              <Button
-                as="a"
-                href={SOCIAL.youtube.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="group"
+          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5">
+            {SOCIAL_ACCOUNTS.map((account, i) => (
+              <Reveal
+                key={account.id}
+                variant="fade-up"
+                delay={i * 70}
+                className="surface honeycomb honeycomb-strong overflow-hidden"
               >
-                <Youtube className="icon-tilt h-4 w-4" aria-hidden />
-                {SOCIAL.youtube.handle}
-              </Button>
-              <Button
-                as="a"
-                href={SOCIAL.instagram.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                variant="outline"
-                className="group"
-              >
-                <Instagram className="icon-tilt h-4 w-4" aria-hidden />
-                {SOCIAL.instagram.handle}
-              </Button>
-            </div>
+                <a
+                  href={account.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="focus-ring group flex h-full flex-col p-6 sm:p-7"
+                >
+                  <span className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground shadow-raised">
+                    <SocialIcon id={account.id} className="icon-tilt h-5 w-5" />
+                  </span>
+                  <p className="font-display mt-5 text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
+                    {account.label}
+                  </p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                    {account.note}
+                  </p>
+                  <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                    {account.handle}
+                    <ArrowUpRight
+                      className="nudge-x h-4 w-4 transition-colors group-hover:text-accent"
+                      aria-hidden
+                    />
+                  </span>
+                </a>
+              </Reveal>
+            ))}
           </div>
-        </Reveal>
+        </section>
       </div>
     </div>
   );

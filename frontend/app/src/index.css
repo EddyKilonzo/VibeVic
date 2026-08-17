@@ -575,6 +575,23 @@
   }
 
   /*
+   * The lattice on a dark ground.
+   *
+   * Every weight above is navy at a low alpha, which is correct on paper and
+   * completely invisible on the admin sidebar — navy on navy. This flips the
+   * ink to white so the same motif carries onto the dark shell. It only
+   * redefines the two variables; the `::before` that draws them is unchanged,
+   * so `.honeycomb`, `-strong` and the pointer pool all behave identically.
+   *
+   * White reads heavier than navy at the same alpha against a mid-dark ground,
+   * so both steps are pulled down a touch from their paper values.
+   */
+  .honeycomb-invert {
+    --comb-ink: hsl(0 0% 100% / 0.05);
+    --comb-ink-strong: hsl(0 0% 100% / 0.075);
+  }
+
+  /*
    * Pointer response.
    *
    * A second lattice layer, masked twice: once by the hex cells and once by a

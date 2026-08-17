@@ -17,10 +17,24 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/States";
 
+/**
+ * Status pills.
+ *
+ * `published` was `text-accent` on `bg-accent/12` — bright blue on a 12%
+ * wash of itself, which measures 2.8:1. These are 11px semibold, nowhere
+ * near the 18.7px that would let them count as large text, so 4.5:1 applies
+ * and it missed by a wide margin.
+ *
+ * The three are now separated by fill weight rather than by hue alone:
+ * solid for live, tinted-and-outlined for pending, flat grey for not yet.
+ * That ordering is legible in greyscale and to every colour-vision type,
+ * which colour-only pills are not. Measured on white card: 8.3:1, 7.3:1,
+ * 5.4:1.
+ */
 const STATUS_STYLE: Record<StoryStatus, string> = {
-  published: "bg-accent/12 text-accent",
-  draft: "bg-muted text-muted-foreground",
-  scheduled: "bg-secondary text-primary",
+  published: "bg-primary text-primary-foreground",
+  scheduled: "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35",
+  draft: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
 };
 
 export default function AdminStories() {
@@ -59,7 +73,7 @@ export default function AdminStories() {
             <h1 className="font-display display-2 mt-2 font-semibold">Stories</h1>
           </div>
           <Button as={Link} href="/admin/stories/new" size="sm">
-            <PenLine className="h-4 w-4" aria-hidden />
+            <PenLine className="icon-lean h-4 w-4" aria-hidden />
             New story
           </Button>
         </div>
@@ -85,14 +99,14 @@ export default function AdminStories() {
               onClick={() => setStatus(value)}
               aria-pressed={status === value}
               className={cn(
-                "focus-ring tap relative inline-flex h-8 items-center rounded px-3 text-xs font-semibold capitalize transition-colors duration-normal",
+                "focus-ring tap relative inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold capitalize transition-colors duration-normal",
                 status === value ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
               )}
             >
               {status === value && (
                 <motion.span
                   layoutId={reduced ? undefined : "admin-status-pill"}
-                  className="absolute inset-0 rounded bg-primary"
+                  className="absolute inset-0 rounded-md bg-primary"
                   transition={transitions.normal}
                 />
               )}
@@ -154,7 +168,7 @@ export default function AdminStories() {
 
                     {story.stats && (
                       <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                        <Headphones className="h-3.5 w-3.5" aria-hidden />
+                        <Headphones className="icon-lean h-3.5 w-3.5" aria-hidden />
                         {story.stats.listens.toLocaleString()}
                       </span>
                     )}
@@ -172,7 +186,7 @@ export default function AdminStories() {
                       type="button"
                       onClick={() => remove(story)}
                       aria-label={`Delete ${story.title}`}
-                      className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+                      className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
                     </button>

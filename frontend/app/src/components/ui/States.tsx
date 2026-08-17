@@ -24,7 +24,10 @@ export function EmptyState({ icon, title, description, action, className }: Empt
     <Reveal variant="fade-up" distance="sm">
       <div
         className={cn(
-          "honeycomb honeycomb-strong flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/60 px-6 py-20 text-center",
+          // `rounded-xl`, matching `.surface`: this is a card-scale object,
+          // and 8px next to the 12px panels around it reads as a mistake
+          // rather than as a distinction.
+          "honeycomb honeycomb-strong flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/60 px-6 py-20 text-center",
           className,
         )}
       >

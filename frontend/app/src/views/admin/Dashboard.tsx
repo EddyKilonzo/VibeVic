@@ -75,7 +75,7 @@ export default function Dashboard() {
               <Youtube className="icon-tilt h-4 w-4" aria-hidden />
               Channel
             </Button>
-            <Button as={Link} href="/admin/stories/new" size="sm" className="group">
+            <Button as={Link} href="/admin/stories/new" size="sm">
               <PenLine className="icon-lean h-4 w-4" aria-hidden />
               New story
             </Button>

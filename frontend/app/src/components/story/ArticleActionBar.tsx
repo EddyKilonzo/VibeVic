@@ -24,7 +24,7 @@ import { ChapterRail } from "@/components/voice/ChapterRail";
  * When the device has no speech synthesis at all, the Listen control is
  * absent rather than broken, and a single quiet line explains why.
  */
-export function ArticleActionBar({ story }: { story: Story }) {
+export function ArticleActionBar({ story, className }: { story: Story; className?: string }) {
   const { supported, state, article, total, preparing, play } = useVoice();
   const reduced = useReducedMotion();
   const [mode, setMode] = useState<"read" | "listen">("read");
@@ -74,7 +74,10 @@ export function ArticleActionBar({ story }: { story: Story }) {
   const estimated = article && total > 0 ? formatDuration(total) : null;
 
   return (
-    <div className="mt-8">
+    // The `mt-8` was baked in from when this sat above the first paragraph.
+    // It now opens a rail card, where a caller-set margin is the only right
+    // answer — none at the top of the card, a gap under the resume offer.
+    <div className={className}>
       <div className="flex flex-wrap items-center gap-2">
         {supported && (
           <div

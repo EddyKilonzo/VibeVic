@@ -236,8 +236,36 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
         <div className="container-site mt-10 sm:mt-14">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_290px] lg:gap-14">
             <aside className="lg:order-2">
-              <div className="surface p-5 sm:p-6 lg:sticky lg:top-28">
-                <ArticleActionBar story={story} />
+              {/* Everything in the rail lives inside the sticky box.
+
+                  The resume card used to be a sibling below it, which is the
+                  one arrangement `position: sticky` gets wrong on purpose: a
+                  sticky element stays in flow at its static position and then
+                  translates down as you scroll, so it slides straight over
+                  whatever follows it. The offer to pick up where you left off
+                  was being covered by the controls within a screen of
+                  scrolling. */}
+              {/* Capped and scrollable from `lg`, where it is pinned. With
+                  the resume offer, both control groups and a section index in
+                  one card, the rail is taller than a 768px laptop viewport,
+                  and a sticky box taller than the screen simply hides its own
+                  bottom — the section list, which is the part a reader
+                  actually navigates with. `overflow-y` on the sticky element
+                  itself is safe; it is an *ancestor* scroll container that
+                  breaks sticky. */}
+              <div className="surface p-5 sm:p-6 lg:sticky lg:top-28 lg:max-h-[calc(100svh-9rem)] lg:overflow-y-auto">
+                {/* Offered, never applied — see `useReadingPosition`. First in
+                    the rail because it is the one thing here that expires:
+                    everything below it is available for the whole read. */}
+                {saved !== null && (
+                  <ResumeReading
+                    progress={saved}
+                    target={articleRef}
+                    onDismiss={decline}
+                  />
+                )}
+
+                <ArticleActionBar story={story} className={saved !== null ? "mt-4" : undefined} />
 
                 <div className="mt-5 border-t border-border pt-5">
                   <ReadingControls
@@ -256,17 +284,28 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                   className="mt-6 hidden border-t border-border pt-6 lg:block"
                 />
               </div>
-
-              {/* Offered, never applied — see `useReadingPosition`. */}
-              {saved !== null && (
-                <ResumeReading progress={saved} target={articleRef} onDismiss={decline} />
-              )}
-
             </aside>
 
             <div className="min-w-0 lg:order-1">
+              {/* Padding on the sheet, on a phone as well as a desktop.
+                  It was `px-0 py-2`: the tint started eight pixels above the
+                  first line and ended flush with the sides of the text, so
+                  the prose was sitting on the very edge of the paper rather
+                  than on the paper.
+
+                  The horizontal padding is bought with a bleed rather than
+                  taken out of the measure. `-mx-5` cancels `container-site`'s
+                  own padding so the sheet runs the full width of the screen,
+                  then `px-5` puts the text back exactly where it was. The
+                  measure is unchanged — the reader gains a margin they can
+                  see instead of losing four characters a line.
+
+                  `w-full` had to go with it: on an explicit `width: 100%`
+                  box the negative right margin is dropped as over-constrained
+                  and the sheet slides sideways. Block width is already the
+                  full column. */}
               <div
-                className="paper w-full max-w-[46rem] px-0 py-2 sm:px-10 sm:py-12 lg:px-14"
+                className="paper -mx-5 max-w-[46rem] px-5 py-9 sm:mx-0 sm:px-10 sm:py-12 lg:px-14"
                 style={{ "--reading-scale": scale } as React.CSSProperties}
               >
                 <ArticleBody story={story} />

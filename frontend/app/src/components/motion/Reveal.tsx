@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 import { distance as distanceTokens, transitions, viewport } from "@/lib/motion";
@@ -84,6 +84,42 @@ export function Reveal({
 
   const Tag = motion[as];
 
+  /**
+   * The safety net, and the reason content stopped needing a refresh to appear.
+   *
+   * `whileInView` sets its observer up when the element mounts, and on a
+   * client-side navigation that happens *before* the router has scrolled the
+   * new page to the top. The observer's first reading is therefore taken at
+   * the old scroll offset: everything that is about to be on screen is
+   * measured as off screen, `once: true` means it is never asked again, and
+   * the section sits at opacity zero until something forces a re-render — a
+   * reload, a resize, a filter change. That is the bug people describe as
+   * "it only animates if I refresh".
+   *
+   * So the element is also measured directly, two frames after it mounts:
+   * one frame for layout, the second to land after the router's scroll. If it
+   * is on screen by then it is shown, whatever the observer concluded.
+   *
+   * This runs from a ref callback rather than an effect. Effects are for
+   * synchronising with external systems; this is a one-shot measurement of the
+   * node React has just handed over, and doing it here keeps it out of the
+   * cascading-render path entirely.
+   */
+  const [settled, setSettled] = useState(false);
+
+  const check = useCallback((node: HTMLElement | null) => {
+    if (!node || typeof window === "undefined") return;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const box = node.getBoundingClientRect();
+        // Any part of it inside the window counts. The editorial trigger line
+        // is the observer's job; this is only here to stop things vanishing.
+        if (box.top < window.innerHeight && box.bottom > 0) setSettled(true);
+      });
+    });
+  }, []);
+
   if (reduced) {
     const Plain = as;
     return (
@@ -104,12 +140,16 @@ export function Reveal({
   const trigger = immediate
     ? { animate: "visible" as const }
     : {
+        // `animate` wins over `whileInView` once it is set, so the safety
+        // check below can force the visible state without racing the observer.
+        animate: settled ? ("visible" as const) : undefined,
         whileInView: "visible" as const,
         viewport: { once: !repeat, margin: viewport.margin, amount: viewport.amount },
       };
 
   return (
     <Tag
+      ref={immediate ? undefined : check}
       className={cn(className)}
       style={style}
       initial="hidden"

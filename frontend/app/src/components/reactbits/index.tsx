@@ -1,6 +1,7 @@
 "use client";
 
-import { Children, useId, useState, type ReactNode } from "react";
+import { Children, useCallback, useId, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
@@ -13,11 +14,26 @@ import RbCurvedLoop from "./CurvedLoop.jsx";
 import RbScrollExpand from "./ScrollExpand.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
+import RbMasonry from "./Masonry.jsx";
+import RbTiltedCard from "./TiltedCard.jsx";
 
 const CurvedLoopBase = RbCurvedLoop as any;
 const ScrollExpandBase = RbScrollExpand as any;
 const SpecularButtonBase = RbSpecularButton as any;
 const CountUpBase = RbCountUp as any;
+const MasonryBase = RbMasonry as any;
+const TiltedCardBase = RbTiltedCard as any;
+
+/**
+ * The lanyard is three.js, drei and a Rapier physics build — comfortably the
+ * heaviest thing in this repo, and none of it can render on the server. It is
+ * loaded on demand so that weight lands only on the page that asks for it,
+ * and never at all for a reader who arrives somewhere else.
+ */
+const LanyardBase = dynamic(() => import("./Lanyard.jsx"), {
+  ssr: false,
+  loading: () => null,
+}) as any;
 
 /* ── Curved marquee ──────────────────────────────────────────── */
 
@@ -158,6 +174,162 @@ export function PillNav({
         })}
       </ul>
     </nav>
+  );
+}
+
+/* ── Press pass ──────────────────────────────────────────────── */
+
+/**
+ * A press card hanging on a lanyard, with real rope physics — grab it and it
+ * swings.
+ *
+ * ── What it costs, stated plainly ────────────────────────────────────────
+ * three.js, drei and a Rapier WASM physics build, plus a 2.4MB `.glb`. That
+ * is a lot of weight for something decorative, so it is confined to exactly
+ * one place: the About hero, where the object *is* the subject — a press pass
+ * on a journalist's own page is his identity, not an ornament — and it is
+ * code-split so no other route pays for it.
+ *
+ * Off entirely under reduced motion and on coarse pointers. It is a physics
+ * toy you play with by dragging; on a phone the drag is the scroll gesture,
+ * so it would fight the page for every swipe and win nothing. Both cases fall
+ * back to the caller's static children.
+ */
+export function PressPass({
+  frontImage,
+  fallback,
+  className,
+}: {
+  frontImage?: string;
+  /** Shown wherever the 3D scene is not appropriate. Always provide one. */
+  fallback: ReactNode;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+  const [fine, setFine] = useState<boolean | null>(null);
+
+  // Measured from a ref callback rather than an effect: one read of a media
+  // query at commit, no cascading render.
+  const probe = useCallback((node: HTMLDivElement | null) => {
+    if (!node || typeof window === "undefined" || !window.matchMedia) return;
+    setFine(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  }, []);
+
+  return (
+    <div ref={probe} className={cn("relative", className)}>
+      {reduced || fine !== true ? (
+        fallback
+      ) : (
+        <LanyardBase
+          position={[0, 0, 18]}
+          gravity={[0, -40, 0]}
+          frontImage={frontImage}
+          imageFit="cover"
+          transparent
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Masonry ─────────────────────────────────────────────────── */
+
+export interface MasonryTile {
+  id: string;
+  img: string;
+  url?: string;
+  /** Relative height. The library lays out on these, not on the real images. */
+  height: number;
+}
+
+/**
+ * A staggered picture wall.
+ *
+ * The heights are relative units the library uses to build the columns — they
+ * are the *proportions* of the set, so pass each picture's real aspect ratio
+ * scaled to a common width and nothing gets squashed.
+ *
+ * Under reduced motion the entrance, the hover scale and the blur are all
+ * turned off; the wall still lays out, it just arrives rather than performs.
+ */
+export function PictureWall({
+  items,
+  className,
+}: {
+  items: MasonryTile[];
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+
+  return (
+    <div className={className}>
+      <MasonryBase
+        items={items}
+        ease="power3.out"
+        duration={reduced ? 0 : 0.6}
+        stagger={reduced ? 0 : 0.05}
+        animateFrom="bottom"
+        scaleOnHover={!reduced}
+        hoverScale={0.97}
+        blurToFocus={!reduced}
+        colorShiftOnHover={false}
+      />
+    </div>
+  );
+}
+
+/* ── Tilted card ─────────────────────────────────────────────── */
+
+/**
+ * A picture that tilts toward the pointer, with a line of text over it.
+ *
+ * The overlay is the point rather than the tilt: it is for images that need a
+ * few words to be worth anything — a caption that would otherwise sit under
+ * the frame and be read as an afterthought.
+ *
+ * `showMobileWarning` is off. The library's default is to print a notice over
+ * the card on touch devices explaining that the effect needs a mouse, which is
+ * a developer's message shown to a reader.
+ */
+export function TiltedFrame({
+  src,
+  alt,
+  caption,
+  height = "100%",
+  width = "100%",
+  className,
+}: {
+  src: string;
+  alt: string;
+  caption: string;
+  height?: string;
+  width?: string;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+
+  return (
+    <div className={className}>
+      <TiltedCardBase
+        imageSrc={src}
+        altText={alt}
+        captionText={caption}
+        containerHeight={height}
+        containerWidth={width}
+        imageHeight={height}
+        imageWidth={width}
+        rotateAmplitude={reduced ? 0 : 9}
+        scaleOnHover={reduced ? 1 : 1.04}
+        showMobileWarning={false}
+        showTooltip={false}
+        displayOverlayContent
+        overlayContent={
+          <p className="m-3 rounded-lg bg-brand-ink-deep/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+            {caption}
+          </p>
+        }
+      />
+    </div>
   );
 }
 

@@ -1,6 +1,9 @@
 "use client";
 
-import { useRef, type ElementType } from "react";
+import { useRef } from "react";
+
+/** See the note in `Stagger` — `ElementType` is unusable once R3F is present. */
+type HeadingTag = "h1" | "h2" | "h3" | "p" | "div";
 import { cn } from "@/lib/utils";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { gsapEase, seconds, viewport } from "@/lib/motion";
@@ -17,7 +20,7 @@ export interface TextRevealProps {
   immediate?: boolean;
   className?: string;
   lineClassName?: string;
-  as?: ElementType;
+  as?: HeadingTag;
 }
 
 /**
@@ -40,7 +43,9 @@ export function TextReveal({
   lineClassName,
   as: Tag = "h1",
 }: TextRevealProps) {
-  const scope = useRef<HTMLElement>(null);
+  // Typed as the widest tag `as` allows, so the ref is assignable whichever
+  // heading level a call site picks. GSAP only ever reads it as a scope root.
+  const scope = useRef<HTMLHeadingElement & HTMLParagraphElement & HTMLDivElement>(null);
   const inherited = useStaggerDelay();
 
   useGSAP(

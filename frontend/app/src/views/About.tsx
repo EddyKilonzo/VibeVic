@@ -6,12 +6,20 @@ import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
 import {
   AGAINST_WALL,
   FIELD_CLIP,
-  GALLERY,
   ON_ASSIGNMENT,
+  PORTRAIT,
   REVIEWING_FRAMES,
+  WALL,
 } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
 import { FieldClip } from "@/components/media/FieldClip";
+import {
+  PictureWall,
+  PressPass,
+  ScrollStack,
+  ScrollStackItem,
+  TiltedFrame,
+} from "@/components/reactbits";
 import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
 import {
   CountUp,
@@ -67,17 +75,29 @@ export default function About() {
               </p>
             </div>
 
-            <Reveal variant="fade-scale" delay={140}>
-              <ImageReveal
-                src={AGAINST_WALL.src}
-                alt={AGAINST_WALL.alt}
-                ratio="3/4"
-                priority
-                immediate
-                className="mx-auto max-w-[260px] rounded-2xl shadow-primary sm:max-w-none"
-                imgClassName="object-cover object-top"
-              />
-            </Reveal>
+            {/* A press pass on a lanyard, with rope physics — drag it and it
+                swings. It is the one object on this site that *is* the
+                subject rather than a decoration of it, which is the only
+                reason a WebGL scene is allowed anywhere near a reading site.
+                On touch, and under reduced motion, the photograph it would
+                have replaced is shown instead. */}
+            <PressPass
+              frontImage={PORTRAIT.src}
+              className="min-h-[420px] lg:min-h-[520px]"
+              fallback={
+                <Reveal variant="fade-scale" delay={140}>
+                  <ImageReveal
+                    src={AGAINST_WALL.src}
+                    alt={AGAINST_WALL.alt}
+                    ratio="3/4"
+                    priority
+                    immediate
+                    className="mx-auto max-w-[260px] rounded-2xl shadow-primary sm:max-w-none"
+                    imgClassName="object-cover object-top"
+                  />
+                </Reveal>
+              }
+            />
           </div>
         </div>
       </header>
@@ -187,22 +207,18 @@ export default function About() {
             right answer there. */}
         <section className="mt-24 sm:mt-28">
           <p className="rule-label">Portraits</p>
-          <Stagger className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5" step="normal">
-            {GALLERY.map((portrait, i) => (
-              <StaggerItem key={portrait.src} index={i}>
-                <figure className={i === 1 ? "lg:translate-y-8" : ""}>
-                  <ImageReveal
-                    src={portrait.src}
-                    alt={portrait.alt}
-                    ratio="3/4"
-                    className="rounded-xl shadow-primary"
-                    imgClassName="object-cover"
-                  />
-                  <figcaption className="rule-label mt-3">{portrait.caption}</figcaption>
-                </figure>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          {/* A picture wall rather than a row of equal plates. The heights are
+              each frame's own proportion scaled to a common column width, so
+              the wall is ragged because the pictures are, and nothing is
+              cropped to make a tidy grid. */}
+          <PictureWall
+            className="mt-8"
+            items={WALL.map((portrait) => ({
+              id: portrait.src,
+              img: portrait.src,
+              height: Math.round((portrait.height / portrait.width) * 420),
+            }))}
+          />
         </section>
 
         {/* ── In the field ───────────────────────────────────────
@@ -225,19 +241,18 @@ export default function About() {
           <div className="mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
             <FieldClip src={FIELD_CLIP.src} title={FIELD_CLIP.title} />
 
+            {/* Tilted frames here rather than plain plates: these two need a
+                few words to mean anything, and a caption sitting under a
+                picture is read as an afterthought. Over it, it is the label. */}
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               {[ON_ASSIGNMENT, REVIEWING_FRAMES].map((shot, i) => (
                 <Reveal key={shot.src} variant="fade-up" delay={i * 80}>
-                  <figure>
-                    <ImageReveal
-                      src={shot.src}
-                      alt={shot.alt}
-                      ratio="4/5"
-                      className="rounded-xl shadow-primary"
-                      imgClassName="object-cover"
-                    />
-                    <figcaption className="rule-label mt-3">{shot.caption}</figcaption>
-                  </figure>
+                  <TiltedFrame
+                    src={shot.src}
+                    alt={shot.alt}
+                    caption={shot.caption}
+                    height="clamp(320px, 46vw, 560px)"
+                  />
                 </Reveal>
               ))}
             </div>
@@ -255,12 +270,13 @@ export default function About() {
             Three places, three different things.
           </h2>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5">
-            {SOCIAL_ACCOUNTS.map((account, i) => (
-              <Reveal
+          {/* Three cards that park and stack as the next arrives. A short,
+              ordered, finite set is the one shape this reads well at, and
+              three destinations at the end of a biography is exactly that. */}
+          <ScrollStack className="mt-8">
+            {SOCIAL_ACCOUNTS.map((account) => (
+              <ScrollStackItem
                 key={account.id}
-                variant="fade-up"
-                delay={i * 70}
                 className="surface honeycomb honeycomb-strong overflow-hidden"
               >
                 <a
@@ -286,9 +302,9 @@ export default function About() {
                     />
                   </span>
                 </a>
-              </Reveal>
+              </ScrollStackItem>
             ))}
-          </div>
+          </ScrollStack>
         </section>
       </div>
     </div>

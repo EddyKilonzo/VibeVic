@@ -84,8 +84,13 @@ export function Button<E extends ElementType = "button">({
   children,
   ...props
 }: ButtonProps<E>) {
-  const Tag = (as ?? "button") as ElementType;
-  const isButton = Tag === "button";
+  // Rendered through a plain prop-bag component type rather than `ElementType`.
+  // The generic above still gives call sites their real prop checking; this
+  // cast only concerns the tag *inside* the component, where `ElementType`
+  // became unusable once `@react-three/fiber` widened React's intrinsic
+  // elements with every three.js object — see the note in `Stagger`.
+  const Tag = (as ?? "button") as React.ComponentType<Record<string, unknown>>;
+  const isButton = (as ?? "button") === "button";
   const inactive = Boolean(disabled) || loading;
 
   return (

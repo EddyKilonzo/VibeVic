@@ -120,3 +120,12 @@ export const FIELD_CLIP = {
  * there is no shortage.
  */
 export const GALLERY: Portrait[] = [PORTRAIT, WITH_CAMERA, SHOOTING];
+
+/**
+ * The About page's picture wall.
+ *
+ * All four of the black-and-white set. `AGAINST_WALL` also stands in for the
+ * press pass on devices that cannot show it, and appearing in both is fine —
+ * the two are never on screen together.
+ */
+export const WALL: Portrait[] = [PORTRAIT, WITH_CAMERA, SHOOTING, AGAINST_WALL];

@@ -1,6 +1,17 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ElementType, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+
+/**
+ * The tags a stagger container is ever given.
+ *
+ * Narrower than `ElementType` on purpose. Beyond being honest about what this
+ * is for, `ElementType` stopped working the moment `@react-three/fiber` joined
+ * the project: it augments React's intrinsic elements with every three.js
+ * object, and the props of a union that wide intersect to `never`, so a plain
+ * `className` becomes a type error in a file that has nothing to do with 3D.
+ */
+type StaggerTag = "div" | "ul" | "ol" | "section" | "nav";
 import { stagger as staggerTokens } from "@/lib/motion";
 
 const DelayContext = createContext<number>(0);
@@ -18,7 +29,7 @@ export interface StaggerProps {
   /** Delay before the first child (ms). */
   delay?: number;
   className?: string;
-  as?: ElementType;
+  as?: StaggerTag;
 }
 
 /**

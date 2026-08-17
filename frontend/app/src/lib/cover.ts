@@ -86,6 +86,19 @@ export function storyCover(story: { slug: string; cover?: string }): string {
   return story.cover ?? coverFor(story.slug);
 }
 
+/**
+ * An in-article image's source.
+ *
+ * Image blocks predate there being any real pictures, so `src` was a seed for
+ * generated art rather than an address. Imported articles carry actual URLs,
+ * and rendering one of those as a hash would have produced an abstract
+ * gradient in place of the diagram the sentence above it refers to. Anything
+ * that looks like a location is used as one; anything else still generates.
+ */
+export function blockImage(src: string): string {
+  return /^(https?:)?\/\//.test(src) || src.startsWith("/") ? src : coverFor(src);
+}
+
 /** Square variant for avatars and list thumbnails. */
 export function thumbFor(slug: string): string {
   return coverFor(slug, 400, 400);

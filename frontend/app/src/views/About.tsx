@@ -194,27 +194,35 @@ export default function About() {
               </p>
             </div>
 
-            <ul className="mt-9 space-y-3 text-sm">
+            {/* A grid, not a column. Eight single-line entries stacked made a
+                narrow ladder down the left of a wide page, and at small widths
+                the platform name wrapped onto its own line after each handle.
+                In two columns every entry is a self-contained cell, the icons
+                form a readable rail, and the block finishes near where the
+                paragraph beside it does. */}
+            <ul className="mt-9 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
               <li className="flex items-center gap-3">
                 <GraduationCap className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-                <span>{PROFILE.education}</span>
+                <span className="min-w-0">{PROFILE.education}</span>
               </li>
               <li className="flex items-center gap-3">
                 <MapPin className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-                <span>{PROFILE.base}</span>
+                <span className="min-w-0">{PROFILE.base}</span>
               </li>
               {SOCIAL_ACCOUNTS.map((account) => (
                 <li key={account.id} className="group flex items-center gap-3">
                   <SocialIcon id={account.id} className="icon-tilt h-4 w-4 shrink-0 text-accent" />
-                  <a
-                    href={account.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="underline-grow"
-                  >
-                    {account.handle}
-                  </a>
-                  <span className="text-muted-foreground">· {account.label}</span>
+                  <span className="min-w-0">
+                    <a
+                      href={account.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="underline-grow block truncate font-medium"
+                    >
+                      {account.handle}
+                    </a>
+                    <span className="block text-xs text-muted-foreground">{account.label}</span>
+                  </span>
                 </li>
               ))}
             </ul>

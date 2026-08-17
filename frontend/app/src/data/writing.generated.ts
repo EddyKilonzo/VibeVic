@@ -179,166 +179,201 @@ export const WORDPRESS_STORIES: Story[] = [
       },
       {
         "id": "w26",
-        "type": "paragraph",
-        "text": "The study revealed the magnitude of the decline threatened the population sustainability of warthog, lesser kudu, Thompson’s gazelle, eland, oryx, topi, hartebeest, impala, Grevy’s zebra, and waterbuck in Kenya’s rangelands."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/pexels-photo-5205060.jpeg",
+        "alt": "Photo by Wayne Lubbe on Pexels.com",
+        "caption": "Photo by Wayne Lubbe on Pexels.com"
       },
       {
         "id": "w27",
         "type": "paragraph",
-        "text": "Modern technology and innovations have, however, boosted conservation approaches, giving conservationists an upper hand in the fight against wildlife endangerment."
+        "text": "The study revealed the magnitude of the decline threatened the population sustainability of warthog, lesser kudu, Thompson’s gazelle, eland, oryx, topi, hartebeest, impala, Grevy’s zebra, and waterbuck in Kenya’s rangelands."
       },
       {
         "id": "w28",
         "type": "paragraph",
-        "text": "The Lewa Wildlife Conservancy, a conservation sanctuary located in the foothills of Mount Kenya, has played a pivotal role in safeguarding endangered species and raising awareness on conservation to local communities since 1995."
+        "text": "Modern technology and innovations have, however, boosted conservation approaches, giving conservationists an upper hand in the fight against wildlife endangerment."
       },
       {
         "id": "w29",
         "type": "paragraph",
-        "text": "In the Lewa at 30 report, the renowned UNESCO World Heritage Site revealed that it uses data from eBird, a global database where bird watchers record, store, and share bird sightings, which has enhanced its conservation strategies, such as tracking bird distribution patterns."
+        "text": "The Lewa Wildlife Conservancy, a conservation sanctuary located in the foothills of Mount Kenya, has played a pivotal role in safeguarding endangered species and raising awareness on conservation to local communities since 1995."
       },
       {
         "id": "w30",
         "type": "paragraph",
-        "text": "“Lewa’s research team has documented 502 bird species thriving on the Lewa-Borana landscape. Visitors to the conservancy have also contributed thousands of insights and data to eBird, the global citizen science platform,” the conservancy said."
+        "text": "In the Lewa at 30 report, the renowned UNESCO World Heritage Site revealed that it uses data from eBird, a global database where bird watchers record, store, and share bird sightings, which has enhanced its conservation strategies, such as tracking bird distribution patterns."
       },
       {
         "id": "w31",
         "type": "paragraph",
-        "text": "The site also adopted EarthRanger, a game-changing tool for collecting field data, tracking real-time wildlife movement and patrols, and ensuring swift decision-making."
+        "text": "“Lewa’s research team has documented 502 bird species thriving on the Lewa-Borana landscape. Visitors to the conservancy have also contributed thousands of insights and data to eBird, the global citizen science platform,” the conservancy said."
       },
       {
         "id": "w32",
         "type": "paragraph",
-        "text": "“This bold experiment has since grown into the conservancy’s central nervous system,” the sanctuary remarked."
+        "text": "The site also adopted EarthRanger, a game-changing tool for collecting field data, tracking real-time wildlife movement and patrols, and ensuring swift decision-making."
       },
       {
         "id": "w33",
-        "type": "paragraph",
-        "text": "The rangers lauded the technology, citing that it ensured faster tracking, smarter patrols, safer operations, and enhanced wildlife monitoring."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/screenshot-2026-03-19-133903-edited.png",
+        "alt": "Lewa Conservancy rangers learn how to use a drone/SCREENGRAB.",
+        "caption": "Lewa Conservancy rangers learn how to use a drone/SCREENGRAB."
       },
       {
         "id": "w34",
         "type": "paragraph",
-        "text": "“Alerts are triggered by unusual animal behavior, fence breakages, or wildlife straying near community settlements, ensuring that potential conflicts are flagged before they erupt and that both people and wildlife are protected,” Lewa said."
+        "text": "“This bold experiment has since grown into the conservancy’s central nervous system,” the sanctuary remarked."
       },
       {
         "id": "w35",
         "type": "paragraph",
-        "text": "The system processes raw data from camera traps, river gauges, weather stations, and drones and transforms it into actionable intelligence."
+        "text": "The rangers lauded the technology, citing that it ensured faster tracking, smarter patrols, safer operations, and enhanced wildlife monitoring."
       },
       {
         "id": "w36",
         "type": "paragraph",
-        "text": "“It has evolved into a full ecosystem for decision-making, research, and coordinated response,” the conservancy commended."
+        "text": "“Alerts are triggered by unusual animal behavior, fence breakages, or wildlife straying near community settlements, ensuring that potential conflicts are flagged before they erupt and that both people and wildlife are protected,” Lewa said."
       },
       {
         "id": "w37",
         "type": "paragraph",
-        "text": "The Mara Elephant Project (MEP), a tech-driven elephant conservation organization, deploys intelligence-led rangers in the region to stop poaching and mitigate Human-Elephant Conflict (HEC) by using digital gadgets such as tracking devices."
+        "text": "The system processes raw data from camera traps, river gauges, weather stations, and drones and transforms it into actionable intelligence."
       },
       {
         "id": "w38",
         "type": "paragraph",
-        "text": "The foundation protects elephants and their habitat in the Greater Mara Ecosystem in Narok County."
+        "text": "“It has evolved into a full ecosystem for decision-making, research, and coordinated response,” the conservancy commended."
       },
       {
         "id": "w39",
         "type": "paragraph",
-        "text": "The project deploys a tracking system using a collar attached to elephants to monitor their movements and predict their pasturing destinations."
+        "text": "The Mara Elephant Project (MEP), a tech-driven elephant conservation organization, deploys intelligence-led rangers in the region to stop poaching and mitigate Human-Elephant Conflict (HEC) by using digital gadgets such as tracking devices."
       },
       {
         "id": "w40",
         "type": "paragraph",
-        "text": "“We may establish geofences, invisible boundaries that exist only in our tracking system, so that when Edwin (an elephant under monitoring) nears a geofence, the MEP operations room receives an alert that allows them to assess whether intervention is necessary,” MEP said on X."
+        "text": "The foundation protects elephants and their habitat in the Greater Mara Ecosystem in Narok County."
       },
       {
         "id": "w41",
         "type": "paragraph",
-        "text": "The rangers use a thermal drone in sync, which provides visibility in the dark, to monitor the elephants and warn residents via drone speakers whenever the elephants approach a settlement."
+        "text": "The project deploys a tracking system using a collar attached to elephants to monitor their movements and predict their pasturing destinations."
       },
       {
         "id": "w42",
         "type": "paragraph",
-        "text": "“Since elephants are apprehensive of the buzzing sound they make, drones have proven to be incredibly effective in human-elephant conflict (HEC) mitigation,” MEP said."
+        "text": "“We may establish geofences, invisible boundaries that exist only in our tracking system, so that when Edwin (an elephant under monitoring) nears a geofence, the MEP operations room receives an alert that allows them to assess whether intervention is necessary,” MEP said on X."
       },
       {
         "id": "w43",
         "type": "paragraph",
-        "text": "The drones are then used to reroute straying elephants back into the wild, reducing crop and farm structure damage and also ensuring the safety of elephants, residents, and rangers."
+        "text": "The rangers use a thermal drone in sync, which provides visibility in the dark, to monitor the elephants and warn residents via drone speakers whenever the elephants approach a settlement."
       },
       {
         "id": "w44",
         "type": "paragraph",
-        "text": "For rangers in the Ol Pejeta Conservancy, night patrols meant they would only rely on torches and headlights for visibility. That was until their vehicles were mounted with thermal cameras."
+        "text": "“Since elephants are apprehensive of the buzzing sound they make, drones have proven to be incredibly effective in human-elephant conflict (HEC) mitigation,” MEP said."
       },
       {
         "id": "w45",
         "type": "paragraph",
-        "text": "Thermal cameras detect infrared radiation emitted by objects (heat signals) rather than visible light, enhancing vigilance on night patrols."
+        "text": "The drones are then used to reroute straying elephants back into the wild, reducing crop and farm structure damage and also ensuring the safety of elephants, residents, and rangers."
       },
       {
         "id": "w46",
-        "type": "paragraph",
-        "text": "“Now, vehicle-mounted thermal cameras allow our rangers to detect wildlife and potential threats far beyond torchlight, quietly and in real time, revealing what the eye can’t see in darkness and dense bush,” Ol Pejeta said."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/screenshot-2026-03-04-133712.png?w=875",
+        "alt": "MEP thermal drone used to monitor elephant movement at night/SCREENGRAB.",
+        "caption": "MEP thermal drone used to monitor elephant movement at night/SCREENGRAB."
       },
       {
         "id": "w47",
         "type": "paragraph",
-        "text": "Every night patrol carries risks for wildlife and the people protecting it. Thermal imaging helps our rangers see first, respond faster, and operate more safely, while continuing to safeguard endangered species across the Conservancy."
+        "text": "For rangers in the Ol Pejeta Conservancy, night patrols meant they would only rely on torches and headlights for visibility. That was until their vehicles were mounted with thermal cameras."
       },
       {
         "id": "w48",
         "type": "paragraph",
-        "text": "In response to the major strides of modern conservation, the Kenya Wildlife Service held the Global Conservation Tech and Drone Forum on 3rd February in Nairobi."
+        "text": "Thermal cameras detect infrared radiation emitted by objects (heat signals) rather than visible light, enhancing vigilance on night patrols."
       },
       {
         "id": "w49",
         "type": "paragraph",
-        "text": "The service acknowledged the need for real-time data, precision monitoring, and intelligent systems in modern conservation to enhance situational awareness."
+        "text": "“Now, vehicle-mounted thermal cameras allow our rangers to detect wildlife and potential threats far beyond torchlight, quietly and in real time, revealing what the eye can’t see in darkness and dense bush,” Ol Pejeta said."
       },
       {
         "id": "w50",
         "type": "paragraph",
-        "text": "“Through drones, remote sensing tools, GIS, thermal imaging, and data analytics platforms, KWS is transforming how wildlife and protected areas are monitored,” the KWS noted."
+        "text": "Every night patrol carries risks for wildlife and the people protecting it. Thermal imaging helps our rangers see first, respond faster, and operate more safely, while continuing to safeguard endangered species across the Conservancy."
       },
       {
         "id": "w51",
-        "type": "paragraph",
-        "text": "These innovations have overhauled the conservation landscape, yet the full adoption of these technologies in Kenyan conservancies faces new challenges that undermine the digitized interventions."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/hbxmscbxaaagy8x.jpg?w=1024",
+        "alt": "Patrol vehicles mounted with thermal cameras for better visibility in dark or dense surroundings at the Ol Pejeta Conservancy/OL PEJETA CONSERVANCY.",
+        "caption": "Patrol vehicles mounted with thermal cameras for better visibility in dark or dense surroundings at the Ol Pejeta Conservancy/OL PEJETA CONSERVANCY."
       },
       {
         "id": "w52",
         "type": "paragraph",
-        "text": "The cost of these gadgets and systems is very high, making them unaffordable for younger conservancies in the country that require the innovations."
+        "text": "In response to the major strides of modern conservation, the Kenya Wildlife Service held the Global Conservation Tech and Drone Forum on 3rd February in Nairobi."
       },
       {
         "id": "w53",
         "type": "paragraph",
-        "text": "A thermal drone, for instance, costs between $2,000 and $10,000 depending on thermal resolution, radiometric capacity, and flight time."
+        "text": "The service acknowledged the need for real-time data, precision monitoring, and intelligent systems in modern conservation to enhance situational awareness."
       },
       {
         "id": "w54",
         "type": "paragraph",
-        "text": "Training rangers on these technologies may face challenges such as high training costs, low literacy, inadequate training materials, and a lack of motivation to shift from traditional methods."
+        "text": "“Through drones, remote sensing tools, GIS, thermal imaging, and data analytics platforms, KWS is transforming how wildlife and protected areas are monitored,” the KWS noted."
       },
       {
         "id": "w55",
         "type": "paragraph",
-        "text": "Yet despite these difficulties, conservationists still put up a fight, with the help of individual donations, government funding, private investors, and other established conservation organizations."
+        "text": "These innovations have overhauled the conservation landscape, yet the full adoption of these technologies in Kenyan conservancies faces new challenges that undermine the digitized interventions."
       },
       {
         "id": "w56",
         "type": "paragraph",
-        "text": "In his iconic series Life on Earth, prominent biologist David Attenborough reiterated that it was up to mankind to dedicate itself to conservation."
+        "text": "The cost of these gadgets and systems is very high, making them unaffordable for younger conservancies in the country that require the innovations."
       },
       {
         "id": "w57",
         "type": "paragraph",
-        "text": "“The fact is that no species has ever had such wholesale control over everything on earth, living or dead, as we now have. That lays upon us, whether we like it or not, an awesome responsibility,” he said."
+        "text": "A thermal drone, for instance, costs between $2,000 and $10,000 depending on thermal resolution, radiometric capacity, and flight time."
       },
       {
         "id": "w58",
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/03/pexels-photo-36410722.jpeg",
+        "alt": "Photo by Enes Ersahin on Pexels.com",
+        "caption": "Photo by Enes Ersahin on Pexels.com"
+      },
+      {
+        "id": "w59",
+        "type": "paragraph",
+        "text": "Training rangers on these technologies may face challenges such as high training costs, low literacy, inadequate training materials, and a lack of motivation to shift from traditional methods."
+      },
+      {
+        "id": "w60",
+        "type": "paragraph",
+        "text": "Yet despite these difficulties, conservationists still put up a fight, with the help of individual donations, government funding, private investors, and other established conservation organizations."
+      },
+      {
+        "id": "w61",
+        "type": "paragraph",
+        "text": "In his iconic series Life on Earth, prominent biologist David Attenborough reiterated that it was up to mankind to dedicate itself to conservation."
+      },
+      {
+        "id": "w62",
+        "type": "paragraph",
+        "text": "“The fact is that no species has ever had such wholesale control over everything on earth, living or dead, as we now have. That lays upon us, whether we like it or not, an awesome responsibility,” he said."
+      },
+      {
+        "id": "w63",
         "type": "paragraph",
         "text": "As conservancies strive to protect endangered species, innovation turns out to be not merely an icing on the cake but a necessity for the future of wildlife."
       }
@@ -365,92 +400,98 @@ export const WORDPRESS_STORIES: Story[] = [
     "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/04/screenshot-2026-04-09-112929.png",
     "body": [
       {
-        "id": "w59",
-        "type": "paragraph",
-        "text": "As the Kenyan professional landscape continues to evolve, young talents are stepping into the ring, eager to carve their paths."
-      },
-      {
-        "id": "w60",
-        "type": "paragraph",
-        "text": "Internships have become a rite of passage, a space where textbook knowledge meets real-world challenges."
-      },
-      {
-        "id": "w61",
-        "type": "paragraph",
-        "text": "But what’s it really like? I spoke to my fellow young interns to uncover the human side of their internship journeys."
-      },
-      {
-        "id": "w62",
-        "type": "paragraph",
-        "text": "“I never knew how much communication mattered,” says Priscah, a journalism intern at a Nairobi-based media house."
-      },
-      {
-        "id": "w63",
-        "type": "paragraph",
-        "text": "“I was tasked with covering a story on local governance, but I struggled to get sources to open up. My editor told me to focus on building rapport, not just facts. That lesson stuck with me. It’s all about people, not just the story.”"
-      },
-      {
         "id": "w64",
-        "type": "paragraph",
-        "text": "For many interns, the biggest lessons come from unexpected places."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/04/screenshot-2026-04-09-112929.png?w=450",
+        "alt": ""
       },
       {
         "id": "w65",
         "type": "paragraph",
-        "text": "“I was assigned to social media management, but I ended up learning more about crisis PR,” says Mutheu, a PR intern."
+        "text": "As the Kenyan professional landscape continues to evolve, young talents are stepping into the ring, eager to carve their paths."
       },
       {
         "id": "w66",
         "type": "paragraph",
-        "text": "“When a client faced backlash online, I saw how quick thinking and empathy could turn a situation around. It was a crash course in reputation management.”"
+        "text": "Internships have become a rite of passage, a space where textbook knowledge meets real-world challenges."
       },
       {
         "id": "w67",
         "type": "paragraph",
-        "text": "“I felt like I didn’t belong,” admits Aisha, an IT intern at a tech startup in Nairobi."
+        "text": "But what’s it really like? I spoke to my fellow young interns to uncover the human side of their internship journeys."
       },
       {
         "id": "w68",
         "type": "paragraph",
-        "text": "“The first week, they asked me to ‘just fix the server issue.’ I was like, ‘What?!’ But everyone was supportive, and I ended up thriving. It taught me that it’s okay to not know, as long as you’re willing to learn.”"
+        "text": "“I never knew how much communication mattered,” says Priscah, a journalism intern at a Nairobi-based media house."
       },
       {
         "id": "w69",
         "type": "paragraph",
-        "text": "Imposter syndrome is a common theme among interns. “I doubted myself a lot,” says David, an engineering intern at a construction company in Mombasa."
+        "text": "“I was tasked with covering a story on local governance, but I struggled to get sources to open up. My editor told me to focus on building rapport, not just facts. That lesson stuck with me. It’s all about people, not just the story.”"
       },
       {
         "id": "w70",
         "type": "paragraph",
-        "text": "“But my mentor told me, ‘You’re here to learn, not to impress.’ That shifted my perspective.”"
+        "text": "For many interns, the biggest lessons come from unexpected places."
       },
       {
         "id": "w71",
         "type": "paragraph",
-        "text": "With remote work on the rise, interns are navigating new ways to build connections. “I work with a team across three time zones,” says Grace, a marketing intern at an e-commerce company."
+        "text": "“I was assigned to social media management, but I ended up learning more about crisis PR,” says Mutheu, a PR intern."
       },
       {
         "id": "w72",
         "type": "paragraph",
-        "text": "“It’s tough to feel part of the team when you’re just a screen. But we’ve made it work by overcommunicating on Slack and having virtual coffee breaks.”"
+        "text": "“When a client faced backlash online, I saw how quick thinking and empathy could turn a situation around. It was a crash course in reputation management.”"
       },
       {
         "id": "w73",
         "type": "paragraph",
-        "text": "Not every intern gets to work on their dream project. “I wanted to do social media, but I was assigned data marketing,” says Maria, an intern at an ad agency in Nairobi."
+        "text": "“I felt like I didn’t belong,” admits Aisha, an IT intern at a tech startup in Nairobi."
       },
       {
         "id": "w74",
         "type": "paragraph",
-        "text": "“It was boring at first, but I realized it taught me attention to detail. Sometimes the less glamorous tasks are the most valuable.”"
+        "text": "“The first week, they asked me to ‘just fix the server issue.’ I was like, ‘What?!’ But everyone was supportive, and I ended up thriving. It taught me that it’s okay to not know, as long as you’re willing to learn.”"
       },
       {
         "id": "w75",
         "type": "paragraph",
-        "text": "As these young professionals navigate their internships, they’re learning that the real curriculum is experience itself. Their stories remind us that behind every job title is a human navigating challenges, learning curves, and unexpected victories."
+        "text": "Imposter syndrome is a common theme among interns. “I doubted myself a lot,” says David, an engineering intern at a construction company in Mombasa."
       },
       {
         "id": "w76",
+        "type": "paragraph",
+        "text": "“But my mentor told me, ‘You’re here to learn, not to impress.’ That shifted my perspective.”"
+      },
+      {
+        "id": "w77",
+        "type": "paragraph",
+        "text": "With remote work on the rise, interns are navigating new ways to build connections. “I work with a team across three time zones,” says Grace, a marketing intern at an e-commerce company."
+      },
+      {
+        "id": "w78",
+        "type": "paragraph",
+        "text": "“It’s tough to feel part of the team when you’re just a screen. But we’ve made it work by overcommunicating on Slack and having virtual coffee breaks.”"
+      },
+      {
+        "id": "w79",
+        "type": "paragraph",
+        "text": "Not every intern gets to work on their dream project. “I wanted to do social media, but I was assigned data marketing,” says Maria, an intern at an ad agency in Nairobi."
+      },
+      {
+        "id": "w80",
+        "type": "paragraph",
+        "text": "“It was boring at first, but I realized it taught me attention to detail. Sometimes the less glamorous tasks are the most valuable.”"
+      },
+      {
+        "id": "w81",
+        "type": "paragraph",
+        "text": "As these young professionals navigate their internships, they’re learning that the real curriculum is experience itself. Their stories remind us that behind every job title is a human navigating challenges, learning curves, and unexpected victories."
+      },
+      {
+        "id": "w82",
         "type": "paragraph",
         "text": "The internship journey in Kenya is full of growth, mishaps, and breakthroughs. These stories capture the essence of young talent finding their footing, making mistakes, and emerging stronger."
       }
@@ -477,92 +518,106 @@ export const WORDPRESS_STORIES: Story[] = [
     "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-19972937.jpeg",
     "body": [
       {
-        "id": "w77",
+        "id": "w86",
         "type": "paragraph",
         "text": "My aunt and uncle recently ventured into poultry farming. They bought over 50 chickens and built a standard housing structure for semi-intensive rearing, where the chickens have access to the outdoors but in a fenced setting."
       },
       {
-        "id": "w78",
+        "id": "w87",
         "type": "paragraph",
         "text": "The chickens fared well in their new habitation, but a mysterious disease hit them two months later, killing about ten of them. Upon research, my uncle and I found that the disease was Newcastle, a deadly poultry disease that has no cure."
       },
       {
-        "id": "w79",
+        "id": "w88",
         "type": "paragraph",
         "text": "We tried to salvage the rest of the infected chicken by introducing antibiotics and even opted for natural remedies such as aloe vera juice and chilli concoctions. We successfully maintained secondary infections, but recovery entirely depended on each chicken’s immunity."
       },
       {
-        "id": "w80",
+        "id": "w89",
         "type": "paragraph",
         "text": "We, however, learned that early vaccination is the main strategy for healthy chickens and circled back to the old adage, “Prevention is better than cure.”"
       },
       {
-        "id": "w81",
+        "id": "w90",
         "type": "paragraph",
         "text": "Early medication, though vital, needs to be administered with caution. Most poultry farmers believe dosing chickens with antibiotics (amoxicillin is commonly used) makes them resistant to incoming diseases."
       },
       {
-        "id": "w82",
+        "id": "w91",
         "type": "paragraph",
         "text": "This may work. However, I became aware of a chilling repercussion. Microbial resistance. This is a condition in which disease-causing pathogens become resistant to the medicines intended to kill them."
       },
       {
-        "id": "w83",
+        "id": "w92",
         "type": "paragraph",
         "text": "Microbial resistance is partly caused by the misuse of drugs, where they are used when not needed or not fully administered, allowing stronger germs to survive."
       },
       {
-        "id": "w84",
+        "id": "w93",
         "type": "paragraph",
         "text": "A study conducted in Nairobi found that some chickens had Escherichia coli and Salmonella bacteria, and 53 percent of the bacteria were resistant to amoxicillin."
       },
       {
-        "id": "w85",
+        "id": "w94",
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-30610009.jpeg",
+        "alt": "Amoxicillin is an antibiotic made from penicillin and is used to treat bacterial infection/ Patrick (Pexels).",
+        "caption": "Amoxicillin is an antibiotic made from penicillin and is used to treat bacterial infection/ Patrick (Pexels)."
+      },
+      {
+        "id": "w95",
         "type": "paragraph",
         "text": "These bacteria affect both chickens and humans. The germs are likely to cause food poisoning and diarrheal illnesses in humans when consumed in meat and eggs. They also cause respiratory, reproductive, and digestive complications in poultry."
       },
       {
-        "id": "w86",
+        "id": "w96",
         "type": "paragraph",
         "text": "This happens when the farmers irregularly dose the poultry with the drug, killing all of the weak and ordinary bacteria."
       },
       {
-        "id": "w87",
+        "id": "w97",
         "type": "paragraph",
         "text": "The amoxicillin, however, leaves stronger bacteria, which mutate and become resistant to the antibiotic."
       },
       {
-        "id": "w88",
+        "id": "w98",
         "type": "paragraph",
         "text": "In the study, the researchers selected chicken droppings from 150 different households in Nairobi. They found that some of the resistant germs contained TEM and CTX-M genes, causing their resistance to antibiotics."
       },
       {
-        "id": "w89",
+        "id": "w99",
         "type": "paragraph",
         "text": "“The isolates were detected with TEM (46%), CTX-M (18%) resistance genes and class 1 integrons (25%),” the study noted."
       },
       {
-        "id": "w90",
+        "id": "w100",
         "type": "paragraph",
         "text": "The researchers noted that Salmonella and E. coli shared information on how to resist the antibiotic through class 1 integrons, DNA structures in bacteria that capture and spread the code for drug resistance to other bacterial species."
       },
       {
-        "id": "w91",
+        "id": "w101",
         "type": "paragraph",
         "text": "“Therefore, the wide distribution of chicken and their fecal waste is likely to increase the development of antibiotic resistance,” the researchers observed."
       },
       {
-        "id": "w92",
+        "id": "w102",
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/microorganisms-12-02579-g004-550.jpg?w=550",
+        "alt": "The mechanism of antimicrobial resistance/MDPI.",
+        "caption": "The mechanism of antimicrobial resistance/MDPI."
+      },
+      {
+        "id": "w103",
         "type": "paragraph",
         "text": "Poultry farmers can avoid microbial resistance by getting a prescription from a trained vet, completing the full dose of the antibiotic, and discontinuing routine prevention."
       },
       {
-        "id": "w93",
+        "id": "w104",
         "type": "paragraph",
         "text": "“Only use antibiotics after consulting with a certified veterinarian, even if you can buy direct from a pharmacy or agrochemical shop,” the Food and Agriculture Organization said in a report."
       },
       {
-        "id": "w94",
+        "id": "w105",
         "type": "paragraph",
         "text": "Proper vaccination and farm cleanliness are also crucial in ensuring poultry remain healthy and unexposed to contaminants."
       }
@@ -589,92 +644,113 @@ export const WORDPRESS_STORIES: Story[] = [
     "cover": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-8458906.jpeg",
     "body": [
       {
-        "id": "w95",
-        "type": "paragraph",
-        "text": "We all have this experience where you are by yourself in a quiet room, idle, then your mind starts replaying your thoughts, and a sudden fear grips you. You then rush for something to keep your mind busy. Doomscrolling is largely the most used escape."
-      },
-      {
-        "id": "w96",
-        "type": "paragraph",
-        "text": "The psychological term for this phenomenon is known as autophobia. This is an intense, irrational fear of being isolated that makes you feel vulnerable and helpless. Although it seems like the right move to find safety, distraction validates the phobia, making it hard to overcome."
-      },
-      {
-        "id": "w97",
-        "type": "paragraph",
-        "text": "The process of thinking about your own thoughts is commonly described as metacognition. One of the main triggers of autophobia is the lack of self-reflection, which is less practiced in recent years due to the fast-paced digital world, making boredom-the opportunity to ponder-an impossibility."
-      },
-      {
-        "id": "w98",
-        "type": "paragraph",
-        "text": "Lebanese-American mathematician and author Nassim Nicholas Taleb, in his book, The Bed of Procrustes: Philosophical and Practical Aphorisms, described technology as bondage, in which consumers are oblivious of its addictive pull."
-      },
-      {
-        "id": "w99",
-        "type": "paragraph",
-        "text": "“The difference between technology and slavery is that slaves are fully aware that they are not free,” he said."
-      },
-      {
-        "id": "w100",
-        "type": "paragraph",
-        "text": "The danger of not facing your own thoughts is that you are left exposed to manipulation and poor judgment. Failing to control your thoughts and have independent introspection may make you vulnerable to algorithms, peer pressure, and media influence, derailing you from your actual principles or beliefs."
-      },
-      {
-        "id": "w101",
-        "type": "paragraph",
-        "text": "A study published in 2024 observed that anxiety patients who attributed their anxiety to an internal cause, such as a psychological or biological factor, were more likely to seek help or opt to improve their states."
-      },
-      {
-        "id": "w102",
-        "type": "paragraph",
-        "text": "“Conversely, if the individual attributes their anxiety to external factors, they may delay seeking assistance and persist in avoiding anxiety-provoking situations or continue managing their anxiety with safety behaviors,” the study contrasted."
-      },
-      {
-        "id": "w103",
-        "type": "paragraph",
-        "text": "This underscores the importance of individuals taking time for self-reflection to make better decisions."
-      },
-      {
-        "id": "w104",
-        "type": "paragraph",
-        "text": "Avoiding your feelings about situations or scenarios can lead you to act solely based on them, which may complicate your relationships or cause shame, guilt, and regret after your reactions."
-      },
-      {
-        "id": "w105",
-        "type": "paragraph",
-        "text": "“The less a person knows, the more they trust their instinct, not realizing their instinct was trained by what they never questioned,” online author Pierre Lagrenat said."
-      },
-      {
         "id": "w106",
-        "type": "paragraph",
-        "text": "Re-establishing the habit of metacognition in your life enables you to gain mastery over your emotions. The art of confronting your thoughts guides you on how to react to a conversation or scenario that triggers positive and negative emotions in you."
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-14028617.jpeg",
+        "alt": "Photo by Danilo Arenas/Pexels.",
+        "caption": "Photo by Danilo Arenas/Pexels."
       },
       {
         "id": "w107",
         "type": "paragraph",
-        "text": "Metacognition also aids you in exploring different ideas, perspectives, and experiences within your mind. This accelerates your ability to learn new skills and improves your flexibility in complicated situations or challenges."
+        "text": "We all have this experience where you are by yourself in a quiet room, idle, then your mind starts replaying your thoughts, and a sudden fear grips you. You then rush for something to keep your mind busy. Doomscrolling is largely the most used escape."
       },
       {
         "id": "w108",
         "type": "paragraph",
-        "text": "The ability to master your own thoughts also helps you gain confidence. This comes from knowing your mental boundaries, strengths, and blind spots. You are then able to set your own principles, build mental fortitude, and self-awareness."
+        "text": "The psychological term for this phenomenon is known as autophobia. This is an intense, irrational fear of being isolated that makes you feel vulnerable and helpless. Although it seems like the right move to find safety, distraction validates the phobia, making it hard to overcome."
       },
       {
         "id": "w109",
         "type": "paragraph",
-        "text": "To regain the art of metacognition, you must view your thoughts, emotions, and interactions through a third-person lens. Practice observing your own thoughts like an objective scientist, a therapist, or a kind friend. Do not be overly harsh or critical of your thoughts."
+        "text": "The process of thinking about your own thoughts is commonly described as metacognition. One of the main triggers of autophobia is the lack of self-reflection, which is less practiced in recent years due to the fast-paced digital world, making boredom-the opportunity to ponder-an impossibility."
       },
       {
         "id": "w110",
         "type": "paragraph",
-        "text": "Proper self-reflection happens when you cut off distractions. Turn your phone off, find a quiet place, and trace every thought that comes up back to its origin."
+        "text": "Lebanese-American mathematician and author Nassim Nicholas Taleb, in his book, The Bed of Procrustes: Philosophical and Practical Aphorisms, described technology as bondage, in which consumers are oblivious of its addictive pull."
       },
       {
         "id": "w111",
         "type": "paragraph",
-        "text": "Journaling is also a vital strategy that helps you declutter your messy thoughts onto physical paper. If it seems hard, use prompts, such as “Why did what she said bother me so much?”"
+        "text": "“The difference between technology and slavery is that slaves are fully aware that they are not free,” he said."
       },
       {
         "id": "w112",
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/pexels-photo-8088495.jpeg",
+        "alt": "Phone consumers stay glued to their phones, seeming drawn to it/Cottonbro Studio (Pexels)",
+        "caption": "Phone consumers stay glued to their phones, seeming drawn to it/Cottonbro Studio (Pexels)"
+      },
+      {
+        "id": "w113",
+        "type": "paragraph",
+        "text": "The danger of not facing your own thoughts is that you are left exposed to manipulation and poor judgment. Failing to control your thoughts and have independent introspection may make you vulnerable to algorithms, peer pressure, and media influence, derailing you from your actual principles or beliefs."
+      },
+      {
+        "id": "w114",
+        "type": "paragraph",
+        "text": "A study published in 2024 observed that anxiety patients who attributed their anxiety to an internal cause, such as a psychological or biological factor, were more likely to seek help or opt to improve their states."
+      },
+      {
+        "id": "w115",
+        "type": "paragraph",
+        "text": "“Conversely, if the individual attributes their anxiety to external factors, they may delay seeking assistance and persist in avoiding anxiety-provoking situations or continue managing their anxiety with safety behaviors,” the study contrasted."
+      },
+      {
+        "id": "w116",
+        "type": "paragraph",
+        "text": "This underscores the importance of individuals taking time for self-reflection to make better decisions."
+      },
+      {
+        "id": "w117",
+        "type": "paragraph",
+        "text": "Avoiding your feelings about situations or scenarios can lead you to act solely based on them, which may complicate your relationships or cause shame, guilt, and regret after your reactions."
+      },
+      {
+        "id": "w118",
+        "type": "paragraph",
+        "text": "“The less a person knows, the more they trust their instinct, not realizing their instinct was trained by what they never questioned,” online author Pierre Lagrenat said."
+      },
+      {
+        "id": "w119",
+        "type": "paragraph",
+        "text": "Re-establishing the habit of metacognition in your life enables you to gain mastery over your emotions. The art of confronting your thoughts guides you on how to react to a conversation or scenario that triggers positive and negative emotions in you."
+      },
+      {
+        "id": "w120",
+        "type": "paragraph",
+        "text": "Metacognition also aids you in exploring different ideas, perspectives, and experiences within your mind. This accelerates your ability to learn new skills and improves your flexibility in complicated situations or challenges."
+      },
+      {
+        "id": "w121",
+        "type": "image",
+        "src": "https://vicunfiltered.wordpress.com/wp-content/uploads/2026/07/metacognition_diagram_outline-1.jpg?w=1000",
+        "alt": "Metacognition cycle with planning, monitoring, and evaluating outline diagram/VectorMine.",
+        "caption": "Metacognition cycle with planning, monitoring, and evaluating outline diagram/VectorMine."
+      },
+      {
+        "id": "w122",
+        "type": "paragraph",
+        "text": "The ability to master your own thoughts also helps you gain confidence. This comes from knowing your mental boundaries, strengths, and blind spots. You are then able to set your own principles, build mental fortitude, and self-awareness."
+      },
+      {
+        "id": "w123",
+        "type": "paragraph",
+        "text": "To regain the art of metacognition, you must view your thoughts, emotions, and interactions through a third-person lens. Practice observing your own thoughts like an objective scientist, a therapist, or a kind friend. Do not be overly harsh or critical of your thoughts."
+      },
+      {
+        "id": "w124",
+        "type": "paragraph",
+        "text": "Proper self-reflection happens when you cut off distractions. Turn your phone off, find a quiet place, and trace every thought that comes up back to its origin."
+      },
+      {
+        "id": "w125",
+        "type": "paragraph",
+        "text": "Journaling is also a vital strategy that helps you declutter your messy thoughts onto physical paper. If it seems hard, use prompts, such as “Why did what she said bother me so much?”"
+      },
+      {
+        "id": "w126",
         "type": "paragraph",
         "text": "In a nutshell, metacognition is only achievable if you stop thinking of it as a serious interrogation, but as a self-befriending activity."
       }

@@ -96,11 +96,16 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           ratio="16/10"
           hoverZoom
           priority={isFeature}
-          // From `sm` the cover is a grid cell that stretches to the row, so
-          // an explicit height takes over from the ratio and the picture is
-          // exactly as tall as the words beside it. Below `sm` the layout is
-          // stacked and the ratio does the work.
-          className={cn("shrink-0", isFeature && "sm:h-full")}
+          // `w-full` is load-bearing, and its absence was the bug where the
+          // cover covered the headline. `ImageReveal` sets `aspect-ratio`
+          // inline; give an element a definite height and an aspect ratio and
+          // the browser derives the *width* from them — 513px tall at 16:10
+          // became 821px wide inside a 337px grid column, and a grid item's
+          // `min-width: auto` let it overflow rather than shrink. With both
+          // dimensions definite the ratio is ignored and the picture fills its
+          // cell exactly. Below `sm` the layout is stacked and the ratio does
+          // the work as intended.
+          className={cn("shrink-0", isFeature && "sm:h-full sm:w-full")}
         />
 
         {/* On the feature the column centres its content instead of pushing

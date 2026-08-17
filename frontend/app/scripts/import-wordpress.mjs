@@ -72,16 +72,48 @@ const text = (html) => decode(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ")
  * because a half-understood block rendered wrongly is worse than an absent
  * one, and the original stays one click away at its source URL.
  */
-function toBlocks(html, seed) {
+function toBlocks(html, seed, skip = new Set()) {
   const blocks = [];
   let n = seed;
   const id = () => `w${++n}`;
+  // Pictures already used elsewhere — the cover, or an image WordPress repeats
+  // inside the post. Showing the cover again as the first thing in the body is
+  // the same photograph twice in one screen.
+  const seen = new Set(skip);
 
+  // `figure` comes first so a figure is consumed whole rather than having its
+  // caption picked up separately, and a bare `img` is matched last so it only
+  // catches pictures that were not wrapped in one.
   const pattern =
-    /<(h[2-4])[^>]*>([\s\S]*?)<\/\1>|<blockquote[^>]*>([\s\S]*?)<\/blockquote>|<(ul|ol)[^>]*>([\s\S]*?)<\/\4>|<p[^>]*>([\s\S]*?)<\/p>/gi;
+    /<figure[^>]*>([\s\S]*?)<\/figure>|<(h[2-4])[^>]*>([\s\S]*?)<\/\2>|<blockquote[^>]*>([\s\S]*?)<\/blockquote>|<(ul|ol)[^>]*>([\s\S]*?)<\/\5>|<p[^>]*>([\s\S]*?)<\/p>|<img[^>]+>/gi;
 
   for (const m of html.matchAll(pattern)) {
-    const [, hTag, hBody, quoteBody, , listBody, pBody] = m;
+    const [whole, figureBody, hTag, hBody, quoteBody, , listBody, pBody] = m;
+
+    if (figureBody !== undefined || whole.startsWith("<img")) {
+      const scope = figureBody ?? whole;
+      const src = scope.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
+      if (!src || seen.has(src)) continue;
+      seen.add(src);
+
+      const alt = scope.match(/<img[^>]+alt=["']([^"']*)["']/i)?.[1] ?? "";
+      const caption = figureBody
+        ? text(figureBody.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] ?? "")
+        : "";
+
+      blocks.push({
+        id: id(),
+        type: "image",
+        src,
+        // WordPress fills alt with the filename when nobody wrote one, which
+        // is worse than empty: a screen reader then announces
+        // "metacognition_diagram_outline-1.jpg". A caption is real text, so it
+        // stands in; otherwise the image is marked decorative.
+        alt: alt && !/\.(jpe?g|png|gif|webp)$/i.test(alt) ? decode(alt) : caption,
+        caption: caption || undefined,
+      });
+      continue;
+    }
 
     if (hTag) {
       const value = text(hBody);
@@ -191,9 +223,13 @@ let seed = 0;
 const stories = [];
 
 for (const post of posts.slice().reverse()) {
-  const { blocks, next } = toBlocks(post.content, seed);
+  const cover = coverFor(post);
+  const { blocks, next } = toBlocks(post.content, seed, new Set(cover ? [cover] : []));
   seed = next;
-  if (!blocks.length) continue;
+
+  // A post of nothing but pictures has no article to render here. Skipped
+  // rather than half-built — the original stays one link away.
+  if (!blocks.some((b) => b.type === "paragraph")) continue;
 
   const published = new Date(post.date).toISOString().slice(0, 10);
 
@@ -230,7 +266,7 @@ for (const post of posts.slice().reverse()) {
     readingMinutes: Math.max(1, Math.round(words(blocks) / 220)),
     publication: "Vic Unfiltered",
     sourceUrl: post.URL,
-    cover: coverFor(post),
+    cover,
     body: blocks,
   });
 }

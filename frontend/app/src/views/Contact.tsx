@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
 import { useCopy } from "@/hooks/useCopy";
 import { notify } from "@/lib/toast";
-import { CONTACT } from "@/data/content";
+import { CONTACT, SOCIAL_ACCOUNTS } from "@/data/content";
+import { SocialIcon } from "@/components/social/SocialIcon";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/hero/PageHero";
@@ -120,6 +121,44 @@ export default function Contact() {
             <MessageCircle className="icon-rise h-4 w-4" aria-hidden />
             Message on WhatsApp
           </Button>
+
+          {/* The accounts, as a grid of destinations rather than a row of
+              logos. They sit *below* the direct routes and under a heading
+              that says what they are not: a public reply on a social platform
+              is a public reply, and somebody arriving on a tips page needs
+              that said before they pick the easiest icon. */}
+          <div className="mt-8">
+            <p className="rule-label">Or find him on</p>
+            <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {SOCIAL_ACCOUNTS.map((account) => (
+                <li key={account.id}>
+                  <a
+                    href={account.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="surface-compact focus-ring tap group flex h-full items-center gap-2.5 px-3 py-2.5 transition-colors duration-normal hover:border-accent/50"
+                  >
+                    <SocialIcon
+                      id={account.id}
+                      className="icon-tilt h-4 w-4 shrink-0 text-primary"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-semibold">
+                        {account.label}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {account.handle}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              These are public. For anything you would not post yourself, use the phone or email
+              above.
+            </p>
+          </div>
 
           <div className="mt-8 border border-dashed border-border p-6">
             <p className="rule-label">Before you send</p>

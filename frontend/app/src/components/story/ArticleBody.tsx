@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Play } from "lucide-react";
 import type { Block, Story } from "@/data/types";
 import { splitSentences } from "@/lib/voice";
-import { coverFor } from "@/lib/cover";
+import { blockImage } from "@/lib/cover";
 import { cn } from "@/lib/utils";
 import { useVoice } from "@/context/VoiceProvider";
 import { ImageReveal, Reveal } from "@/components/motion";
@@ -148,7 +148,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
       return (
         <figure data-block-id={block.id} className="my-10 -mx-5 sm:mx-0">
           <ImageReveal
-            src={coverFor(block.src)}
+            src={blockImage(block.src)}
             alt={block.alt}
             ratio="16/9"
             className="rounded-lg shadow-card"

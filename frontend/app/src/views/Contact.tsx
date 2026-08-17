@@ -2,19 +2,26 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Check, Copy, Mail, ShieldCheck } from "lucide-react";
+import { Check, Copy, Mail, MessageCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
 import { useCopy } from "@/hooks/useCopy";
 import { notify } from "@/lib/toast";
+import { CONTACT } from "@/data/content";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/hero/PageHero";
 import { AtmosphereBand } from "@/components/ui/AtmosphereBand";
 import { CONTACT_ATMOSPHERE } from "@/data/imagery";
 
-const EMAIL = "tips@maraellison.example";
-const SIGNAL = "+44 7700 900112";
+/**
+ * WhatsApp's own deep link, with the first message pre-filled. `wa.me` opens
+ * the installed app on a phone and WhatsApp Web on a desktop, so one link
+ * covers both without sniffing anything.
+ */
+const whatsappUrl = `https://wa.me/${CONTACT.phoneDigits}?text=${encodeURIComponent(
+  CONTACT.whatsappMessage,
+)}`;
 
 type FormState = "idle" | "sending" | "sent" | "error";
 
@@ -22,20 +29,47 @@ export default function Contact() {
   const [state, setState] = useState<FormState>("idle");
   const reduced = useReducedMotion();
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  /**
+   * The form hands off to WhatsApp instead of posting anywhere.
+   *
+   * There is no backend to receive a submission, and the previous version of
+   * this handler spent 900ms pretending to send before admitting it had not —
+   * honest, but useless to someone with a tip. Composing the fields into a
+   * WhatsApp draft makes the form do the thing it looks like it does: the
+   * reader writes once, presses the button, and lands in a chat with the
+   * message already typed and nothing sent until they press send again.
+   *
+   * When the API lands this becomes a real POST and the WhatsApp route stays
+   * as the second option beside it.
+   */
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (state === "sending") return;
 
-    setState("sending");
-    // Stands in for the real submission endpoint.
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    const data = new FormData(e.currentTarget);
+    const value = (key: string) => String(data.get(key) ?? "").trim();
 
-    // No backend is wired up yet, so this reports honestly rather than
-    // claiming a delivery that did not happen.
-    setState("error");
-    notify.error(
-      "Message not sent",
-      "The contact form isn't connected yet — please use the email address instead.",
+    const message = value("message");
+    if (!message) {
+      notify.error("Nothing to send", "Write your message first.");
+      return;
+    }
+
+    const lines = [
+      value("subject") || "Message from victorkiplimo.com",
+      "",
+      message,
+      "",
+      // Only what they actually filled in — an empty "From:" line reads as a
+      // field that failed rather than one left blank on purpose.
+      value("name") && `From: ${value("name")}`,
+      value("email") && `Reply to: ${value("email")}`,
+    ].filter(Boolean);
+
+    setState("sent");
+    window.open(
+      `https://wa.me/${CONTACT.phoneDigits}?text=${encodeURIComponent(lines.join("\n"))}`,
+      "_blank",
+      "noopener,noreferrer",
     );
   };
 
@@ -60,19 +94,49 @@ export default function Contact() {
       <div className="mt-16 grid gap-14 lg:grid-cols-[1fr_1.1fr]">
         <Reveal variant="fade-right">
           <div className="space-y-px">
-            <CopyRow label="Email" value={EMAIL} icon={<Mail className="h-4 w-4" aria-hidden />} />
             <CopyRow
-              label="Signal"
-              value={SIGNAL}
-              icon={<ShieldCheck className="h-4 w-4" aria-hidden />}
+              label="Email"
+              value={CONTACT.email}
+              icon={<Mail className="h-4 w-4" aria-hidden />}
+            />
+            <CopyRow
+              label="Phone"
+              value={CONTACT.phone}
+              icon={<Phone className="h-4 w-4" aria-hidden />}
             />
           </div>
+
+          {/* The fastest route, and the one most people will actually use.
+              The message is pre-written so the first thing a reader has to do
+              is not compose an opening line to a stranger. */}
+          <Button
+            as="a"
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            size="lg"
+            className="group mt-6 w-full sm:w-auto"
+          >
+            <MessageCircle className="icon-rise h-4 w-4" aria-hidden />
+            Message on WhatsApp
+          </Button>
 
           <div className="mt-8 border border-dashed border-border p-6">
             <p className="rule-label">Before you send</p>
             <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
               <li>Do not use a work device or a work network.</li>
-              <li>Signal is preferred for anything sensitive; set messages to disappear.</li>
+              {/* This used to recommend Signal, which is not one of the routes
+                  above. Saying WhatsApp is fine for sensitive material would
+                  be worse than saying nothing: its message contents are
+                  end-to-end encrypted, but it is tied to your phone number and
+                  the fact that you contacted a journalist is visible in the
+                  metadata. A source deciding how much risk to take deserves
+                  that distinction, not reassurance. */}
+              <li>
+                WhatsApp encrypts what you write, but it is tied to your phone number and records
+                that you got in touch. For anything that could identify you, say so first and we
+                will agree a safer channel before you send it.
+              </li>
               <li>
                 I will not publish anything that identifies you without agreeing it with you first.
               </li>
@@ -88,24 +152,16 @@ export default function Contact() {
             <Field label="Message" name="message" required multiline />
 
             <div className="flex flex-wrap items-center gap-4 pt-1">
-              <Button type="submit" size="lg" loading={state === "sending"} loadingText="Sending">
-                Send message
+              {/* The label says where the button goes. "Send message" beside a
+                  handler that opens WhatsApp would be a small lie, and the one
+                  page on the site where a reader needs to know exactly which
+                  app their words are about to land in is this one. */}
+              <Button type="submit" size="lg" className="group">
+                <MessageCircle className="icon-rise h-4 w-4" aria-hidden />
+                Open in WhatsApp
               </Button>
 
               <AnimatePresence mode="wait">
-                {state === "error" && (
-                  <motion.p
-                    key="error"
-                    role="status"
-                    initial={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={transitions.normal}
-                    className="text-sm text-destructive"
-                  >
-                    Not connected yet — please email instead.
-                  </motion.p>
-                )}
                 {state === "sent" && (
                   <motion.p
                     key="sent"
@@ -117,11 +173,16 @@ export default function Contact() {
                     className="flex items-center gap-2 text-sm text-accent"
                   >
                     <Check className="h-4 w-4" aria-hidden />
-                    Message sent.
+                    Drafted in WhatsApp — press send there.
                   </motion.p>
                 )}
               </AnimatePresence>
             </div>
+
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              This opens WhatsApp with your message written out. Nothing is sent until you press
+              send there, and nothing is stored on this site — there is no server behind this form.
+            </p>
           </form>
         </Reveal>
       </div>

@@ -76,6 +76,30 @@ export const SOCIAL = {
   },
 } as const satisfies Record<string, SocialAccount>;
 
+/**
+ * How to reach him.
+ *
+ * The phone number is real and was supplied by the site's owner. It is kept
+ * here rather than inline in the view so there is exactly one place to change
+ * it — a contact detail that is wrong in one of three files is worse than no
+ * contact detail at all.
+ *
+ * `phoneDigits` is the same number in E.164 with no punctuation, which is what
+ * `tel:` and `wa.me` both require; the spaced form is only ever displayed.
+ */
+export const CONTACT = {
+  /** Still a placeholder domain. Replace before this site goes live. */
+  email: PROFILE.email,
+  phone: "+254 704 376 007",
+  phoneDigits: "254704376007",
+  /**
+   * Pre-filled so the first message is not a blank box. Deliberately says
+   * nothing about the tip itself: WhatsApp shows a message preview on a lock
+   * screen, and the opening line should not be the part worth reading.
+   */
+  whatsappMessage: "Hello Victor — I have something I'd like to share with you for a story.",
+} as const;
+
 /** Iteration order for follow rails: video first, because the work is video. */
 export const SOCIAL_ACCOUNTS: SocialAccount[] = [
   SOCIAL.youtube,

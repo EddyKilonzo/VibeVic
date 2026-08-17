@@ -87,7 +87,7 @@ export default function About() {
               <dl className="mt-8 grid max-w-lg grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
                 {[
                   { term: "Based in", value: PROFILE.base },
-                  { term: "Studied at", value: PROFILE.education },
+                  { term: "Studying at", value: PROFILE.education },
                   { term: "Beats", value: `${TOPICS.length} subjects` },
                 ].map((fact) => (
                   <div key={fact.term}>
@@ -126,7 +126,7 @@ export default function About() {
               // available pushed the card itself below the fold — the one part
               // of it worth seeing. Capped so it cannot outgrow the 80svh hero
               // it sits in.
-              className="h-[min(58svh,560px)] min-h-[380px]"
+              className="h-[min(62svh,540px)] min-h-[400px]"
               fallback={
                 <Reveal variant="fade-scale" delay={140}>
                   <ImageReveal
@@ -152,7 +152,7 @@ export default function About() {
           <Reveal variant="fade-right">
             <div className="space-y-6 text-[1.05rem] leading-[1.8] text-foreground/90">
               <p>
-                I'm a journalist based in {PROFILE.base}, and a graduate of{" "}
+                I'm a journalist based in {PROFILE.base}, and a {PROFILE.educationStatus} at{" "}
                 <span className="font-semibold text-primary">{PROFILE.education}</span>. I report,
                 shoot and edit my own pieces, and publish them on{" "}
                 <a
@@ -166,10 +166,11 @@ export default function About() {
                 .
               </p>
               <p>
-                The work so far has centred on the Eldoret National Polytechnic — how the
-                institution runs, what changes when a process like procurement moves online, and
-                what students carry that never appears in an official statement. Alongside that
-                sit cultural pieces and commissioned features.
+                Most of the work so far has been about the place I study — how the institution
+                runs, what changes when a process like procurement moves online, and what students
+                carry that never appears in an official statement. Reporting on your own college
+                means the people in the story are people you will see again, which is a discipline
+                rather than a conflict. Alongside that sit cultural pieces and commissioned work.
               </p>
               <p>
                 Everything is short-form on purpose. A two-minute report that someone finishes is

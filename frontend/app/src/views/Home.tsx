@@ -243,8 +243,8 @@ export default function Home() {
               {PROFILE.name}
             </h2>
             <p className="mt-5 max-w-[54ch] text-lg leading-relaxed text-muted-foreground">
-              A {PROFILE.role.toLowerCase()} based in {PROFILE.base} and a {PROFILE.education}{" "}
-              graduate. The reporting starts with what an institution actually does, then asks the
+              A {PROFILE.role.toLowerCase()} based in {PROFILE.base} and a {PROFILE.educationStatus}{" "}
+              at {PROFILE.education}. The reporting starts with what an institution actually does, then asks the
               people it affects — and it is published as video, first, on {CHANNEL.handle}.
             </p>
 
@@ -263,7 +263,7 @@ export default function Home() {
           <Stagger className="grid gap-4 sm:grid-cols-3 lg:col-span-4 lg:gap-5" step="tight">
             {[
               { icon: MapPin, label: "Based in", value: PROFILE.base },
-              { icon: GraduationCap, label: "Studied at", value: PROFILE.education },
+              { icon: GraduationCap, label: "Studying at", value: PROFILE.education },
               { icon: Youtube, label: "Publishes on", value: CHANNEL.handle },
             ].map((fact, i) => (
               <StaggerItem key={fact.label} index={i}>

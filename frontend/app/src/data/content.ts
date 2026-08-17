@@ -24,8 +24,16 @@ import { CHANNEL, TOPICS, VIDEOS } from "./videos";
 export const PROFILE = {
   name: "Victor Kiplimo",
   role: "Journalist",
-  /** Supplied by the site's owner. */
-  education: "Moi University",
+  /**
+   * Corrected by the site's owner: he is a *current student* here, not a
+   * graduate of anywhere. The earlier "Moi University graduate" was wrong on
+   * both the institution and the status, and it is the sort of thing that has
+   * to be right on a real journalist's page — every string below reads from
+   * this one field so a correction lands everywhere at once.
+   */
+  education: "The Eldoret National Polytechnic",
+  /** "student" / "graduate" — used wherever the relationship is described. */
+  educationStatus: "student",
   /** Every report on the channel to date has been filed from Eldoret. */
   base: "Eldoret, Kenya",
   channel: CHANNEL,
@@ -223,11 +231,11 @@ export const PUBLICATIONS: Publication[] = [
     url: CHANNEL.url,
   },
   {
-    name: "Moi University",
-    role: "Graduate",
-    period: "Completed",
+    name: "The Eldoret National Polytechnic",
+    role: "Student",
+    period: "Current",
     description:
-      "Where Victor trained before moving into independent reporting and video production.",
+      "Where Victor studies, and the institution most of his campus reporting is about.",
   },
 ];
 

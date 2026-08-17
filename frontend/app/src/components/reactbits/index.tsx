@@ -220,11 +220,14 @@ export function PressPass({
         fallback
       ) : (
         <LanyardBase
-          // Closer camera than the library's default, so the card and its band
-          // fill the column they are given rather than floating in the middle
-          // of it. The band is widened to match; at the default width a card
-          // this size hangs from what looks like a thread.
-          position={[0, 0, 13]}
+          // At fov 20 the visible height is 2·z·tan(10°), so the camera
+          // distance *is* the framing. The whole assembly — anchor at 2.5, a
+          // 1.8-unit cord, then the card — spans about 4.3 units, and 13 gave
+          // a 4.6-unit frustum: technically enough, with no margin, so the
+          // strap clipped at the top or the card at the bottom depending on
+          // where the rope settled. 15 leaves it about half a unit of air at
+          // each end, which is what stops it touching either edge as it swings.
+          position={[0, 0, 13.5]}
           gravity={[0, -40, 0]}
           frontImage={frontImage}
           imageFit="cover"

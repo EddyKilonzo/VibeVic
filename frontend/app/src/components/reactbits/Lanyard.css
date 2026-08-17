@@ -1,11 +1,25 @@
+/*
+ * `height: 100%`, not `100vh`.
+ *
+ * Upstream hard-codes a full-viewport-tall wrapper, which is fine for the
+ * demo page it was written for — the lanyard *is* that page — and wrong
+ * anywhere else. Given a 420px column it still built a 729px canvas, centred
+ * the scene in that, and hung the card a couple of hundred pixels below the
+ * box it was supposed to be in. From outside it looked like the card was
+ * being cut off at the bottom; in fact the canvas was never the size it was
+ * asked to be.
+ *
+ * Filling the parent means the caller's height is the framing, and the camera
+ * distance in `PressPass` can be reasoned about against a box that actually
+ * exists.
+ */
 .lanyard-wrapper {
   position: relative;
   z-index: 0;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  transform: scale(1);
   transform-origin: center;
 }

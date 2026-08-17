@@ -4,7 +4,7 @@ import { PROFILE } from "@/data/content";
 
 export const metadata: Metadata = {
   title: "About",
-  description: `${PROFILE.name}, ${PROFILE.role} based in ${PROFILE.base}. ${PROFILE.education}.`,
+  description: `${PROFILE.name}, ${PROFILE.role} based in ${PROFILE.base} and a ${PROFILE.educationStatus} at ${PROFILE.education}.`,
 };
 
 export default function AboutRoute() {

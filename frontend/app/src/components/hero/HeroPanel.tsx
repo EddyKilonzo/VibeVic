@@ -32,11 +32,20 @@ export function HeroPanel({
    * bottom edge.
    */
   fitViewport = false,
+  /**
+   * A fraction of the screen for the panel to fill, e.g. `70` for 70svh.
+   *
+   * Inner pages want a hero with presence but not a whole screen — the reader
+   * came for what is underneath it. Seventy per cent leaves the top of the
+   * content visible at the fold, which is what tells them to keep going.
+   */
+  minViewport,
 }: {
   children: ReactNode;
   className?: string;
   bleed?: boolean;
   fitViewport?: boolean;
+  minViewport?: number;
 }) {
   return (
     <div className="px-2 pt-2 sm:px-3 sm:pt-3">
@@ -47,8 +56,16 @@ export function HeroPanel({
           fitViewport
             ? "flex min-h-[calc(100svh-0.5rem)] flex-col justify-center pt-20 sm:min-h-[calc(100svh-0.75rem)] sm:pt-24"
             : "pt-28 sm:pt-36",
+          minViewport && !fitViewport && "flex flex-col justify-center",
           className,
         )}
+        style={
+          minViewport && !fitViewport
+            ? // `svh` for the same reason as above: the small viewport is the
+              // one that is actually on screen while the address bar is up.
+              { minHeight: `${minViewport}svh` }
+            : undefined
+        }
       >
         {children}
       </section>

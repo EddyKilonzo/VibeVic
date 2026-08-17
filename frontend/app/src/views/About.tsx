@@ -205,23 +205,44 @@ export default function About() {
             half a step from `lg` up so the row interlocks rather than sitting
             on one flat baseline; on a phone it is a plain column, which is the
             right answer there. */}
-        <section className="mt-24 sm:mt-28">
-          <p className="rule-label">Portraits</p>
-          {/* A picture wall rather than a row of equal plates. The heights are
-              each frame's own proportion scaled to a common column width, so
-              the wall is ragged because the pictures are, and nothing is
-              cropped to make a tidy grid. */}
-          <PictureWall
-            className="mt-8"
-            items={WALL.map((portrait) => ({
-              id: portrait.src,
-              img: portrait.src,
-              alt: portrait.alt,
-              caption: portrait.caption,
-              width: portrait.width,
-              height: portrait.height,
-            }))}
-          />
+        {/* ── Portraits ──────────────────────────────────────────
+            A titled band on its own ground rather than four pictures after a
+            label. The heading sits in a left column and the wall runs beside
+            it from `lg` up, which is what stops a gallery reading as an
+            afterthought stapled to the end of the biography — and on the way
+            it gives the pictures a narrower measure, so they are plates
+            instead of posters.
+
+            The wall is CSS columns: each tile keeps its own proportion, so
+            the ragged edge is the set's, not a crop. */}
+        <section className="honeycomb honeycomb-strong relative mt-24 overflow-hidden rounded-2xl border border-border p-6 sm:mt-28 sm:p-10 lg:p-12">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] lg:gap-14">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <p className="rule-label">Portraits</p>
+              <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+                The set, in black and white.
+              </h2>
+              <p className="mt-4 max-w-[36ch] leading-relaxed text-muted-foreground">
+                Shot in one session. They are portraits, not reporting — which
+                is why none of them is used as a cover on a story.
+              </p>
+            </div>
+
+            <PictureWall
+              // One column on a phone — two portraits side by side inside an
+              // already-narrow band are thumbnails, and the whole point of the
+              // wall is that you can see the photographs.
+              className="columns-1 sm:columns-2 lg:columns-2"
+              items={WALL.map((portrait) => ({
+                id: portrait.src,
+                img: portrait.src,
+                alt: portrait.alt,
+                caption: portrait.caption,
+                width: portrait.width,
+                height: portrait.height,
+              }))}
+            />
+          </div>
         </section>
 
         {/* ── In the field ───────────────────────────────────────

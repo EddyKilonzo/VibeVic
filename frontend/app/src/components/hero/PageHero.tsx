@@ -44,7 +44,10 @@ export function PageHero({
   className,
 }: PageHeroProps) {
   return (
-    <HeroPanel className={className}>
+    // Seventy per cent of the screen: enough for the hero to be an arrival
+    // rather than a strip, and short enough that the first thing the reader
+    // actually came for is already breaking the fold.
+    <HeroPanel minViewport={70} className={className}>
       <div className="container-site flex flex-col items-center text-center">
         {badge && (
           <Reveal variant="fade-up" distance="sm">

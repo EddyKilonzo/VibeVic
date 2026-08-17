@@ -228,6 +228,11 @@ export function PressPass({
           gravity={[0, -40, 0]}
           frontImage={frontImage}
           imageFit="cover"
+          // The band reads PRESS · JOURNALIST, repeating, in brand navy — the
+          // texture is generated rather than sourced so it stays on palette and
+          // tiles cleanly along the strap. Widened to give the words room; at
+          // the library's default the tape is too narrow to read them on.
+          lanyardImage="/lanyard/band-press.png"
           lanyardWidth={1.1}
           transparent
         />

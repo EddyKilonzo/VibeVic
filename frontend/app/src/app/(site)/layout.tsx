@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { HoneycombGround } from "@/components/texture/HoneycombGround";
+import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 
 /**
  * The public shell.
@@ -16,6 +17,8 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
     // same stock and no page has to remember to ask for it. `HoneycombGround`
     // adds the pointer response on top of the same layer.
     <HoneycombGround className="flex min-h-screen flex-col">
+      {/* Person and WebSite, on every public page and none of the newsroom. */}
+      <SiteStructuredData />
       <PublicHeader />
       <main id="main" className="flex-1">
         {children}

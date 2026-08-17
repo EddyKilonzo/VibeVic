@@ -48,6 +48,11 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image", title: PROFILE.name, description },
   robots: { index: true, follow: true },
+  // Declared so a reader's browser and any feed reader can find it without
+  // being told the address. A feed nobody can discover is a file, not a feed.
+  alternates: {
+    types: { "application/rss+xml": "/rss.xml" },
+  },
 };
 
 export const viewport: Viewport = {

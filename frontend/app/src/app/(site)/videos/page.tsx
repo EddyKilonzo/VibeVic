@@ -2,12 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Videos from "@/views/Videos";
 import { VideoGridSkeleton } from "@/components/ui/Skeleton";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Reports",
   description:
     "Every published video report — campus systems, Kenyan culture and student life.",
-};
+  path: "/videos",
+});
 
 /**
  * The topic filter lives in the query string, so the grid reads

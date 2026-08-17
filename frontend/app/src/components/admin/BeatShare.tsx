@@ -1,65 +1,68 @@
 "use client";
 
-import { TOPICS, VIDEOS } from "@/data/videos";
-import { cn } from "@/lib/utils";
+import { GENRES, storiesByGenre } from "@/data/content";
+import { VIDEOS } from "@/data/videos";
 
 /**
- * How the reporting divides across the four beats.
+ * How the work divides across the beats.
  *
- * A single stacked bar rather than a pie: the question is "what share of the
- * work is each beat", and a length along one axis is read accurately where the
- * angles of a pie are not. Four categories is also the point at which a pie
- * stops being readable at card size.
+ * ── Why this stopped being a stacked bar ─────────────────────────────────
+ * It was one stacked bar in four validated colours, which was right when
+ * there were four video topics. There are seven beats now, and three of them
+ * hold only writing. A stacked bar at card width turns seven categories into
+ * seven slivers, and giving each a colour would mean inventing three more
+ * hues that have never been checked for colour-vision separation — the
+ * existing four were, and amber against teal already sits close enough under
+ * tritanopia to need a second encoding.
  *
- * Colour carries identity here, so it is never the only encoding — every
- * segment is directly labelled in the legend below with its own count, and the
- * segments are separated by a 2px surface gap. That gap is required rather than
- * decorative: the amber and teal slots sit at ΔE 6.1 under tritanopia, inside
- * the band where a second encoding is mandatory.
+ * So: a ranked list of bars, one hue, ordered by size. Length carries the
+ * comparison, which is the thing a reader is actually doing, and every row is
+ * directly labelled. Nothing depends on telling two colours apart.
+ *
+ * ── Why both halves are counted ──────────────────────────────────────────
+ * It used to count video only, which understated every beat that has writing
+ * on it and showed three beats as empty when they are not. The bar is the
+ * total; the label breaks it down.
  */
 export function BeatShare() {
-  const counts = TOPICS.map((topic, i) => ({
-    slug: topic.slug,
-    name: topic.name,
-    count: VIDEOS.filter((v) => v.topic === topic.slug).length,
-    color: `hsl(var(--chart-${i + 1}))`,
-  })).filter((t) => t.count > 0);
+  const rows = GENRES.map((genre) => {
+    const reports = VIDEOS.filter((video) => video.topic === genre.slug).length;
+    const written = storiesByGenre(genre.slug).length;
+    return { slug: genre.slug, name: genre.name, reports, written, total: reports + written };
+  })
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total);
 
-  const total = counts.reduce((n, t) => n + t.count, 0);
-  if (!total) return null;
+  const max = rows[0]?.total ?? 0;
+  if (!max) return null;
 
   return (
-    <div>
-      <div
-        className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full"
-        role="img"
-        aria-label={`Reports by beat: ${counts.map((c) => `${c.name} ${c.count}`).join(", ")}`}
-      >
-        {counts.map((t) => (
-          <span
-            key={t.slug}
-            className="h-full first:rounded-l-full last:rounded-r-full"
-            style={{ width: `${(t.count / total) * 100}%`, background: t.color }}
-          />
-        ))}
-      </div>
-
-      <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
-        {counts.map((t) => (
-          <li key={t.slug} className="flex items-center gap-2 text-xs">
-            <span
-              aria-hidden
-              className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-              style={{ background: t.color }}
-            />
-            {/* Label and value in text tokens, never the series colour. */}
-            <span className="min-w-0 flex-1 truncate text-muted-foreground">{t.name}</span>
-            <span className={cn("shrink-0 font-semibold tabular-nums text-foreground")}>
-              {t.count}
+    <ul className="space-y-3.5">
+      {rows.map((row) => (
+        <li key={row.slug}>
+          <div className="flex items-baseline justify-between gap-3 text-xs">
+            <span className="min-w-0 truncate font-medium text-foreground">{row.name}</span>
+            <span className="shrink-0 tabular-nums text-muted-foreground">
+              {row.reports > 0 && `${row.reports} report${row.reports === 1 ? "" : "s"}`}
+              {row.reports > 0 && row.written > 0 && " · "}
+              {row.written > 0 && `${row.written} written`}
             </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+          </div>
+
+          <div
+            className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary"
+            role="img"
+            aria-label={`${row.name}: ${row.total} ${row.total === 1 ? "piece" : "pieces"}`}
+          >
+            <span
+              className="block h-full rounded-full bg-[hsl(var(--chart-seq))]"
+              // Floored so a beat with one piece still shows a bar rather than
+              // a hairline that reads as nothing.
+              style={{ width: `${Math.max(4, (row.total / max) * 100)}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

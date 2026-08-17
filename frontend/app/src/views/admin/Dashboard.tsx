@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
-import { STORIES } from "@/data/content";
+import { GENRES, STORIES } from "@/data/content";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
 import { summariseAll } from "@/lib/voice/analytics";
 import { formatCompact, formatPercent, formatTime } from "@/lib/format";
@@ -36,6 +36,7 @@ export default function Dashboard() {
   const reduced = useReducedMotion();
 
   const drafts = STORIES.filter((s) => s.status !== "published").length;
+  const published = STORIES.length - drafts;
 
   const chartData = useMemo(
     () =>
@@ -71,11 +72,11 @@ export default function Dashboard() {
               variant="outline"
               size="sm"
             >
-              <Youtube className="h-4 w-4" aria-hidden />
+              <Youtube className="icon-tilt h-4 w-4" aria-hidden />
               Channel
             </Button>
-            <Button as={Link} href="/admin/stories/new" size="sm">
-              <PenLine className="h-4 w-4" aria-hidden />
+            <Button as={Link} href="/admin/stories/new" size="sm" className="group">
+              <PenLine className="icon-lean h-4 w-4" aria-hidden />
               New story
             </Button>
           </div>
@@ -107,11 +108,17 @@ export default function Dashboard() {
           caption="At last capture"
           delay={140}
         />
+        {/* The written archive exists now — five imported pieces — and the
+            dashboard had no view of it at all. A newsroom overview that counts
+            only video is describing half the work. Drafts moved into the
+            caption because the number is currently zero, and a zeroed card in
+            a row of four reads as something broken rather than as nothing
+            outstanding. */}
         <StatCard
-          label="Drafts in progress"
-          value={drafts}
+          label="Written pieces"
+          value={published}
           icon={FileText}
-          caption="Not yet published"
+          caption={drafts > 0 ? `${drafts} in draft` : "All published"}
           delay={210}
         />
       </div>
@@ -130,10 +137,17 @@ export default function Dashboard() {
           </div>
         </Reveal>
 
-        <Reveal variant="fade-up" delay={70} className="surface p-5 lg:col-span-5">
-          <p className="rule-label">Reports by beat</p>
+        <Reveal
+          variant="fade-up"
+          delay={70}
+          className="surface honeycomb honeycomb-strong overflow-hidden p-5 lg:col-span-5"
+        >
+          <p className="rule-label">Work by beat</p>
+          {/* Reads the real list. It said "the four subjects" for a while
+              after there were seven, which is the failure mode of writing a
+              count into a sentence. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            How the published work divides across the four subjects.
+            Reports and writing together, across all {GENRES.length} subjects.
           </p>
           <div className="mt-6">
             <BeatShare />

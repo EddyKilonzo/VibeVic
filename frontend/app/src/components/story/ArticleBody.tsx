@@ -116,7 +116,12 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
 
     case "heading":
       return (
-        <Reveal variant="fade-up" distance="sm">
+        // The one place on the site that does *not* replay. Everywhere else a
+        // reveal firing again is a nice thing to scroll back into; inside a
+        // piece somebody is reading, a heading that fades out behind them and
+        // fades back in when they check a line is the page moving while they
+        // work. Reading beats motion here.
+        <Reveal variant="fade-up" distance="sm" repeat={false}>
           <h2 data-block-id={block.id} className={cn("group/block relative", active && "speaking")}>
             {seekControl}
             {block.text}
@@ -126,7 +131,8 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
 
     case "quote":
       return (
-        <Reveal variant="fade-up" distance="sm">
+        // Same reasoning as the heading above: prose does not replay.
+        <Reveal variant="fade-up" distance="sm" repeat={false}>
           <blockquote data-block-id={block.id} className={cn(active && "speaking")}>
             {block.text}
             {block.attribution && (

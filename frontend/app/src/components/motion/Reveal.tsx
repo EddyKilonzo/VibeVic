@@ -49,7 +49,13 @@ export interface RevealProps {
   distance?: keyof typeof distanceTokens | number;
   /** Animate on mount instead of on scroll — for page-load sequences. */
   immediate?: boolean;
-  /** Re-run each time it re-enters the viewport. Off by default. */
+  /**
+   * Replay on every entry, and reverse on every exit.
+   *
+   * On by default — the site's reveals are tied to visibility rather than to
+   * page load, so scrolling back up plays them again. Pass `false` for the
+   * rare element that should settle once and stay settled.
+   */
   repeat?: boolean;
   className?: string;
   style?: CSSProperties;
@@ -73,7 +79,7 @@ export function Reveal({
   delay = 0,
   distance = "md",
   immediate = false,
-  repeat = false,
+  repeat = true,
   className,
   style,
   as = "div",
@@ -85,27 +91,33 @@ export function Reveal({
   const Tag = motion[as];
 
   /**
-   * The safety net, and the reason content stopped needing a refresh to appear.
+   * The mount kick, and the reason nothing needs a refresh to appear.
    *
    * `whileInView` sets its observer up when the element mounts, and on a
    * client-side navigation that happens *before* the router has scrolled the
    * new page to the top. The observer's first reading is therefore taken at
-   * the old scroll offset: everything that is about to be on screen is
-   * measured as off screen, `once: true` means it is never asked again, and
-   * the section sits at opacity zero until something forces a re-render — a
-   * reload, a resize, a filter change. That is the bug people describe as
-   * "it only animates if I refresh".
+   * the old scroll offset: an element that is about to be on screen measures
+   * as off screen. Nothing further fires, because nothing further *changes* —
+   * an observer reports transitions, and if the reader is already looking at
+   * the element and does not scroll, there is no transition to report. The
+   * section sits at opacity zero until something forces a re-render.
    *
-   * So the element is also measured directly, two frames after it mounts:
-   * one frame for layout, the second to land after the router's scroll. If it
-   * is on screen by then it is shown, whatever the observer concluded.
+   * So the element is measured directly, two frames after mount: one frame for
+   * layout, the second to land after the router's scroll. If it is on screen
+   * by then it is shown, whatever the observer concluded.
+   *
+   * ── And then it lets go ──────────────────────────────────────────────
+   * `animate` outranks `whileInView` in Motion, so leaving this set would pin
+   * every element visible forever and kill the replay behaviour entirely. It
+   * is cleared on the next tick, by which point the observer has live and
+   * correct readings and owns the element again. If the element is still in
+   * view, `whileInView` simply holds it where it is and nothing flickers.
    *
    * This runs from a ref callback rather than an effect. Effects are for
    * synchronising with external systems; this is a one-shot measurement of the
-   * node React has just handed over, and doing it here keeps it out of the
-   * cascading-render path entirely.
+   * node React has just handed over.
    */
-  const [settled, setSettled] = useState(false);
+  const [kicked, setKicked] = useState(false);
 
   const check = useCallback((node: HTMLElement | null) => {
     if (!node || typeof window === "undefined") return;
@@ -115,7 +127,10 @@ export function Reveal({
         const box = node.getBoundingClientRect();
         // Any part of it inside the window counts. The editorial trigger line
         // is the observer's job; this is only here to stop things vanishing.
-        if (box.top < window.innerHeight && box.bottom > 0) setSettled(true);
+        if (box.top >= window.innerHeight || box.bottom <= 0) return;
+
+        setKicked(true);
+        window.setTimeout(() => setKicked(false), 120);
       });
     });
   }, []);
@@ -130,7 +145,15 @@ export function Reveal({
   }
 
   const variants: Variants = {
-    hidden: hiddenState(variant, px),
+    hidden: {
+      ...hiddenState(variant, px),
+      // Exits are quicker than entrances and carry no stagger delay. Mirroring
+      // the entrance exactly — 620ms, staggered — means a grid you scroll past
+      // spends half a second visibly dismantling itself behind you, which is
+      // the version of replay that reads as noise. Leaving should be something
+      // you only notice if you look back.
+      transition: { ...transitions.normal, delay: 0 },
+    },
     visible: {
       ...VISIBLE,
       transition: { ...transitions.editorial, delay: (inherited + delay) / 1000 },
@@ -140,9 +163,10 @@ export function Reveal({
   const trigger = immediate
     ? { animate: "visible" as const }
     : {
-        // `animate` wins over `whileInView` once it is set, so the safety
-        // check below can force the visible state without racing the observer.
-        animate: settled ? ("visible" as const) : undefined,
+        // `animate` outranks `whileInView`, so the mount kick can force the
+        // visible state without racing the observer — and is cleared again
+        // straight afterwards so the observer keeps ownership. See above.
+        animate: kicked ? ("visible" as const) : undefined,
         whileInView: "visible" as const,
         viewport: { once: !repeat, margin: viewport.margin, amount: viewport.amount },
       };

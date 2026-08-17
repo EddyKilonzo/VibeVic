@@ -74,9 +74,39 @@ export default function About() {
                 className="font-display mt-4 text-[2.4rem] font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.6rem]"
                 immediate
               />
-              <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-muted-foreground">
+              <p className="mt-5 max-w-[48ch] text-lg leading-relaxed text-muted-foreground">
                 Reporting from {PROFILE.base} — campus systems, Kenyan culture and student life.
+                He films, writes and edits every piece himself, and publishes it on{" "}
+                {CHANNEL.handle} first.
               </p>
+
+              {/* A hero of one line and a title reads as a placeholder. These
+                  three facts are the ones a reader wants before deciding
+                  whether to keep going, and every one of them is already
+                  stated further down the page — nothing new is claimed here. */}
+              <dl className="mt-8 grid max-w-lg grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+                {[
+                  { term: "Based in", value: PROFILE.base },
+                  { term: "Studied at", value: PROFILE.education },
+                  { term: "Beats", value: `${TOPICS.length} subjects` },
+                ].map((fact) => (
+                  <div key={fact.term}>
+                    <dt className="rule-label">{fact.term}</dt>
+                    <dd className="font-display mt-1.5 text-[15px] font-semibold leading-snug">
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button as={Link} href="/videos">
+                  Watch the work
+                </Button>
+                <Button as={Link} href="/stories" variant="outline">
+                  Read the writing
+                </Button>
+              </div>
             </div>
 
             {/* A press pass on a lanyard, with rope physics — drag it and it
@@ -91,7 +121,12 @@ export default function About() {
               // strap alone was carrying that job and a strap is 40px wide on
               // screen — the words belong on the thing you actually look at.
               frontImage="/lanyard/press-card.png"
-              className="min-h-[480px] lg:min-h-[620px]"
+              // Sized against the viewport, not a fixed pixel height. The pass
+              // hangs from the top of its box, so a box taller than the space
+              // available pushed the card itself below the fold — the one part
+              // of it worth seeing. Capped so it cannot outgrow the 80svh hero
+              // it sits in.
+              className="h-[min(58svh,560px)] min-h-[380px]"
               fallback={
                 <Reveal variant="fade-scale" delay={140}>
                   <ImageReveal
@@ -318,23 +353,36 @@ export default function About() {
                 key={account.id}
                 className="surface honeycomb honeycomb-strong overflow-hidden"
               >
+                {/* Laid out across the card rather than stacked down the left
+                    of it: the mark and the platform name make a header row,
+                    the sentence takes the middle, and the handle sits on a
+                    hairline floor with the arrow pushed to the far edge. The
+                    stacked version left a column of dead space on the right of
+                    every card and a ragged bottom edge across the three. */}
                 <a
                   href={account.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="focus-ring group flex h-full flex-col p-6 sm:p-7"
+                  className="focus-ring group flex h-full flex-col p-6 sm:p-8"
                 >
-                  <span className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground shadow-raised">
-                    <SocialIcon id={account.id} className="icon-tilt h-5 w-5" />
-                  </span>
-                  <p className="font-display mt-5 text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
-                    {account.label}
-                  </p>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-raised">
+                      <SocialIcon id={account.id} className="icon-tilt h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-display text-xl font-semibold tracking-tight transition-transform duration-normal ease-entrance group-hover:translate-x-[3px] motion-reduce:transform-none">
+                        {account.label}
+                      </p>
+                      <p className="rule-label mt-1">{account.handle}</p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 flex-1 text-[0.95rem] leading-relaxed text-muted-foreground">
                     {account.note}
                   </p>
-                  <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-                    {account.handle}
+
+                  <span className="mt-6 flex items-center justify-between border-t border-border pt-4 text-sm font-semibold text-primary">
+                    Follow on {account.label}
                     <ArrowUpRight
                       className="nudge-x h-4 w-4 transition-colors group-hover:text-accent"
                       aria-hidden

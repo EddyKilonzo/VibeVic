@@ -66,7 +66,14 @@ export function TextReveal({
           stagger: step / 1000,
           scrollTrigger: immediate
             ? undefined
-            : { trigger: scope.current, start: viewport.scrollTriggerStart, once: true },
+            : {
+                trigger: scope.current,
+                start: viewport.scrollTriggerStart,
+                // Replays on the way down and reverses on the way back up, to
+                // match `Reveal`. `once: true` here would have left headings
+                // as the one thing on the page that animated a single time.
+                toggleActions: "play reverse play reverse",
+              },
         });
       });
 

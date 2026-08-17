@@ -1,4 +1,5 @@
 import type { Block } from "@/data/types";
+import { stripInline } from "@/lib/inline";
 import type { Chapter, Segment } from "./types";
 
 /**
@@ -50,7 +51,10 @@ const CURRENCY: Record<string, string> = { "£": "pounds", $: "dollars", "€": 
  * article text is untouched — this string is only ever spoken.
  */
 export function toSpeakable(input: string): string {
-  let text = input;
+  // Emphasis markers first, before anything else looks at the string. A
+  // narrator saying "asterisk asterisk" is the loudest possible version of
+  // this bug, and every spoken segment funnels through here.
+  let text = stripInline(input);
 
   // Money: "$61.4m" → "61.4 million dollars"
   text = text.replace(/([£$€])\s?([\d,]+(?:\.\d+)?)\s?(m|bn|k)?\b/gi, (_, sym, num, scale) => {
@@ -153,7 +157,9 @@ export function extractArticle(title: string, blocks: Block[]): ExtractResult {
         chapterIndex += 1;
         chapters.push({
           index: chapterIndex,
-          title: block.text,
+          // Stripped: this is a label in the chapter rail, not prose, and a
+          // heading written as `**Aftermath**` should not list as `**Aftermath**`.
+          title: stripInline(block.text),
           startSegment: segments.length,
           seconds: 0,
         });

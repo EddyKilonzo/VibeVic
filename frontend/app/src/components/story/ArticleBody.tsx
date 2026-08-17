@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Play } from "lucide-react";
 import type { Block, Story } from "@/data/types";
+import { Inline } from "./Inline";
 import { splitSentences } from "@/lib/voice";
 import { blockImage } from "@/lib/cover";
 import { cn } from "@/lib/utils";
@@ -106,10 +107,10 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
           {sentences
             ? sentences.map((sentence, i) => (
                 <span key={i} className={cn(i === sentenceIndex && "speaking-sentence font-medium")}>
-                  {sentence}{" "}
+                  <Inline text={sentence} />{" "}
                 </span>
               ))
-            : block.text}
+            : <Inline text={block.text} />}
         </p>
       );
     }
@@ -124,7 +125,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
         <Reveal variant="fade-up" distance="sm" repeat={false}>
           <h2 data-block-id={block.id} className={cn("group/block relative", active && "speaking")}>
             {seekControl}
-            {block.text}
+            <Inline text={block.text} />
           </h2>
         </Reveal>
       );
@@ -134,7 +135,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
         // Same reasoning as the heading above: prose does not replay.
         <Reveal variant="fade-up" distance="sm" repeat={false}>
           <blockquote data-block-id={block.id} className={cn(active && "speaking")}>
-            {block.text}
+            <Inline text={block.text} />
             {block.attribution && (
               <cite className="mt-3 block font-sans text-[0.8rem] not-italic tracking-wide text-muted-foreground">
                 {block.attribution}
@@ -160,7 +161,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
                 active && "speaking",
               )}
             >
-              {block.caption}
+              <Inline text={block.caption} />
             </figcaption>
           )}
         </figure>
@@ -178,7 +179,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
                 aria-hidden
                 className="absolute -left-4 top-[0.85em] h-px w-2.5 bg-accent"
               />
-              {item}
+              <Inline text={item} />
             </li>
           ))}
         </ul>

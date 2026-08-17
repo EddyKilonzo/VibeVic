@@ -1,3 +1,4 @@
+import { stripInline } from "@/lib/inline";
 import { PROFILE, publishedStories } from "@/data/content";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
@@ -48,7 +49,7 @@ export function GET() {
       <guid isPermaLink="true">${escapeXml(url)}</guid>
       <pubDate>${new Date(story.publishedAt).toUTCString()}</pubDate>
       <dc:creator>${escapeXml(PROFILE.name)}</dc:creator>
-      <description>${escapeXml(story.dek)}</description>
+      <description>${escapeXml(stripInline(story.dek))}</description>
 ${story.tags.map((tag) => `      <category>${escapeXml(tag)}</category>`).join("\n")}
       <enclosure url="${escapeXml(image)}" type="image/jpeg" />
     </item>`;

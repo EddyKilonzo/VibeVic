@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AnimatePresence,
@@ -11,8 +11,10 @@ import {
 } from "motion/react";
 import {
   ArrowLeft,
+  Bold,
   Check,
   Cloud,
+  Italic,
   Copy,
   GripVertical,
   Heading2,
@@ -38,6 +40,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { addUpload, listMedia, srcFor } from "@/lib/media";
 import { allBeats } from "@/lib/beats";
+import { toggleEmphasis, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
@@ -487,16 +490,30 @@ export default function StoryWorkspace({ id }: { id?: string }) {
         ))}
       </Reorder.Group>
 
-      <button
-        type="button"
-        onClick={() =>
-          setDraft((d) => ({ ...d, body: [...d.body, emptyBlock("paragraph")] }))
-        }
-        className="focus-ring mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md border border-dashed border-border text-sm font-semibold text-muted-foreground transition-colors duration-normal hover:border-accent hover:text-accent"
-      >
-        <Plus className="h-4 w-4" aria-hidden />
-        Add a block
-      </button>
+      {/* The control a writer reaches at the end of the paragraph they just
+          finished. It appended a paragraph and nothing else, so carrying on
+          with a picture meant going back up to the gutter of the block above.
+          Same six choices as the gutter menu, laid out as a row because there
+          is width here and a menu would be one click for no reason. */}
+      <div className="mt-4 rounded-lg border border-dashed border-border p-2">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="rule-label px-2">Continue with</span>
+          {INSERT_ORDER.map((type) => {
+            const Icon = INSERT_ICON[type];
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, body: [...d.body, emptyBlock(type)] }))}
+                className="focus-ring tap group inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
+              >
+                <Icon className="icon-pop h-3.5 w-3.5" aria-hidden />
+                {BLOCK_LABEL[type]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -726,6 +743,7 @@ function BlockRow({
           onFocus={onFocus}
           onBlur={onBlur}
           faceClass={faceClass}
+          active={active}
         />
 
         {/* Actions — one row, only while focused. */}
@@ -1026,18 +1044,112 @@ function ImageBlockPicker({
   );
 }
 
+/**
+ * Bold and italic on a plain `<textarea>`.
+ *
+ * The shortcut is the whole feature: a writer who wants a word emphasised
+ * presses ⌘B, they do not go looking for a button. The buttons exist for
+ * discoverability and for anyone who cannot hold two keys, and both routes
+ * run the same `toggleEmphasis`.
+ *
+ * The selection is restored by hand after the change. React re-renders the
+ * textarea from `value`, which resets the caret to the end — so a writer who
+ * emphasised a word in the middle of a paragraph would be thrown to the
+ * bottom of it on every press. `setSelectionRange` in a layout effect puts
+ * them back before the browser paints.
+ */
+function useEmphasis(
+  value: string,
+  commit: (next: string) => void,
+): {
+  ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>;
+  apply: (kind: EmphasisKind) => void;
+  onKeyDown: (event: React.KeyboardEvent) => void;
+} {
+  const ref = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+  const pending = useRef<[number, number] | null>(null);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || !pending.current) return;
+    const [start, end] = pending.current;
+    pending.current = null;
+    node.focus();
+    node.setSelectionRange(start, end);
+  });
+
+  const apply = useCallback(
+    (kind: EmphasisKind) => {
+      const node = ref.current;
+      if (!node) return;
+      const start = node.selectionStart ?? value.length;
+      const end = node.selectionEnd ?? start;
+      const result = toggleEmphasis(value, start, end, kind);
+      pending.current = [result.start, result.end];
+      commit(result.text);
+    },
+    [value, commit],
+  );
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      const key = event.key.toLowerCase();
+      if (key !== "b" && key !== "i") return;
+      event.preventDefault();
+      apply(key === "b" ? "bold" : "italic");
+    },
+    [apply],
+  );
+
+  return { ref, apply, onKeyDown };
+}
+
+/** The B / I pair shown on the focused block. */
+function EmphasisButtons({ apply }: { apply: (kind: EmphasisKind) => void }) {
+  return (
+    <>
+      {(
+        [
+          { kind: "bold" as const, Icon: Bold, label: "Bold", hint: "Ctrl/⌘ B" },
+          { kind: "italic" as const, Icon: Italic, label: "Italic", hint: "Ctrl/⌘ I" },
+        ]
+      ).map(({ kind, Icon, label, hint }) => (
+        <button
+          key={kind}
+          type="button"
+          // Pointer-down, not click: a click fires after blur, and by then the
+          // textarea has lost the selection this is meant to wrap.
+          onMouseDown={(e) => {
+            e.preventDefault();
+            apply(kind);
+          }}
+          aria-label={`${label} (${hint})`}
+          title={`${label} — ${hint}`}
+          className="focus-ring tap inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      ))}
+    </>
+  );
+}
+
 function BlockEditor({
   block,
   onChange,
   onFocus,
   onBlur,
   faceClass,
+  active,
 }: {
   block: Block;
   onChange: (patch: Partial<Block>) => void;
   onFocus: () => void;
   onBlur: () => void;
   faceClass: string;
+  /** Shows the emphasis controls only on the block being written in. */
+  active: boolean;
 }) {
   // The face rides on `shared`, so every text surface in the editor —
   // paragraphs included — shows the piece in the same one. Paragraphs used to
@@ -1063,11 +1175,12 @@ function BlockEditor({
 
     case "quote":
       return (
-        <textarea
+        <EmphasisField
           value={block.text}
-          onChange={(e) => onChange({ text: e.target.value } as Partial<Block>)}
+          onChange={(text) => onChange({ text } as Partial<Block>)}
           onFocus={onFocus}
           onBlur={onBlur}
+          active={active}
           rows={2}
           placeholder="Pull quote"
           className={cn(shared, "border-l-2 border-accent pl-4 text-xl italic")}
@@ -1076,13 +1189,14 @@ function BlockEditor({
 
     case "list":
       return (
-        <textarea
+        <EmphasisField
           value={block.items.join("\n")}
-          onChange={(e) =>
-            onChange({ items: e.target.value.split("\n") } as unknown as Partial<Block>)
+          onChange={(text) =>
+            onChange({ items: text.split("\n") } as unknown as Partial<Block>)
           }
           onFocus={onFocus}
           onBlur={onBlur}
+          active={active}
           rows={Math.max(2, block.items.length)}
           placeholder="One item per line"
           className={cn(shared, "text-[15px] leading-relaxed")}
@@ -1117,15 +1231,71 @@ function BlockEditor({
 
     default:
       return (
-        <textarea
+        <EmphasisField
           value={block.text}
-          onChange={(e) => onChange({ text: e.target.value } as Partial<Block>)}
+          onChange={(text) => onChange({ text } as Partial<Block>)}
           onFocus={onFocus}
           onBlur={onBlur}
+          active={active}
           rows={Math.max(2, Math.ceil(block.text.length / 90))}
           placeholder="Write…"
           className={cn(shared, "text-[15px] leading-[1.75]")}
         />
       );
   }
+}
+
+/**
+ * A textarea that can be emphasised.
+ *
+ * The toolbar sits under the field rather than floating over the selection.
+ * A floating bar has to be positioned from the selection rectangle, which
+ * means measuring it on every keystroke and fighting the caret on mobile,
+ * where the OS puts its own bar in the same place. Under the field it is
+ * always in the same spot and never covers the words.
+ */
+function EmphasisField({
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  active,
+  rows,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+  onFocus: () => void;
+  onBlur: () => void;
+  active: boolean;
+  rows: number;
+  placeholder: string;
+  className: string;
+}) {
+  const { ref, apply, onKeyDown } = useEmphasis(value, onChange);
+
+  return (
+    <div>
+      <textarea
+        ref={ref as React.RefObject<HTMLTextAreaElement>}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        rows={rows}
+        placeholder={placeholder}
+        className={className}
+      />
+      {active && (
+        <div className="-ml-1.5 flex items-center gap-0.5">
+          <EmphasisButtons apply={apply} />
+          <span className="ml-1 text-[10px] text-muted-foreground">
+            **bold** · *italic*
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }

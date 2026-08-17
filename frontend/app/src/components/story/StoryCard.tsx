@@ -7,6 +7,7 @@ import { genreName } from "@/data/content";
 import { storyCover } from "@/lib/cover";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { stripInline } from "@/lib/inline";
 import { ImageReveal, Reveal } from "@/components/motion";
 import { BookmarkButton } from "./BookmarkButton";
 import { ReadProgress } from "./ReadProgress";
@@ -160,7 +161,11 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
                 : "mt-3 flex-1 text-[0.94rem] leading-relaxed",
             )}
           >
-            {story.dek}
+            {/* Stripped, not rendered. A card summary is clamped to a few
+                lines and sits in a grid of siblings; bold inside it is noise
+                competing with the headline above it, which is the thing the
+                card is asking you to read. */}
+            {stripInline(story.dek)}
           </p>
 
           {/* Metadata holds still on hover — only the arrow moves. It sits on

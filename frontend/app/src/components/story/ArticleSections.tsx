@@ -2,6 +2,7 @@
 
 import type { Story } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { stripInline } from "@/lib/inline";
 
 /**
  * The article's sections, in the sidebar.
@@ -80,7 +81,9 @@ export function ArticleSections({
                     here && "font-semibold",
                   )}
                 >
-                  {heading.text}
+                  {/* Stripped, not rendered: this is an index label, and a
+                      heading written with emphasis should list as its words. */}
+                  {stripInline(heading.text)}
                   {here && <span className="sr-only"> — you are here</span>}
                 </span>
               </button>

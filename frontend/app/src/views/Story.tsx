@@ -16,6 +16,7 @@ import { useReadingPosition } from "@/hooks/useReadingPosition";
 import { useFollowAlong } from "@/hooks/useFollowAlong";
 import { useVoice } from "@/context/VoiceProvider";
 import { ImageReveal, Reveal, ScrollProgress, Stagger, StaggerItem } from "@/components/motion";
+import { Inline } from "@/components/story/Inline";
 import { ArticleActionBar } from "@/components/story/ArticleActionBar";
 import { ArticleBody } from "@/components/story/ArticleBody";
 import { ArticleSections } from "@/components/story/ArticleSections";
@@ -179,7 +180,11 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
 
                 <Reveal variant="fade-up" delay={260}>
                   <p className="mt-5 max-w-[52ch] text-pretty text-lg leading-relaxed text-muted-foreground">
-                    {story.dek}
+                    {/* Emphasis renders here too. The standfirst is written
+                        in the same editor as the body, and markers left
+                        showing as literal asterisks under the headline is the
+                        most visible place this could leak. */}
+                    <Inline text={story.dek} />
                   </p>
                 </Reveal>
 

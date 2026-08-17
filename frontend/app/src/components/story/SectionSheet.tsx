@@ -3,6 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import type { Story } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { stripInline } from "@/lib/inline";
 import { Overlay } from "@/components/ui/Overlay";
 
 /**
@@ -85,7 +86,7 @@ export function SectionSheet({
                       here && "text-primary",
                     )}
                   >
-                    {heading.text}
+                    {stripInline(heading.text)}
                     {here && <span className="sr-only"> — you are here</span>}
                   </span>
                   <ArrowRight

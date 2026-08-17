@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Story from "@/views/Story";
 import { PROFILE, publishedStories, storyBySlug } from "@/data/content";
+import { stripInline } from "@/lib/inline";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 
@@ -35,10 +36,14 @@ export async function generateMetadata({
 
   const path = `/stories/${story.slug}`;
   const image = storyCover(story);
+  // Metadata is plain text by definition. Emphasis markers left in a
+  // description are rendered literally by Google, Slack and every share card
+  // that exists — "the **council** refused" in a search result.
+  const description = stripInline(story.dek);
 
   return {
     title: story.title,
-    description: story.dek,
+    description,
     // Every indexable page needs exactly one preferred address, or a crawler
     // has to guess which of several URLs is the real one.
     alternates: { canonical: path },
@@ -46,7 +51,7 @@ export async function generateMetadata({
       type: "article",
       url: absoluteUrl(path),
       title: story.title,
-      description: story.dek,
+      description,
       publishedTime: story.publishedAt,
       modifiedTime: story.updatedAt || story.publishedAt,
       authors: [PROFILE.name],
@@ -56,7 +61,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       title: story.title,
-      description: story.dek,
+      description,
       images: [image],
     },
   };
@@ -88,7 +93,9 @@ export default async function StoryRoute({ params }: { params: Promise<{ slug: s
     "@context": "https://schema.org",
     "@type": "Article",
     headline: story.title,
-    description: story.dek,
+    // Plain text, same as the meta description above — structured data is
+    // read by machines that will not un-asterisk it.
+    description: stripInline(story.dek),
     image: [storyCover(story)],
     datePublished: story.publishedAt,
     dateModified: story.updatedAt || story.publishedAt,

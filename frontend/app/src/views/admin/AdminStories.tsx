@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Headphones, PenLine, Search, Trash2 } from "lucide-react";
+import { Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
 import type { Story, StoryStatus } from "@/data/types";
 import { api } from "@/data/api";
 import { genreName } from "@/data/content";
@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
 import { useAsync } from "@/hooks/useAsync";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { storyCover } from "@/lib/cover";
+import { ImageReveal } from "@/components/motion";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -41,6 +44,14 @@ export default function AdminStories() {
   const { data, loading } = useAsync(() => api.allStories(), []);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StoryStatus | "all">("all");
+  /**
+   * List or grid, remembered.
+   *
+   * Not component state: a view mode that resets on every navigation is one
+   * the person has to re-choose all day, which makes it a worse default than
+   * having no choice at all.
+   */
+  const [view, setView] = useLocalStorage<"list" | "grid">("vv:admin-stories-view", "list");
   /** Locally removed rows — the seed data itself is never mutated. */
   const [removed, setRemoved] = useState<string[]>([]);
   const reduced = useReducedMotion();
@@ -114,30 +125,149 @@ export default function AdminStories() {
             </button>
           ))}
         </div>
+
+        {/* List or grid. Icon-only, because the two shapes say it faster than
+            the two words do — and both carry a label for anything not reading
+            the picture. */}
+        <div role="group" aria-label="View" className="surface-compact flex items-center gap-1 p-1">
+          {(
+            [
+              { id: "list", label: "List view", Icon: List },
+              { id: "grid", label: "Grid view", Icon: LayoutGrid },
+            ] as const
+          ).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setView(id)}
+              aria-pressed={view === id}
+              title={label}
+              aria-label={label}
+              className={cn(
+                "focus-ring group relative inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-normal",
+                view === id ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
+              )}
+            >
+              {view === id && (
+                <motion.span
+                  layoutId={reduced ? undefined : "admin-view-pill"}
+                  className="absolute inset-0 rounded-md bg-primary"
+                  transition={transitions.normal}
+                />
+              )}
+              <Icon className="icon-pop relative h-4 w-4" aria-hidden />
+            </button>
+          ))}
+        </div>
       </Reveal>
 
-      <div className="surface mt-6 overflow-hidden">
+      {/* The grid is a set of cards on the page ground, not rows inside one
+          panel — so the container only becomes a `.surface` in list view.
+          A card grid inside a card is two borders describing one thing. */}
+      <div className={cn("mt-6", view === "list" && "surface overflow-hidden")}>
         {loading ? (
-          <div className="divide-y divide-border">
-            {Array.from({ length: 5 }, (_, i) => (
-              <div key={i} className="flex items-center gap-4 p-4">
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
+          view === "grid" ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="surface overflow-hidden">
+                  <Skeleton className="aspect-[16/10] w-full rounded-none" />
+                  <div className="space-y-2 p-4">
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4">
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          )
         ) : stories.length === 0 ? (
           <EmptyState
             title="No stories match"
             description="Try a different filter, or start something new."
-            className="border-0"
+            className={view === "list" ? "border-0" : undefined}
             action={
               <Button as={Link} href="/admin/stories/new" variant="outline" size="sm">
                 New story
               </Button>
             }
           />
+        ) : view === "grid" ? (
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence initial={false}>
+              {stories.map((story, i) => (
+                <motion.li
+                  key={story.id}
+                  layout={!reduced}
+                  initial={reduced ? false : { opacity: 0, y: 10 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: { ...transitions.normal, delay: Math.min(i, 8) * stagger.tight },
+                  }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+                  transition={transitions.normal}
+                  className="surface surface-hover group relative flex flex-col overflow-hidden"
+                >
+                  <Link href={`/admin/stories/${story.id}`} className="focus-ring block">
+                    <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
+                      <ImageReveal
+                        src={storyCover(story)}
+                        alt=""
+                        ratio="16/10"
+                        sizes="(min-width: 1280px) 320px, (min-width: 640px) 45vw, 90vw"
+                        className="media-zoom h-full w-full"
+                      />
+                      <span
+                        className={cn(
+                          "absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize shadow-raised",
+                          STATUS_STYLE[story.status],
+                        )}
+                      >
+                        {story.status}
+                      </span>
+                    </div>
+                  </Link>
+
+                  <div className="flex min-h-0 flex-1 flex-col p-4">
+                    <Link href={`/admin/stories/${story.id}`} className="focus-ring min-w-0">
+                      <p className="font-display line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight">
+                        {story.title}
+                      </p>
+                    </Link>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      {genreName(story.genre)} · edited {formatRelative(story.updatedAt)}
+                    </p>
+
+                    <div className="mt-auto flex items-center gap-3 pt-4">
+                      {story.stats && (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Headphones className="icon-lean h-3.5 w-3.5" aria-hidden />
+                          {story.stats.listens.toLocaleString()}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => remove(story)}
+                        aria-label={`Delete ${story.title}`}
+                        className="focus-ring tap-square ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
         ) : (
           <ul className="divide-y divide-border">
             <AnimatePresence initial={false}>

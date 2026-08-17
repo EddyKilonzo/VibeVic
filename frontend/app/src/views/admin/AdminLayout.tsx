@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   BarChart3,
+  FilePen,
   FileText,
   Image,
   LayoutDashboard,
@@ -40,11 +41,12 @@ import { ConnectionState } from "@/components/admin/ConnectionState";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: "/admin/stories", label: "Stories", icon: FileText },
+  { href: "/admin/drafts", label: "Drafts", icon: FilePen },
   { href: "/admin/ideas", label: "Ideas", icon: Lightbulb, soon: true },
-  { href: "/admin/media", label: "Media", icon: Image, soon: true },
+  { href: "/admin/media", label: "Media", icon: Image },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3, soon: true },
   { href: "/admin/readers", label: "Readers", icon: Users, soon: true },
-  { href: "/admin/genres", label: "Genres & tags", icon: Tags, soon: true },
+  { href: "/admin/genres", label: "Beats", icon: Tags },
   { href: "/admin/awards", label: "Awards", icon: Trophy, soon: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, soon: true },
 ];

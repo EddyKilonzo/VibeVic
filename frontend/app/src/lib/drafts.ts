@@ -66,6 +66,40 @@ export function writeDraft(story: Story): StoredDraft {
   return record;
 }
 
+/**
+ * Every draft held on this device, newest first.
+ *
+ * Reads the keyspace rather than a manifest. A manifest is one more thing to
+ * keep in step with reality, and when it drifts the drafts it forgot about
+ * become invisible rather than merely unlisted — which, for the only copy of
+ * somebody's writing, is the worst failure this module could have.
+ */
+export function listDrafts(): StoredDraft[] {
+  if (typeof window === "undefined") return [];
+  const out: StoredDraft[] = [];
+  try {
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const k = window.localStorage.key(i);
+      if (!k?.startsWith(PREFIX)) continue;
+      const record = readDraft(k.slice(PREFIX.length));
+      if (record) out.push(record);
+    }
+  } catch {
+    return out;
+  }
+  return out.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+/** Words in a draft's body — the figure a writer actually tracks. */
+export function draftWordCount(story: Story): number {
+  return story.body
+    .map((b) => ("text" in b ? b.text : "items" in b ? b.items.join(" ") : ""))
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
 export function discardDraft(id: string): void {
   if (typeof window === "undefined") return;
   try {

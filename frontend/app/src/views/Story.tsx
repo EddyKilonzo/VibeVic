@@ -49,6 +49,17 @@ import { SectionHeading } from "@/components/SectionHeading";
  */
 export default function Story({ slug, story }: { slug: string; story: StoryRecord }) {
   const articleRef = useRef<HTMLElement>(null);
+  /**
+   * The prose, and only the prose.
+   *
+   * Reading progress used to be measured against `<article>`, which contains
+   * the hero — so the ring showed a reader several per cent through a piece
+   * they had not started a sentence of. Now that "Related work" shares the
+   * column too, measuring the wrapper would count the next three headlines as
+   * part of this one. Everything that reports *where the reader is* reads this
+   * instead: the sheet the words are set on.
+   */
+  const proseRef = useRef<HTMLDivElement>(null);
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const scale = useReadingScale();
   const reduced = useReducedMotion();
@@ -87,22 +98,22 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
 
   return (
     <>
-      {/* Progress through the article itself, not the document — the footer
-          and related rail should not count as reading. */}
-      <ScrollProgress target={articleRef} />
+      {/* Progress through the prose, not the document and not the hero —
+          neither the cover nor the related cards are reading. */}
+      <ScrollProgress target={proseRef} />
       <SectionSheet
         story={story}
         activeIndex={activeSection}
         open={sectionsOpen}
         onClose={() => setSectionsOpen(false)}
       />
-      <QuoteSelection story={story} target={articleRef} />
+      <QuoteSelection story={story} target={proseRef} />
 
       {/* The bottom readout. Suppressed on a phone while the voice transport
           is up — they want the same corner, and the transport is the one the
           reader explicitly asked for. */}
       <ReadingHUD
-        target={articleRef}
+        target={proseRef}
         story={story}
         sectionLabel={headings[activeSection]?.text ?? null}
         onOpenSections={headings.length >= 2 ? () => setSectionsOpen(true) : undefined}
@@ -258,11 +269,7 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                     the rail because it is the one thing here that expires:
                     everything below it is available for the whole read. */}
                 {saved !== null && (
-                  <ResumeReading
-                    progress={saved}
-                    target={articleRef}
-                    onDismiss={decline}
-                  />
+                  <ResumeReading progress={saved} target={proseRef} onDismiss={decline} />
                 )}
 
                 <ArticleActionBar story={story} className={saved !== null ? "mt-4" : undefined} />
@@ -286,6 +293,14 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
               </div>
             </aside>
 
+            {/* The reading column, and everything that follows the piece.
+
+                "Related work" used to be a full-width section *after* the
+                grid, which meant the grid — and therefore the rail's footing
+                — ended with the last paragraph. The rail unpinned a whole
+                screen before the footer and left the page ending on a bare
+                column. Keeping the related cards in this column gives the
+                sticky box something to hold onto all the way down. */}
             <div className="min-w-0 lg:order-1">
               {/* Padding on the sheet, on a phone as well as a desktop.
                   It was `px-0 py-2`: the tint started eight pixels above the
@@ -305,6 +320,7 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                   and the sheet slides sideways. Block width is already the
                   full column. */}
               <div
+                ref={proseRef}
                 className="paper -mx-5 max-w-[46rem] px-5 py-9 sm:mx-0 sm:px-10 sm:py-12 lg:px-14"
                 style={{ "--reading-scale": scale } as React.CSSProperties}
               >
@@ -345,27 +361,30 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                   </div>
                 </Reveal>
               </div>
+
+              {/* Two across, not three. The column is ~290px narrower than
+                  the container this used to span, and three cards in what is
+                  left are narrower than the standfirst above them. */}
+              {related.length > 0 && (
+                <section className="mt-24 sm:mt-28">
+                  <SectionHeading
+                    label="Keep reading"
+                    title="Related work"
+                    action={{ href: "/stories", label: "All stories" }}
+                  />
+                  <Stagger className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2">
+                    {related.map((item, i) => (
+                      <StaggerItem key={item.id} index={i}>
+                        <StoryCard story={item} />
+                      </StaggerItem>
+                    ))}
+                  </Stagger>
+                </section>
+              )}
             </div>
           </div>
         </div>
       </article>
-
-      {related.length > 0 && (
-        <section className="container-site mt-28">
-          <SectionHeading
-            label="Keep reading"
-            title="Related work"
-            action={{ href: "/stories", label: "All stories" }}
-          />
-          <Stagger className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((item, i) => (
-              <StaggerItem key={item.id} index={i}>
-                <StoryCard story={item} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </section>
-      )}
     </>
   );
 }

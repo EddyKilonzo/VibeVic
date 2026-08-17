@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AnimatePresence,
@@ -15,20 +15,29 @@ import {
   Cloud,
   Copy,
   GripVertical,
+  Heading2,
   Headphones,
+  ImagePlus,
+  List as ListIcon,
+  Minus,
   Pause,
+  Pilcrow,
   Plus,
+  Quote,
   Trash2,
   Type,
 } from "lucide-react";
-import type { Block, BlockType, Story, StoryStatus } from "@/data/types";
+import type { Block, BlockType, Genre, Story, StoryStatus } from "@/data/types";
 import { GENRES, storyById } from "@/data/content";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { formatRelative } from "@/lib/format";
 import { notify } from "@/lib/toast";
 import { useAutosave, type SaveStatus } from "@/hooks/useAutosave";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
+import { addUpload, listMedia, srcFor } from "@/lib/media";
+import { allBeats } from "@/lib/beats";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
@@ -144,11 +153,37 @@ export default function StoryWorkspace({ id }: { id?: string }) {
    * the ref callback fires at exactly the moment we need and re-fires when
    * `targetId` changes it, which is also when the offer should come back.
    */
+  const [beats, setBeats] = useState<Genre[]>(GENRES);
+
+  /**
+   * Which face the draft is composed in.
+   *
+   * This is a preview, and the control says so. The site sets the published
+   * face in `.article-body`; nothing here writes a font onto the story,
+   * because the renderer does not read one and a control that quietly did
+   * nothing would be worse than no control.
+   *
+   * What it is genuinely for: the editor used to compose paragraphs in Inter
+   * while the site publishes them in Fraunces, so a writer judging rhythm,
+   * line breaks and how a long name sits was looking at the wrong text in the
+   * wrong face. It now opens in the published face, and flips to the sans for
+   * comparison.
+   */
+  const [face, setFace] = useLocalStorage<"display" | "sans">(
+    "vv:workspace-face",
+    "display",
+  );
+  const faceClass = face === "sans" ? "font-sans" : "font-display";
+
   const pickUpDraft = useCallback(
     (node: HTMLDivElement | null) => {
       if (!node) return;
       setStored(readDraft(targetId));
       setRestoreOffer(true);
+      // Same pass, same reason: both stores are read once the sheet is up
+      // rather than during render, which this prerendered route would hydrate
+      // against a different answer.
+      setBeats(allBeats());
     },
     [targetId],
   );
@@ -309,14 +344,20 @@ export default function StoryWorkspace({ id }: { id?: string }) {
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           placeholder="Headline"
           rows={2}
-          className="font-display display-2 w-full resize-none bg-transparent font-semibold outline-none placeholder:text-muted-foreground/30"
+          className={cn(
+            faceClass,
+            "display-2 w-full resize-none bg-transparent font-semibold outline-none placeholder:text-muted-foreground/30",
+          )}
         />
         <textarea
           value={draft.dek}
           onChange={(e) => setDraft((d) => ({ ...d, dek: e.target.value }))}
           placeholder="Standfirst — one sentence on why this matters."
           rows={2}
-          className="font-display lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30"
+          className={cn(
+            faceClass,
+            "lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30",
+          )}
         />
 
         <div className="mt-5 flex flex-wrap items-center gap-3 border-y border-border py-3 text-xs text-muted-foreground">
@@ -325,9 +366,11 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             <select
               value={draft.genre}
               onChange={(e) => setDraft((d) => ({ ...d, genre: e.target.value }))}
-              className="focus-ring tap rounded border border-border bg-background px-2 py-1 text-xs"
+              className="focus-ring tap rounded-md border border-border bg-background px-2 py-1 text-xs"
             >
-              {GENRES.map((g) => (
+              {/* Beats opened in the workspace are listed here too — a beat
+                  you cannot file anything under is a beat you did not open. */}
+              {beats.map((g) => (
                 <option key={g.slug} value={g.slug}>
                   {g.name}
                 </option>
@@ -342,6 +385,54 @@ export default function StoryWorkspace({ id }: { id?: string }) {
           <span>
             {draft.body.length} {draft.body.length === 1 ? "block" : "blocks"}
           </span>
+
+          <span aria-hidden className="h-3 w-px bg-border" />
+          {/* A preview, and labelled as one. The site decides the published
+              face; this is here so the rhythm and the line breaks a writer is
+              judging are the ones the reader will get. */}
+          <label className="flex items-center gap-2">
+            <span className="rule-label">Set in</span>
+            <span
+              role="group"
+              aria-label="Preview typeface"
+              className="surface-compact flex items-center gap-0.5 p-0.5"
+            >
+              {(
+                [
+                  { id: "display", label: "Fraunces", cls: "font-display" },
+                  { id: "sans", label: "Inter", cls: "font-sans" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setFace(option.id)}
+                  aria-pressed={face === option.id}
+                  title={
+                    option.id === "display"
+                      ? "Fraunces — the face the site publishes in"
+                      : "Inter — the sans, for comparison"
+                  }
+                  className={cn(
+                    option.cls,
+                    "focus-ring relative inline-flex h-6 items-center rounded px-2 text-[11px] font-semibold transition-colors duration-normal",
+                    face === option.id
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-primary",
+                  )}
+                >
+                  {face === option.id && (
+                    <motion.span
+                      layoutId={reduced ? undefined : "workspace-face-pill"}
+                      className="absolute inset-0 rounded bg-primary"
+                      transition={transitions.normal}
+                    />
+                  )}
+                  <span className="relative">{option.label}</span>
+                </button>
+              ))}
+            </span>
+          </label>
           {/* Same pill vocabulary as the story list, and the same contrast
               fix: `text-accent` on `bg-accent/12` measured 2.8:1 at 11px
               semibold, where 4.5:1 applies. */}
@@ -391,6 +482,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             onRemove={() => remove(block.id)}
             onConvert={(type) => convert(block.id, type)}
             reduced={!!reduced}
+            faceClass={faceClass}
           />
         ))}
       </Reorder.Group>
@@ -520,6 +612,8 @@ interface BlockRowProps {
   index: number;
   active: boolean;
   reduced: boolean;
+  /** `font-display` or `font-sans` — the workspace's preview face. */
+  faceClass: string;
   onFocus: () => void;
   onBlur: () => void;
   onDragStart: () => void;
@@ -536,6 +630,7 @@ function BlockRow({
   index,
   active,
   reduced,
+  faceClass,
   onFocus,
   onBlur,
   onDragStart,
@@ -599,14 +694,7 @@ function BlockRow({
         >
           <GripVertical className="h-4 w-4" aria-hidden />
         </button>
-        <button
-          type="button"
-          onClick={() => onInsert("paragraph")}
-          aria-label="Add a block below"
-          className="focus-ring flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-        </button>
+        <InsertMenu onInsert={onInsert} />
       </div>
 
       <div
@@ -628,18 +716,17 @@ function BlockRow({
           >
             <GripVertical className="h-4 w-4" aria-hidden />
           </button>
-          <button
-            type="button"
-            onClick={() => onInsert("paragraph")}
-            aria-label="Add a block below"
-            className="focus-ring tap-square flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-          </button>
+          <InsertMenu onInsert={onInsert} />
           <span className="rule-label ml-1.5 truncate">{BLOCK_LABEL[block.type]}</span>
         </div>
 
-        <BlockEditor block={block} onChange={onChange} onFocus={onFocus} onBlur={onBlur} />
+        <BlockEditor
+          block={block}
+          onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          faceClass={faceClass}
+        />
 
         {/* Actions — one row, only while focused. */}
         <AnimatePresence>
@@ -695,19 +782,271 @@ function BlockRow({
   );
 }
 
+/**
+ * "Add a block here" — and *which* block.
+ *
+ * The `+` used to insert a paragraph, full stop. Putting a picture between
+ * two paragraphs therefore meant: add a paragraph, focus it, find the type
+ * dropdown in the row that appears underneath, change it to Image. Four steps
+ * and a dropdown to do the second most common thing anyone does while writing
+ * a piece.
+ *
+ * The menu lists the block types directly, so the picture goes where the
+ * writer is pointing. Paragraph stays first because it is still the common
+ * case, and Image second because it is the one this menu exists for.
+ */
+const INSERT_ORDER: BlockType[] = ["paragraph", "image", "heading", "quote", "list", "divider"];
+
+const INSERT_ICON: Record<BlockType, typeof Plus> = {
+  paragraph: Pilcrow,
+  image: ImagePlus,
+  heading: Heading2,
+  quote: Quote,
+  list: ListIcon,
+  divider: Minus,
+};
+
+function InsertMenu({ onInsert }: { onInsert: (type: BlockType) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+
+  // Pointer-down rather than click, so the menu is gone before whatever was
+  // pressed underneath it reacts; Escape because a menu you can only leave
+  // with a mouse is a trap for anyone using the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrap} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Add a block below"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="focus-ring tap-square flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary aria-expanded:bg-secondary aria-expanded:text-primary"
+      >
+        <Plus
+          className={cn("h-4 w-4 transition-transform duration-normal", open && "rotate-45")}
+          aria-hidden
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            aria-label="Block type"
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+            transition={transitions.fast}
+            className="surface-compact absolute left-0 top-9 z-20 w-[168px] origin-top-left overflow-hidden p-1 shadow-lifted"
+          >
+            {INSERT_ORDER.map((type) => {
+              const Icon = INSERT_ICON[type];
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onInsert(type);
+                    setOpen(false);
+                  }}
+                  className="focus-ring group flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                >
+                  <Icon className="icon-pop h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {BLOCK_LABEL[type]}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/**
+ * The picture on an image block: from the device, or from a link.
+ *
+ * The block stores a plain string in `src`, which is all a block needs to
+ * know — a media id for something in the library, or an absolute URL for
+ * something already online. Resolving an id to bytes is the library's job,
+ * and keeping the blob out of the draft matters: a draft is `JSON.stringify`d
+ * into `localStorage`, and a photograph in there would blow the origin quota
+ * and take every other draft with it.
+ */
+function ImageBlockPicker({
+  block,
+  onChange,
+}: {
+  block: Extract<Block, { type: "image" }>;
+  onChange: (patch: Partial<Block>) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  // Resolve whatever `src` holds. An absolute URL is itself; anything else is
+  // a library id, and a missing one is reported rather than left as a blank
+  // frame the writer will assume is still loading.
+  useEffect(() => {
+    let revoke: string | null = null;
+    let live = true;
+
+    const resolve = async () => {
+      const value = block.src;
+      if (!value || value === block.id) {
+        setPreview(null);
+        return;
+      }
+      if (/^https?:\/\//.test(value)) {
+        setPreview(value);
+        return;
+      }
+      const found = (await listMedia()).find((m) => m.id === value);
+      if (!live) return;
+      if (!found) {
+        setPreview(null);
+        setProblem("That picture is no longer in the media library.");
+        return;
+      }
+      const url = srcFor(found);
+      if (found.source === "upload") revoke = url;
+      setPreview(url);
+    };
+
+    void resolve();
+    return () => {
+      live = false;
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [block.src, block.id]);
+
+  const take = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const item = await addUpload(file);
+      onChange({ src: item.id } as Partial<Block>);
+    } catch (cause) {
+      setProblem(cause instanceof Error ? cause.message : "That file could not be added.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {preview ? (
+        <div className="relative overflow-hidden rounded-lg border border-border">
+          {/* Blob and arbitrary remote URLs — no optimiser route, no
+              `remotePatterns` entry. */}
+          <img src={preview} alt="" className="max-h-72 w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange({ src: block.id } as Partial<Block>)}
+            className="focus-ring absolute right-2 top-2 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold shadow-raised backdrop-blur transition-colors hover:text-primary"
+          >
+            Replace
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-border p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={input}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                void take(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              disabled={busy}
+              className="focus-ring group inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-semibold transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+            >
+              <ImagePlus className="icon-pop h-3.5 w-3.5" aria-hidden />
+              {busy ? "Adding…" : "From this device"}
+            </button>
+
+            <label className="inline-flex min-w-0 flex-1 items-center gap-2">
+              <span className="sr-only">Image address</span>
+              <input
+                type="url"
+                defaultValue={/^https?:\/\//.test(block.src) ? block.src : ""}
+                onBlur={(e) => {
+                  const value = e.target.value.trim();
+                  if (value && /^https?:\/\//.test(value)) {
+                    onChange({ src: value } as Partial<Block>);
+                    setProblem(null);
+                  } else if (value) {
+                    setProblem("Links must start with http:// or https://");
+                  }
+                }}
+                placeholder="…or paste a link"
+                className="focus-ring h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 text-xs outline-none transition-colors focus:border-accent"
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            On a phone the picker offers the camera as well as your photos.
+          </p>
+        </div>
+      )}
+
+      {problem && (
+        <p role="alert" className="text-[11px] text-destructive">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function BlockEditor({
   block,
   onChange,
   onFocus,
   onBlur,
+  faceClass,
 }: {
   block: Block;
   onChange: (patch: Partial<Block>) => void;
   onFocus: () => void;
   onBlur: () => void;
+  faceClass: string;
 }) {
-  const shared =
-    "w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground/40";
+  // The face rides on `shared`, so every text surface in the editor —
+  // paragraphs included — shows the piece in the same one. Paragraphs used to
+  // be left at the body sans while the site publishes them in the serif, which
+  // meant a writer judging a line break was judging the wrong line.
+  const shared = cn(
+    faceClass,
+    "w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground/40",
+  );
 
   switch (block.type) {
     case "heading":
@@ -718,7 +1057,7 @@ function BlockEditor({
           onFocus={onFocus}
           onBlur={onBlur}
           placeholder="Section heading — becomes an audio chapter"
-          className={cn(shared, "font-display text-2xl font-semibold tracking-tight")}
+          className={cn(shared, "text-2xl font-semibold tracking-tight")}
         />
       );
 
@@ -731,7 +1070,7 @@ function BlockEditor({
           onBlur={onBlur}
           rows={2}
           placeholder="Pull quote"
-          className={cn(shared, "font-display border-l-2 border-accent pl-4 text-xl italic")}
+          className={cn(shared, "border-l-2 border-accent pl-4 text-xl italic")}
         />
       );
 
@@ -753,15 +1092,21 @@ function BlockEditor({
     case "image":
       return (
         <div className="space-y-2">
-          <div className="flex h-24 items-center justify-center rounded border border-dashed border-border text-xs text-muted-foreground">
-            Image upload isn't wired up yet
-          </div>
+          <ImageBlockPicker block={block} onChange={onChange} />
           <input
             value={block.caption ?? ""}
             onChange={(e) => onChange({ caption: e.target.value } as Partial<Block>)}
             onFocus={onFocus}
             onBlur={onBlur}
             placeholder="Caption — read aloud with the article"
+            className={cn(shared, "text-xs")}
+          />
+          <input
+            value={block.alt ?? ""}
+            onChange={(e) => onChange({ alt: e.target.value } as Partial<Block>)}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            placeholder="Alt text — what the picture shows, for anyone who cannot see it"
             className={cn(shared, "text-xs")}
           />
         </div>

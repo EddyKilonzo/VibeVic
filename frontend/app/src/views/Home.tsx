@@ -196,7 +196,7 @@ export default function Home() {
           Under `lg` every cell falls back to full width and the bento becomes
           an ordinary column, which is the honest layout on a phone. */}
       <section className="container-site mt-20 sm:mt-24">
-        <div className="grid gap-4 lg:grid-cols-6 lg:gap-5">
+        <div className="stack-mobile grid gap-4 lg:grid-cols-6 lg:gap-5">
           {/* A · Portrait, held down the left across two bands. */}
           <Reveal
             variant="fade-up"
@@ -441,8 +441,11 @@ export default function Home() {
             the same amount, which is the one thing an editorial page should
             never say — and at twelve the pattern repeats every five cards, so
             it stays composed however many there are. */}
+        {/* Stacked on a phone — six reports as a tall column is a lot of thumb,
+            and stacked they arrive one at a time. The bento is untouched from
+            `lg` up; see `.stack-mobile`. */}
         <Stagger
-          className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5"
+          className="stack-mobile mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5"
           step="normal"
         >
           {rest.map((video, i) => (

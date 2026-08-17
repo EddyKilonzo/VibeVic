@@ -89,7 +89,12 @@ export function ReadingHUD({
             className,
           )}
         >
-          <div className="frost pointer-events-auto flex max-w-full items-center gap-3 rounded-full py-1.5 pl-2.5 pr-1.5 shadow-primary">
+          {/* Heavier on a phone. `.frost` is a backdrop blur over whatever is
+              behind it, and behind it on a narrow screen is the article — so
+              the readout ended up sitting on words, which is the one thing a
+              readout must not do. Below `sm` it takes a near-solid card
+              instead and lets the blur go. */}
+          <div className="frost pointer-events-auto flex max-w-full items-center gap-3 rounded-full border-border bg-card py-1.5 pl-2.5 pr-1.5 shadow-primary sm:bg-transparent">
             <ProgressRing value={progress} />
 
             <div className="min-w-0">

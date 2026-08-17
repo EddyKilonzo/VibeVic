@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
+import { ImageReveal } from "@/components/motion";
 
 // The React Bits sources are untyped JSX. Everything above this file imports
 // from here instead, so the product only ever sees typed props — and so the
@@ -14,14 +15,12 @@ import RbCurvedLoop from "./CurvedLoop.jsx";
 import RbScrollExpand from "./ScrollExpand.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
-import RbMasonry from "./Masonry.jsx";
 import RbTiltedCard from "./TiltedCard.jsx";
 
 const CurvedLoopBase = RbCurvedLoop as any;
 const ScrollExpandBase = RbScrollExpand as any;
 const SpecularButtonBase = RbSpecularButton as any;
 const CountUpBase = RbCountUp as any;
-const MasonryBase = RbMasonry as any;
 const TiltedCardBase = RbTiltedCard as any;
 
 /**
@@ -221,10 +220,15 @@ export function PressPass({
         fallback
       ) : (
         <LanyardBase
-          position={[0, 0, 18]}
+          // Closer camera than the library's default, so the card and its band
+          // fill the column they are given rather than floating in the middle
+          // of it. The band is widened to match; at the default width a card
+          // this size hangs from what looks like a thread.
+          position={[0, 0, 13]}
           gravity={[0, -40, 0]}
           frontImage={frontImage}
           imageFit="cover"
+          lanyardWidth={1.1}
           transparent
         />
       )}
@@ -237,20 +241,32 @@ export function PressPass({
 export interface MasonryTile {
   id: string;
   img: string;
-  url?: string;
-  /** Relative height. The library lays out on these, not on the real images. */
+  alt?: string;
+  caption?: string;
+  /** The picture's real pixel dimensions. Used as the ratio, so nothing crops. */
+  width: number;
   height: number;
 }
 
 /**
  * A staggered picture wall.
  *
- * The heights are relative units the library uses to build the columns — they
- * are the *proportions* of the set, so pass each picture's real aspect ratio
- * scaled to a common width and nothing gets squashed.
+ * ── Why this is CSS columns and not the registry's Masonry ───────────────
+ * That component lays out by measuring the container and then absolutely
+ * positioning every tile, which means the wall has no height of its own —
+ * it is set from JavaScript after the measurement lands. When the measurement
+ * does not land, or lands at the wrong width, the container collapses to
+ * nothing and the section below is drawn straight over the pictures. That is
+ * what it was doing here: the portraits ended up underneath the band that
+ * follows them.
  *
- * Under reduced motion the entrance, the hover scale and the blur are all
- * turned off; the wall still lays out, it just arrives rather than performs.
+ * `column-count` is masonry that the layout engine performs, so the container
+ * always has the height of its contents and nothing can overlap it. The wall
+ * is ragged because the pictures are different shapes, which is the actual
+ * point, and it costs no JavaScript at all.
+ *
+ * `break-inside: avoid` is what stops a browser splitting one picture across
+ * two columns — without it, multi-column will happily cut a tile in half.
  */
 export function PictureWall({
   items,
@@ -259,21 +275,27 @@ export function PictureWall({
   items: MasonryTile[];
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-
   return (
-    <div className={className}>
-      <MasonryBase
-        items={items}
-        ease="power3.out"
-        duration={reduced ? 0 : 0.6}
-        stagger={reduced ? 0 : 0.05}
-        animateFrom="bottom"
-        scaleOnHover={!reduced}
-        hoverScale={0.97}
-        blurToFocus={!reduced}
-        colorShiftOnHover={false}
-      />
+    <div
+      className={cn(
+        "columns-2 gap-4 [column-fill:balance] lg:columns-3 lg:gap-5",
+        className,
+      )}
+    >
+      {items.map((tile, index) => (
+        <figure key={tile.id} className="mb-4 break-inside-avoid lg:mb-5">
+          <ImageReveal
+            src={tile.img}
+            alt={tile.alt ?? ""}
+            ratio={`${tile.width}/${tile.height}`}
+            delay={index * 60}
+            hoverZoom
+            className="group rounded-xl shadow-primary"
+            imgClassName="object-cover"
+          />
+          {tile.caption && <figcaption className="rule-label mt-3">{tile.caption}</figcaption>}
+        </figure>
+      ))}
     </div>
   );
 }

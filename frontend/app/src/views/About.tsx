@@ -83,7 +83,7 @@ export default function About() {
                 have replaced is shown instead. */}
             <PressPass
               frontImage={PORTRAIT.src}
-              className="min-h-[420px] lg:min-h-[520px]"
+              className="min-h-[480px] lg:min-h-[620px]"
               fallback={
                 <Reveal variant="fade-scale" delay={140}>
                   <ImageReveal
@@ -216,7 +216,10 @@ export default function About() {
             items={WALL.map((portrait) => ({
               id: portrait.src,
               img: portrait.src,
-              height: Math.round((portrait.height / portrait.width) * 420),
+              alt: portrait.alt,
+              caption: portrait.caption,
+              width: portrait.width,
+              height: portrait.height,
             }))}
           />
         </section>
@@ -238,7 +241,7 @@ export default function About() {
             {FIELD_CLIP.caption}
           </p>
 
-          <div className="mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+          <div className="stack-mobile mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
             <FieldClip src={FIELD_CLIP.src} title={FIELD_CLIP.title} />
 
             {/* Tilted frames here rather than plain plates: these two need a

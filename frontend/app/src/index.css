@@ -930,6 +930,55 @@
     @apply rounded-xl border border-border bg-card;
     box-shadow: var(--shadow-primary);
   }
+  /*
+   * Card stacking, on small screens only.
+   *
+   * A phone turns every grid on this site into one tall column, and a tall
+   * column of cards is a lot of thumb. Stacked, each card parks under the
+   * masthead and the next one slides over it: the same amount of content in a
+   * fraction of the scroll, and only one card asking to be read at a time.
+   *
+   * ── The two things that make it work ─────────────────────────────────
+   * `display: block` is not cosmetic. `position: sticky` moves an element
+   * within its containing block, and in a single-column grid each child's
+   * containing block is its own row — exactly its own height, so there is
+   * nowhere to stick to and the property does nothing at all. Reverting the
+   * container to normal flow gives the children the whole column to travel in.
+   *
+   * And the cards must be opaque, or you read three at once. Every call site
+   * passes `.surface`, which is.
+   *
+   * The offsets fan the parked cards by 12px each so the stack shows its
+   * depth rather than looking like one card that keeps changing. Past the
+   * fifth they stop moving; beyond that the fan is wider than the header and
+   * starts eating the card on top.
+   */
+  @media (max-width: 1023px) {
+    .stack-mobile {
+      display: block;
+    }
+    .stack-mobile > * {
+      position: sticky;
+      top: 5.5rem;
+      margin-bottom: 1rem;
+    }
+    .stack-mobile > *:nth-child(2) {
+      top: calc(5.5rem + 12px);
+    }
+    .stack-mobile > *:nth-child(3) {
+      top: calc(5.5rem + 24px);
+    }
+    .stack-mobile > *:nth-child(4) {
+      top: calc(5.5rem + 36px);
+    }
+    .stack-mobile > *:nth-child(n + 5) {
+      top: calc(5.5rem + 48px);
+    }
+    .stack-mobile > *:last-child {
+      margin-bottom: 0;
+    }
+  }
+
   .surface-hover {
     transition:
       transform var(--dur-normal) var(--ease-out),

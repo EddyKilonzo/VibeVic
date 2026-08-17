@@ -7,7 +7,6 @@ import {
   AGAINST_WALL,
   FIELD_CLIP,
   ON_ASSIGNMENT,
-  PORTRAIT,
   REVIEWING_FRAMES,
   WALL,
 } from "@/data/portraits";
@@ -59,9 +58,14 @@ export default function About() {
           The ground is the comb at its loud weight, matching the article
           hero. Nothing here is body copy, which is the condition for using
           it. */}
-      <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
+      <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate flex min-h-[80svh] flex-col justify-center overflow-clip border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
         <div className="container-site relative">
-          <div className="grid items-center gap-10 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:gap-16">
+          {/* Tighter than it was. The pass and the name belong to each other —
+              at a sixteen-unit gap they read as two separate things that
+              happen to share a row, and the card drifted off toward the
+              gutter. The image column is also wider now, so the card is close
+              enough to the words to be part of the same object. */}
+          <div className="grid items-center gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,300px)] sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:gap-8">
             <div>
               <p className="rule-label">About</p>
               <TextReveal
@@ -82,7 +86,11 @@ export default function About() {
                 On touch, and under reduced motion, the photograph it would
                 have replaced is shown instead. */}
             <PressPass
-              frontImage={PORTRAIT.src}
+              // The card face is a composed pass, not a bare photograph:
+              // PRESS across the top, his name and role across the foot. The
+              // strap alone was carrying that job and a strap is 40px wide on
+              // screen — the words belong on the thing you actually look at.
+              frontImage="/lanyard/press-card.png"
               className="min-h-[480px] lg:min-h-[620px]"
               fallback={
                 <Reveal variant="fade-scale" delay={140}>
@@ -215,7 +223,14 @@ export default function About() {
 
             The wall is CSS columns: each tile keeps its own proportion, so
             the ragged edge is the set's, not a crop. */}
-        <section className="honeycomb honeycomb-strong relative mt-24 overflow-hidden rounded-2xl border border-border p-6 sm:mt-28 sm:p-10 lg:p-12">
+        {/* `overflow-clip`, not `overflow-hidden`, and the difference is the
+            whole reason the heading below sticks. `hidden` makes an element a
+            scroll container: `position: sticky` then anchors to *it* rather
+            than to the page, and since that box never scrolls, the heading
+            never moves. `clip` clips the honeycomb to the rounded corners in
+            exactly the same way without creating a scroller, so the sticky
+            column keeps measuring against the viewport. */}
+        <section className="honeycomb honeycomb-strong relative mt-24 overflow-clip rounded-2xl border border-border p-6 sm:mt-28 sm:p-10 lg:p-12">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] lg:gap-14">
             <div className="lg:sticky lg:top-28 lg:self-start">
               <p className="rule-label">Portraits</p>

@@ -37,6 +37,29 @@ import { CurvedMarquee, SpecularButton, SpringCountUp } from "@/components/react
  * `lg:` only. Below that the one- and two-column stacks are the layout, and
  * imposing spans on them buys nothing.
  */
+/**
+ * Bento spans for the beats, on a six-column field.
+ *
+ * The cycle is 4·2 / 2·4 / 3·3 — three rows that each fill the width exactly,
+ * then repeat. It replaced `every third cell is wide`, which was written for
+ * four beats and did not survive seven: the three written-only subjects landed
+ * in third-width cells, and politics ended up alone in a four-column box with
+ * two columns of nothing beside it.
+ *
+ * The last item gets the full width when it would otherwise start a row on its
+ * own. A single card in a third of a row next to empty space reads as a
+ * layout that has run out, rather than as a decision.
+ */
+function beatSpan(index: number, total: number): string {
+  if (index === total - 1 && index % 6 === 0) return "lg:col-span-6";
+
+  const cycle = ["lg:col-span-4", "lg:col-span-2", "lg:col-span-2", "lg:col-span-4", "lg:col-span-3", "lg:col-span-3"];
+  return cycle[index % cycle.length];
+}
+
+/** Wide cells carry a larger heading and a longer measure. */
+const isWideBeat = (span: string) => span.endsWith("4") || span.endsWith("6");
+
 function reportSpan(index: number): string {
   const position = index % 5;
   if (position === 0) return "lg:col-span-7";
@@ -369,7 +392,8 @@ export default function Home() {
               omits what he covers is the one thing it cannot do. Every third
               cell runs wide so seven read as woven rows rather than a wall. */}
           {GENRES.map((topic, i) => {
-            const wide = i % 3 === 0;
+            const span = beatSpan(i, GENRES.length);
+            const wide = isWideBeat(span);
             // Compared as plain strings: `topic.slug` is a genre, and three of
             // the genres are deliberately not video topics.
             const count = VIDEOS.filter((video) => video.topic === topic.slug).length;
@@ -379,7 +403,7 @@ export default function Home() {
               <StaggerItem
                 key={topic.slug}
                 index={i}
-                className={wide ? "lg:col-span-4" : "lg:col-span-2"}
+                className={span}
               >
                 <Reveal variant="fade-up" distance="sm" className="h-full">
                   {/* Into `/genres`, not a filtered video feed — three of the

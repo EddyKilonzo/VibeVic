@@ -122,14 +122,23 @@ export default function Genres() {
               )
             )}
 
+            {/* Full cards, on the same grid as the reports above.
+                These used to be compact list rows — a date, a title, a line of
+                metadata — which was fine when writing was a footnote to the
+                video. It is not any more: three of the seven beats have no
+                video at all, and on those the compact rows were the entire
+                section, so the page showed a heading, two counts and a list
+                where every other beat showed work. Same card, same weight. */}
             {written.length > 0 && (
-              <div className="mt-14">
-                <p className="rule-label">Written on this beat</p>
-                <ul className="mt-2">
+              <div className={videos.length > 0 ? "mt-14" : "mt-10"}>
+                {videos.length > 0 && <p className="rule-label mb-6">Written on this beat</p>}
+                <Stagger className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
                   {written.map((story, i) => (
-                    <StoryCard key={story.id} story={story} variant="compact" delay={i * 60} />
+                    <StaggerItem key={story.id} index={i}>
+                      <StoryCard story={story} />
+                    </StaggerItem>
                   ))}
-                </ul>
+                </Stagger>
               </div>
             )}
           </section>

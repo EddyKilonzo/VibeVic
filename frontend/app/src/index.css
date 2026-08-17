@@ -538,8 +538,27 @@
    * never intercepts a click.
    */
   .honeycomb {
-    position: relative;
     isolation: isolate;
+  }
+  /*
+   * `relative` only when the element is not already positioned.
+   *
+   * This class lives in `@layer utilities`, which is where Tailwind's own
+   * `sticky` / `fixed` / `absolute` live — same single-class specificity, and
+   * this file is emitted after the generated utilities. So a plain
+   * `position: relative` here does not lose to `sticky`; it silently beats
+   * it. `honeycomb ... sticky top-0` on the admin sidebar computed to
+   * `relative` and the rail scrolled away with the page, with nothing in the
+   * markup to suggest why.
+   *
+   * `:where()` contributes no specificity, so this still weighs (0,1,0) and
+   * the cascade is unchanged — it simply stops matching when the author has
+   * already said what `position` should be. The `::before` needs a positioned
+   * ancestor, and `sticky`, `fixed` and `absolute` all are one, so nothing is
+   * given up.
+   */
+  .honeycomb:where(:not(.absolute, .fixed, .sticky, .relative)) {
+    position: relative;
   }
   .honeycomb::before {
     content: "";

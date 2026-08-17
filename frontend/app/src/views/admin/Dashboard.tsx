@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
-import { GENRES, STORIES } from "@/data/content";
+import { GENRES, STORIES, storyBySlug } from "@/data/content";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
 import { summariseAll } from "@/lib/voice/analytics";
 import { formatCompact, formatPercent, formatTime } from "@/lib/format";
@@ -240,7 +240,15 @@ export default function Dashboard() {
             />
           ) : (
             <ul className="mt-5 space-y-4">
-              {audio.slice(0, 5).map((summary) => (
+              {audio.map((summary) => {
+                // The panel was printing `summary.slug` — the URL segment, so
+                // this read as a list of
+                // "from-imposter-syndrome-to-breakthroughs-the-untold-…".
+                // Playback is recorded against the slug because that is the
+                // stable key; the headline is what the person reading this
+                // knows the piece by.
+                const story = storyBySlug(summary.slug);
+                return (
                 <li
                   key={summary.slug}
                   className="border-t border-border pt-4 first:border-0 first:pt-0"
@@ -249,8 +257,17 @@ export default function Dashboard() {
                     href={`/stories/${summary.slug}`}
                     className="focus-ring underline-grow text-sm font-semibold"
                   >
-                    {summary.slug}
+                    {story?.title ?? summary.slug}
                   </Link>
+                  {/* A recording whose piece is no longer in the archive.
+                      Kept and labelled rather than dropped — the playback
+                      happened, and silently hiding it would misstate the
+                      totals underneath. */}
+                  {!story && (
+                    <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                      no longer published
+                    </span>
+                  )}
                   <dl className="mt-2 grid grid-cols-3 gap-3 text-xs">
                     <Metric label="Plays" value={String(summary.plays)} />
                     <Metric label="Completion" value={formatPercent(summary.completionRate)} />
@@ -262,7 +279,8 @@ export default function Dashboard() {
                     </p>
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
 

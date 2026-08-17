@@ -1,22 +1,24 @@
-import type { Award, Block, Genre, Publication, Story } from "./types";
+import type { Award, Genre, Publication, Story } from "./types";
 import { CHANNEL, TOPICS, VIDEOS } from "./videos";
+import { WORDPRESS_STORIES } from "./writing.generated";
 
 /**
  * Site content.
  *
- * A hard line runs through this file, and it is worth stating plainly:
+ * Everything in this file is real, and that is a change worth recording. It
+ * used to carry a template article marked `placeholder: true` so the editor
+ * and the listen-to-article feature had something to operate on; that piece
+ * is gone, replaced by his actual writing imported from WordPress. Nothing
+ * here is invented:
  *
- *   VERIFIED — the profile, the channel figures and the video list were read
- *   from the live YouTube channel and from what the site's owner supplied.
- *   These are facts about a real person and are safe to publish.
+ *   - the profile and the channel figures were read from the live YouTube
+ *     channel and from what the site's owner supplied;
+ *   - the written archive is imported verbatim from his own site, with a
+ *     `sourceUrl` on every piece pointing back at the version he maintains;
+ *   - awards is an empty array, because he has not told us of any.
  *
- *   PLACEHOLDER — the written articles below are template text, marked with
- *   `placeholder: true` and labelled as such wherever they render. They exist
- *   so the editor and the listen-to-article feature have something real to
- *   operate on. No reporting, award, quotation or byline has been invented
- *   and attributed to Victor Kiplimo.
- *
- * Replacing a placeholder in the admin clears the flag and the label.
+ * No reporting, award, quotation or byline has been invented and attributed
+ * to Victor Kiplimo, and none should be.
  */
 
 /* ── VERIFIED ──────────────────────────────────────────────────── */
@@ -115,105 +117,53 @@ export const SOCIAL_ACCOUNTS: SocialAccount[] = [
   SOCIAL.instagram,
 ];
 
-/* ── Written articles: PLACEHOLDER ─────────────────────────────── */
-
-let blockSeq = 0;
-const p = (text: string): Block => ({ id: `b${++blockSeq}`, type: "paragraph", text });
-const h = (text: string): Block => ({ id: `b${++blockSeq}`, type: "heading", text, level: 2 });
-const q = (text: string, attribution?: string): Block => ({
-  id: `b${++blockSeq}`,
-  type: "quote",
-  text,
-  attribution,
-});
-const ul = (items: string[]): Block => ({ id: `b${++blockSeq}`, type: "list", items });
-
 /**
- * Genres double as the written-work equivalent of video topics, so the two
- * halves of the archive filter the same way.
+ * Genres for the written archive.
+ *
+ * The first four mirror the video topics, so the two halves of the archive
+ * filter the same way. The three after them exist because the writing does not
+ * fit inside the video beats and pretending otherwise would file a piece about
+ * antimicrobial resistance in poultry under "campus reporting". The video
+ * covers his college; the writing ranges wider, and the filters should say so.
  */
-export const GENRES: Genre[] = TOPICS.map((topic) => ({
-  slug: topic.slug,
-  name: topic.name,
-  description: topic.description,
-}));
-
-export const STORIES: Story[] = [
+export const GENRES: Genre[] = [
+  ...TOPICS.map((topic) => ({
+    slug: topic.slug,
+    name: topic.name,
+    description: topic.description,
+  })),
   {
-    id: "s1",
-    slug: "how-to-publish-a-story",
-    title: "How this newsroom works",
-    dek: "A walkthrough of publishing, editing and narration — and a demonstration of the listen-to-article feature. Replace this text with your first written piece.",
-    genre: "campus",
-    tags: ["Guide", "Placeholder"],
-    status: "published",
-    placeholder: true,
-    publishedAt: "2026-08-01",
-    updatedAt: "2026-08-01",
-    readingMinutes: 4,
-    featured: true,
-    body: [
-      p(
-        "This is placeholder copy. It exists so the editor, the reading progress bar and the voice player have real text to work with before the first article is written. Open it in the admin, replace these paragraphs, and everything on this page updates — including the audio.",
-      ),
-      h("Writing and structure"),
-      p(
-        "Articles are built from blocks rather than from a single field of markup. A block is a paragraph, a heading, a pull quote, an image, or a list. Blocks can be dragged into a new order, duplicated, or converted from one type into another, and the change is saved automatically a moment after you stop typing.",
-      ),
-      p(
-        "Structure is not decoration here. Every heading you write becomes a chapter in the audio player, so a piece broken into clear sections is one a listener can navigate. Nothing extra has to be authored to make that happen.",
-      ),
-      q(
-        "Write the piece well and the audio version organises itself.",
-      ),
-      h("How the narration works"),
-      p(
-        "Pressing Listen sends the article — and only the article — to the device's own speech engine. Navigation, buttons, metadata and the related-story rail are never read aloud, because the page is stored as structured blocks and only the editorial ones are passed to the reader.",
-      ),
-      ul([
-        "Each sentence is spoken separately, which is what allows the current paragraph to be highlighted as it plays.",
-        "Headings become chapters, so a listener can skip forward a section at a time.",
-        "Playback speed, chosen voice and follow-along are remembered on the device.",
-      ]),
-      p(
-        "The times shown in the player are estimates. The browser's speech engine reports no duration, so the length of each sentence is calculated from its word count and corrected at every sentence boundary. A future neural voice would report real timings, and the same player would use them without a change to this page.",
-      ),
-      h("Replacing this article"),
-      p(
-        "Open the admin, choose this story, and edit it. The placeholder label at the top of the page disappears as soon as the flag is cleared, and this piece behaves like any other published work.",
-      ),
-    ],
+    slug: "science",
+    name: "Science & health",
+    description: "Research, medicine and the science behind everyday decisions.",
   },
   {
-    id: "s2",
-    slug: "sample-report-template",
-    title: "Report template",
-    dek: "A skeleton for a written report — headline, standfirst, sections and a pull quote. Duplicate it to start a new piece.",
-    genre: "features",
-    tags: ["Template", "Placeholder"],
-    status: "draft",
-    placeholder: true,
-    publishedAt: "2026-08-10",
-    updatedAt: "2026-08-12",
-    readingMinutes: 3,
-    body: [
-      p(
-        "Open with the fact that made the story worth filing. One sentence, no throat-clearing — the reader has already decided whether to continue by the end of it.",
-      ),
-      h("What happened"),
-      p(
-        "Set out the sequence plainly. Dates, places, names, in the order a person would need them to follow the account without re-reading anything.",
-      ),
-      h("What the records show"),
-      p(
-        "This is where documents, figures and responses belong. Where a number is disputed, say who disputes it.",
-      ),
-      q("A quotation carries more weight when it is the only one on the page."),
-      h("What happens next"),
-      p("Close on the open question rather than on a summary of what was already said."),
-    ],
+    slug: "environment",
+    name: "Environment",
+    description: "Conservation, wildlife and the technology being pointed at both.",
+  },
+  {
+    slug: "politics",
+    name: "Politics",
+    description: "National politics, and what is said in public by the people running it.",
   },
 ];
+
+/**
+ * The written archive.
+ *
+ * These are Victor's own articles, imported from his WordPress site by
+ * `scripts/import-wordpress.mjs` and stored in a generated file so a re-run
+ * picks up any edit made at the source. Every one is real published work —
+ * the template piece that used to sit here has been removed, because a site
+ * with five actual articles has no business shipping demo prose under the
+ * same byline.
+ *
+ * Newest first, matching every other archive on the site.
+ */
+export const STORIES: Story[] = [...WORDPRESS_STORIES].sort((a, b) =>
+  b.publishedAt.localeCompare(a.publishedAt),
+);
 
 /**
  * Where the work is published.

@@ -81,6 +81,14 @@ export interface Story {
   placeholder?: boolean;
   /** Where it originally ran, if syndicated. */
   publication?: string;
+  /**
+   * The piece at its original home.
+   *
+   * Set on imported work. A syndicated article should always be able to point
+   * at the version its author maintains — if the two ever diverge, the reader
+   * can see which is which rather than having to trust this copy.
+   */
+  sourceUrl?: string;
   body: Block[];
   /** Analytics, only meaningful for published work. */
   stats?: {

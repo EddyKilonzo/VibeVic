@@ -270,6 +270,27 @@ export default function Story({ slug }: { slug: string }) {
               >
                 <ArticleBody story={story} />
 
+                {/* Imported work points back at the version its author
+                    maintains. If this copy and the original ever drift apart,
+                    a reader can see which is which instead of having to trust
+                    whichever one they happened to land on. */}
+                {story.sourceUrl && (
+                  <Reveal variant="fade-up" className="mt-12 border-t border-border pt-6">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      First published on{" "}
+                      <a
+                        href={story.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="underline-grow font-semibold text-primary"
+                      >
+                        {story.publication ?? "the original site"}
+                      </a>
+                      .
+                    </p>
+                  </Reveal>
+                )}
+
                 <Reveal variant="fade-up" className="mt-14 border-t border-border pt-6">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rule-label mr-2">Filed under</span>

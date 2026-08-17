@@ -3,8 +3,15 @@
 import Link from "next/link";
 import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
 import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
-import { AGAINST_WALL, GALLERY } from "@/data/portraits";
+import {
+  AGAINST_WALL,
+  FIELD_CLIP,
+  GALLERY,
+  ON_ASSIGNMENT,
+  REVIEWING_FRAMES,
+} from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
+import { FieldClip } from "@/components/media/FieldClip";
 import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
 import {
   CountUp,
@@ -172,19 +179,15 @@ export default function About() {
         </div>
 
         {/* ── Portraits ──────────────────────────────────────────
-            Three frames, and held to a 900px band rather than the full site
-            width. At the container's own width a 3:4 plate in a three-column
-            grid is over four hundred pixels wide and better than five hundred
-            tall — a contact sheet turning into three posters. The middle one
-            drops half a step from `lg` up so the row interlocks rather than
-            sitting on one flat baseline; on a phone it is a plain column,
-            which is the right answer there. */}
+            Three frames across the full width. Splitting into thirds is what
+            keeps each one a plate rather than a poster — the same set at two
+            across was half a screen of coat per picture. The middle one drops
+            half a step from `lg` up so the row interlocks rather than sitting
+            on one flat baseline; on a phone it is a plain column, which is the
+            right answer there. */}
         <section className="mt-24 sm:mt-28">
           <p className="rule-label">Portraits</p>
-          <Stagger
-            className="mt-8 grid max-w-[900px] gap-4 sm:grid-cols-3 sm:gap-5"
-            step="normal"
-          >
+          <Stagger className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5" step="normal">
             {GALLERY.map((portrait, i) => (
               <StaggerItem key={portrait.src} index={i}>
                 <figure className={i === 1 ? "lg:translate-y-8" : ""}>
@@ -200,6 +203,45 @@ export default function About() {
               </StaggerItem>
             ))}
           </Stagger>
+        </section>
+
+        {/* ── In the field ───────────────────────────────────────
+            The portraits above are him posed; these are him working, in
+            colour, and the clip is his own footage. A bento rather than a
+            third row of equal plates: the vertical clip holds the left of the
+            band at its native 9:16 and the two stills stack beside it, which
+            is the only arrangement that lets a portrait video and two portrait
+            photographs share a row without one of them being cropped to suit
+            the others. */}
+        <section className="mt-24 sm:mt-28">
+          <p className="rule-label">In the field</p>
+          <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+            {FIELD_CLIP.title}
+          </h2>
+          <p className="mt-3 max-w-[48ch] leading-relaxed text-muted-foreground">
+            {FIELD_CLIP.caption}
+          </p>
+
+          <div className="mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+            <FieldClip src={FIELD_CLIP.src} title={FIELD_CLIP.title} />
+
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+              {[ON_ASSIGNMENT, REVIEWING_FRAMES].map((shot, i) => (
+                <Reveal key={shot.src} variant="fade-up" delay={i * 80}>
+                  <figure>
+                    <ImageReveal
+                      src={shot.src}
+                      alt={shot.alt}
+                      ratio="4/5"
+                      className="rounded-xl shadow-primary"
+                      imgClassName="object-cover"
+                    />
+                    <figcaption className="rule-label mt-3">{shot.caption}</figcaption>
+                  </figure>
+                </Reveal>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* ── Follow ─────────────────────────────────────────────

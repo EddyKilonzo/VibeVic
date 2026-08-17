@@ -564,9 +564,14 @@
    * else to read — at this weight the lattice is a *material*, which is the
    * whole point of putting it behind a title, and exactly why it must never
    * appear behind body copy.
+   *
+   * It was first set at 17%, which was too much by a wide margin: across a
+   * hero's worth of empty ground the cells read louder than the headline
+   * standing on them, which is a texture that has stopped being a ground.
+   * Nine per cent is unmistakably present and still sits behind the words.
    */
   .honeycomb-intense::before {
-    background-color: hsl(var(--primary) / 0.17);
+    background-color: hsl(var(--primary) / 0.09);
   }
 
   /*
@@ -911,8 +916,18 @@
      adds the pointer response, which is a shadow change and 2px of
      travel — enough to read as "this is pressable", small enough that a
      grid of twelve cards does not ripple as the cursor crosses it.   */
+  /*
+   * The card.
+   *
+   * `rounded-xl` rather than `rounded-lg`: at 8px the corner reads as a square
+   * that has been sanded, which is worse than either a real radius or none at
+   * all — and it is most obvious exactly where these are used hardest, on a
+   * card whose media runs to the card's own edge. 12px is soft enough to be a
+   * decision. `overflow-hidden` at the call sites then clips the image to the
+   * same curve instead of poking a sharp corner through a rounded one.
+   */
   .surface {
-    @apply rounded-lg border border-border bg-card;
+    @apply rounded-xl border border-border bg-card;
     box-shadow: var(--shadow-primary);
   }
   .surface-hover {
@@ -939,8 +954,11 @@
    * toolbars and inline controls where the full primary shadow would read as
    * an object hovering rather than a control sitting on the page.
    */
+  /* The small one — chips, control groups, inline plates. A tighter radius
+     than `.surface` because it wraps things measured in tens of pixels, not
+     hundreds, and 12px on a 36px-tall control is a lozenge. */
   .surface-compact {
-    @apply rounded-md border border-border bg-card;
+    @apply rounded-lg border border-border bg-card;
     box-shadow: var(--shadow-edge), var(--shadow-raised);
   }
 

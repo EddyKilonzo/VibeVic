@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,13 @@ export interface ImageRevealProps {
 
 /** How far outside the viewport a frame starts fetching. */
 const LOAD_MARGIN = "500px";
+
+/**
+ * A real poster is at least this wide. YouTube answers a request for a frame
+ * it does not have with a 120×90 grey placeholder and a 200, so width is the
+ * only signal that the image which arrived is not the image asked for.
+ */
+const PLACEHOLDER_WIDTH = 200;
 
 /**
  * Editorial image entrance: the frame wipes open from the bottom edge while
@@ -86,6 +93,34 @@ export function ImageReveal({
 
   const revealed = reduced || (loaded && (inView || immediate));
 
+  /**
+   * The other half of "has it arrived", and the reason cached images used to
+   * paint as empty plates.
+   *
+   * `onLoad` only fires for a decode that happens *after* React has attached
+   * the handler. An image already in the browser cache — a second visit, a
+   * client-side navigation back to a page, a hero the router prefetched — is
+   * frequently `complete` before that, so the event never comes, `loaded`
+   * stays false, and the wipe below never lifts its clip. The frame then sits
+   * there as a placeholder gradient forever, which is precisely what it looked
+   * like on the About hero.
+   *
+   * A ref callback runs at commit, when the element exists and its `complete`
+   * flag can simply be read. Setting state from one is a commit-phase update,
+   * not the cascading-render effect pattern.
+   */
+  const settle = useCallback(
+    (element: HTMLImageElement | null) => {
+      if (!element || !element.complete || element.naturalWidth === 0) return;
+      if (fallbackSrc && source !== fallbackSrc && element.naturalWidth < PLACEHOLDER_WIDTH) {
+        setSource(fallbackSrc);
+        return;
+      }
+      setLoaded(true);
+    },
+    [fallbackSrc, source],
+  );
+
   return (
     <div
       ref={ref}
@@ -116,6 +151,10 @@ export function ImageReveal({
         }
       >
         <img
+          // Remounted when the source changes, so the ref callback below runs
+          // again for the fallback rather than only for the first attempt.
+          key={source}
+          ref={settle}
           // Undefined until the frame is near, so nothing is requested for a
           // card the reader may never scroll to. `eager` is correct once it is
           // set: the decision has already been made here.

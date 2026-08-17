@@ -71,11 +71,26 @@ export const distance = {
   lg: 28,
 } as const;
 
-/** When a scroll-triggered element counts as "in view". */
+/**
+ * When a scroll-triggered element counts as "in view".
+ *
+ * `amount` was 0.15 — fifteen per cent of the *element* had to be inside the
+ * viewport. That is fine for a card and quietly broken for anything tall: an
+ * element longer than about six screens can never show fifteen per cent of
+ * itself at once, so its reveal simply never fired and the content sat at
+ * opacity zero until something forced a re-render. A section that appears only
+ * after a refresh is that bug, and it gets worse the longer the page gets.
+ *
+ * `"some"` is Motion's zero threshold: the moment any part of the element
+ * enters the detection area it counts. The negative bottom margin still holds
+ * the trigger a little inside the fold, so nothing fires while it is under the
+ * edge of the screen — that is the part doing the editorial work, and it does
+ * not depend on the element's own height.
+ */
 export const viewport = {
   /** Motion's `viewport.margin` / GSAP's ScrollTrigger start. */
   margin: "0px 0px -12% 0px",
-  amount: 0.15,
+  amount: "some",
   scrollTriggerStart: "top 88%",
 } as const;
 

@@ -27,12 +27,18 @@ export interface Portrait {
   height: number;
 }
 
-const frame = (src: string, alt: string, caption: string): Portrait => ({
+const frame = (
+  src: string,
+  alt: string,
+  caption: string,
+  width = 1080,
+  height = 1440,
+): Portrait => ({
   src: `/images/${src}`,
   alt,
   caption,
-  width: 1080,
-  height: 1440,
+  width,
+  height,
 });
 
 /** Head-and-shoulders, looking to camera. The one to use where a face is wanted. */
@@ -63,13 +69,54 @@ export const AGAINST_WALL = frame(
   "On location",
 );
 
+/* ── On assignment ────────────────────────────────────────────────────────
+ * Colour, and shot by someone else — these are him at work rather than him
+ * posed, which is why they live apart from the black-and-white set.
+ *
+ * The filenames these arrived under carried the name "Melwin Kiprop". That is
+ * either the photographer or the second person in the frame, and nobody has
+ * said which, so it is recorded here and *not* published as a credit. Guessing
+ * an attribution is the one thing a journalist's site cannot do casually.
+ * Confirm it and add a `credit` field.
+ */
+
+/** Suited, camera and flash in hand, outside a campus building. */
+export const ON_ASSIGNMENT = frame(
+  "victor-kiplimo-on-assignment.jpg",
+  "Victor Kiplimo in a navy suit holding a Canon camera with a flash mounted",
+  "On assignment",
+  1170,
+  1462,
+);
+
+/** Two photographers reviewing what they have just shot. */
+export const REVIEWING_FRAMES = frame(
+  "victor-kiplimo-reviewing-frames.jpg",
+  "Victor Kiplimo and another photographer looking at the back of a camera together",
+  "Checking the take",
+  1170,
+  1462,
+);
+
+/**
+ * A self-shot vertical clip.
+ *
+ * Served from this site rather than embedded, so it costs no third-party
+ * request and nothing is contacted before the viewer presses play. It has
+ * sound, which is exactly why it never autoplays.
+ */
+export const FIELD_CLIP = {
+  src: "/video/day-in-the-life.mp4",
+  title: "A day in the life",
+  caption: "Filmed and cut by him, between assignments.",
+} as const;
+
 /**
  * The About page's gallery band.
  *
- * Two, not four. That page now shows `AGAINST_WALL` in its hero and
- * `SHOOTING` beside the biography, so these are the ones left — which works
- * out at each of the four appearing exactly once on the page. A picture
- * repeating on a single screen reads as a shortage of pictures rather than as
- * a choice, and there is no shortage.
+ * Three, and `AGAINST_WALL` is absent because it is that page's hero. Each of
+ * the four then appears exactly once on the page. A picture repeating on a
+ * single screen reads as a shortage of pictures rather than as a choice, and
+ * there is no shortage.
  */
-export const GALLERY: Portrait[] = [PORTRAIT, WITH_CAMERA];
+export const GALLERY: Portrait[] = [PORTRAIT, WITH_CAMERA, SHOOTING];

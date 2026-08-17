@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
 import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
-import { AGAINST_WALL, GALLERY, SHOOTING } from "@/data/portraits";
+import { AGAINST_WALL, GALLERY } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
 import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
 import {
   CountUp,
   ImageReveal,
-  Parallax,
   Reveal,
   Stagger,
   StaggerItem,
@@ -143,49 +142,52 @@ export default function About() {
             </div>
           </Reveal>
 
+          {/* No photograph in this column any more. There are four pictures in
+              the set and this page has a hero and a gallery of three, which is
+              five slots — and a portrait appearing twice on one page reads as
+              a shortage rather than a choice. The hero carries the face; this
+              column carries the record. */}
           <Reveal variant="fade-left">
-            {/* A photograph of him, not a frame from a report. The distinction
-                matters on a page that is about the person: a video still here
-                would be the work standing in for its author. */}
-            <Parallax amount={18}>
-              <ImageReveal
-                src={SHOOTING.src}
-                alt={SHOOTING.alt}
-                ratio="3/4"
-                immediate
-                className="rounded-xl shadow-primary"
-                imgClassName="object-cover"
-              />
-            </Parallax>
-            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-              He reports, shoots and edits every piece himself.
-            </p>
+            <div className="surface honeycomb honeycomb-strong overflow-hidden p-6 sm:p-8 lg:sticky lg:top-28">
+              <p className="rule-label">The record</p>
+              <Stagger className="mt-6 grid gap-4 sm:grid-cols-2" step="tight">
+                {stats.map((stat, i) => (
+                  <StaggerItem key={stat.label} index={i}>
+                    <Reveal variant="fade-up" distance="sm">
+                      <p className="font-display text-3xl font-semibold tracking-tight text-primary">
+                        <CountUp value={stat.value} />
+                      </p>
+                      <p className="rule-label mt-1.5">{stat.label}</p>
+                    </Reveal>
+                  </StaggerItem>
+                ))}
+              </Stagger>
+
+              <p className="mt-7 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
+                Figures are read from the channel itself, not estimated. They are a snapshot from
+                when this page was built.
+              </p>
+            </div>
           </Reveal>
         </div>
 
-        {/* Stats count once, on arrival, then hold. */}
-        <div className="mt-24 grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4">
-          {stats.map((stat, i) => (
-            <Reveal key={stat.label} variant="fade-up" delay={i * 70} className="bg-background p-6">
-              <p className="font-display text-4xl font-semibold tracking-tight text-primary">
-                <CountUp value={stat.value} />
-              </p>
-              <p className="rule-label mt-2">{stat.label}</p>
-            </Reveal>
-          ))}
-        </div>
-
         {/* ── Portraits ──────────────────────────────────────────
-            Three frames from the same set, on the comb rhythm the rest of the
-            site uses: every second plate drops half a step from `lg` up, so the
-            row interlocks instead of sitting on one flat baseline. On a phone
-            it is a plain column, which is the right answer there. */}
+            Three frames, and held to a 900px band rather than the full site
+            width. At the container's own width a 3:4 plate in a three-column
+            grid is over four hundred pixels wide and better than five hundred
+            tall — a contact sheet turning into three posters. The middle one
+            drops half a step from `lg` up so the row interlocks rather than
+            sitting on one flat baseline; on a phone it is a plain column,
+            which is the right answer there. */}
         <section className="mt-24 sm:mt-28">
           <p className="rule-label">Portraits</p>
-          <Stagger className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-5" step="normal">
+          <Stagger
+            className="mt-8 grid max-w-[900px] gap-4 sm:grid-cols-3 sm:gap-5"
+            step="normal"
+          >
             {GALLERY.map((portrait, i) => (
               <StaggerItem key={portrait.src} index={i}>
-                <figure className={i % 2 === 1 ? "lg:translate-y-8" : ""}>
+                <figure className={i === 1 ? "lg:translate-y-8" : ""}>
                   <ImageReveal
                     src={portrait.src}
                     alt={portrait.alt}

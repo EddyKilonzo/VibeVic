@@ -21,7 +21,7 @@ import { VideoPoster } from "@/components/video/VideoPoster";
 import { StoryCard } from "@/components/story/StoryCard";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
-import { HeroBadge, HeroPanel } from "@/components/hero/HeroPanel";
+import { HeroPanel } from "@/components/hero/HeroPanel";
 import { HeroNote } from "@/components/hero/HeroNote";
 import { LeadMark } from "@/components/hero/PageHero";
 import { CurvedMarquee, SpecularButton, SpringCountUp } from "@/components/reactbits";
@@ -56,20 +56,19 @@ export default function Home() {
           One GSAP timeline drives the whole entrance; elements opt in
           with data-seq. Nothing here blocks interaction. */}
       <HeroSequence>
-        <HeroPanel>
+        <HeroPanel fitViewport>
           <div data-seq="texture" className="aurora absolute inset-0 -z-10 opacity-70" aria-hidden />
 
           {/* Centred composition: badge, headline, serif subhead, two actions,
               then a chip rail on hairlines. The reference's structure, in our
               palette and type. */}
+          {/* The counts used to sit in a badge above the headline. They are
+              already stated further down, on the plates beside the biography,
+              where they read as his record rather than as a metric bar — and
+              opening a portfolio with a view count puts the smallest number on
+              the page first. */}
           <div className="container-site flex flex-col items-center text-center">
-            <div data-seq="eyebrow">
-              <HeroBadge icon={<Youtube className="h-3.5 w-3.5" aria-hidden />}>
-                {CHANNEL.videoCount} reports · {formatCompact(totalViews())} views
-              </HeroBadge>
-            </div>
-
-            <h1 className="font-display display-1 mt-7 font-semibold text-balance">
+            <h1 className="font-display display-1 font-semibold text-balance">
               {["Reporting from the ground,", "one story at a time."].map((line) => (
                 <span key={line} className="block overflow-hidden pb-[0.16em]">
                   <span data-seq="headline" className="block">
@@ -83,14 +82,14 @@ export default function Home() {
                 second headline. */}
             <p
               data-seq="support"
-              className="font-display lead-copy mx-auto mt-7 max-w-[52ch] text-muted-foreground"
+              className="font-display lead-copy mx-auto mt-4 max-w-[52ch] text-muted-foreground sm:mt-5"
             >
               {PROFILE.name} reports on <LeadMark>campus systems</LeadMark>,{" "}
               <LeadMark>Kenyan culture</LeadMark> and <LeadMark>student life</LeadMark> — published
               as video, and readable or listenable here.
             </p>
 
-            <div className="relative mt-10 flex w-full flex-wrap items-center justify-center gap-3">
+            <div className="relative mt-7 flex w-full flex-wrap items-center justify-center gap-3 sm:mt-8">
               <HeroNote direction="down-right" className="absolute -left-2 -top-4 xl:left-8">
                 Every report plays right here
               </HeroNote>
@@ -125,7 +124,7 @@ export default function Home() {
             </div>
 
             {/* The beats, on hairlines — real links, not decoration. */}
-            <div data-seq="decor" className="rail mt-14 w-full">
+            <div data-seq="decor" className="rail mt-8 w-full sm:mt-10">
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {TOPICS.map((topic) => (
                   <Link
@@ -144,7 +143,7 @@ export default function Home() {
               by it. The middle card stands tallest so the row has a centre,
               and the whole group is decorative — every one of these reports is
               reachable from the grid directly below. */}
-          <div data-seq="image" className="container-site mt-16 grid grid-cols-3 gap-3 sm:gap-5">
+          <div data-seq="image" className="container-site mt-8 grid grid-cols-3 gap-3 sm:mt-10 sm:gap-5">
             {videos.slice(0, 3).map((video, i) => (
               <Link
                 key={video.id}
@@ -157,7 +156,10 @@ export default function Home() {
                   // and 4:5 boxes holding 16:9 thumbnails, which threw away
                   // nearly half the width of every frame — the title cards on
                   // several of these reports were cropped clean off.
-                  "aspect-video",
+                  // The height cap is what lets the whole hero hold to one
+                  // screen: on a wide monitor three 16:9 plates across the
+                  // container are otherwise taller than the space left.
+                  "aspect-video max-h-[19vh]",
                   // The middle card stands proud, so the row has a centre.
                   i === 1 ? "sm:-translate-y-5" : "",
                 )}

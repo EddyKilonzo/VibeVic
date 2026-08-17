@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Share2, Youtube } from "lucide-react";
+import { ArrowLeft, ArrowRight, Share2, Youtube } from "lucide-react";
 import {
   CHANNEL,
   relatedVideos,
   topicName,
   videoById,
+  videosByTopic,
   watchUrl,
+  type Video as VideoRecord,
 } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
+import { DockedPlayer } from "@/components/video/DockedPlayer";
 import { VideoCard, publishedLabel } from "@/components/video/VideoCard";
 import { BookmarkButton } from "@/components/story/BookmarkButton";
 import { ShareSheet } from "@/components/story/ShareSheet";
@@ -23,6 +27,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 export default function Video({ id }: { id: string }) {
   const video = videoById(id);
   const [shareOpen, setShareOpen] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   if (!video) {
     return (
@@ -42,6 +47,13 @@ export default function Video({ id }: { id: string }) {
   }
 
   const related = relatedVideos(video);
+
+  // The beat, newest first, and where this report sits in it.
+  const beat = videosByTopic(video.topic);
+  const index = beat.findIndex((item) => item.id === video.id);
+  const position = index + 1;
+  const newer = index > 0 ? beat[index - 1] : null;
+  const older = index >= 0 && index < beat.length - 1 ? beat[index + 1] : null;
 
   return (
     <div className="pt-28 sm:pt-36">
@@ -71,7 +83,8 @@ export default function Video({ id }: { id: string }) {
         </Reveal>
       </div>
 
-      {/* The player sits in a wider column than the text around it. */}
+      {/* The player sits in a wider column than the text around it, and stays
+          with the viewer once they have started it — see `DockedPlayer`. */}
       <Reveal variant="fade-scale" delay={140}>
         <div
           className={
@@ -80,7 +93,14 @@ export default function Video({ id }: { id: string }) {
               : "mx-auto mt-10 w-full max-w-[1000px] px-0 sm:px-8"
           }
         >
-          <VideoEmbed video={video} priority />
+          <DockedPlayer video={video} playing={playing}>
+            <VideoEmbed
+              video={video}
+              priority
+              className="h-full w-full"
+              onPlay={() => setPlaying(true)}
+            />
+          </DockedPlayer>
         </div>
       </Reveal>
 
@@ -126,6 +146,27 @@ export default function Video({ id }: { id: string }) {
             . Reporting by Victor Kiplimo.
           </p>
         </Reveal>
+
+        {/* Where this report sits on its beat, and the two either side of it.
+            A grid of "related" cards tells a viewer there is more; a position
+            and a direction tells them what they have and have not seen, which
+            is the difference between browsing and following a subject.
+
+            "Newer" and "older" rather than "next" and "previous": the beat is
+            ordered by publication date, and next/previous would imply a
+            sequence the reporting does not claim to have. */}
+        {beat.length > 1 && (
+          <Reveal variant="fade-up" delay={120} className="mt-10 border-t border-border pt-8">
+            <p className="rule-label">
+              Report {position} of {beat.length} on {topicName(video.topic)}
+            </p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {newer ? <BeatStep direction="Newer on this beat" video={newer} /> : <span />}
+              {older && <BeatStep direction="Older on this beat" video={older} align="end" />}
+            </div>
+          </Reveal>
+        )}
       </div>
 
       {related.length > 0 && (
@@ -152,5 +193,42 @@ export default function Video({ id }: { id: string }) {
         onClose={() => setShareOpen(false)}
       />
     </div>
+  );
+}
+
+/** One step along a beat: the direction, the title, and its duration. */
+function BeatStep({
+  direction,
+  video,
+  align = "start",
+}: {
+  direction: string;
+  video: VideoRecord;
+  align?: "start" | "end";
+}) {
+  const Arrow = align === "end" ? ArrowRight : ArrowLeft;
+
+  return (
+    <Link
+      href={`/videos/${video.id}`}
+      className={cn(
+        "surface surface-hover focus-ring group flex items-center gap-4 p-4 sm:p-5",
+        align === "end" && "sm:flex-row-reverse sm:text-right",
+      )}
+    >
+      <Arrow
+        className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-accent"
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1">
+        <span className="rule-label block">{direction}</span>
+        <span className="font-display mt-1.5 line-clamp-2 block text-[15px] font-semibold leading-snug">
+          {video.title}
+        </span>
+        <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
+          {video.duration}
+        </span>
+      </span>
+    </Link>
   );
 }

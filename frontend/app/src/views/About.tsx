@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
 import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
-import { GALLERY, SHOOTING } from "@/data/portraits";
+import { AGAINST_WALL, GALLERY, SHOOTING } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
 import { CHANNEL, TOPICS, totalViews } from "@/data/videos";
 import {
@@ -34,22 +34,49 @@ export default function About() {
   ];
 
   return (
-    <div className="pt-32 sm:pt-40">
-      <div className="container-site">
-        <Reveal variant="fade-up">
-          <p className="rule-label">About</p>
-        </Reveal>
-
-        <TextReveal
-          as="h1"
-          lines={["Victor Kiplimo,", "journalist."]}
-          className="font-display mt-3 text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4rem]"
+    <div>
+      {/* ── Hero ───────────────────────────────────────────────────
+          Short on purpose. A biography page's hero has one job — put a face
+          to the name before the first sentence about him — and a full screen
+          of it would only delay the part with the information in it. The
+          portrait sits behind the title at low contrast rather than beside
+          it, so the headline still reads as the page's opening rather than as
+          a caption on a photograph. */}
+      <header className="relative isolate flex min-h-[38vh] items-end overflow-hidden bg-brand-ink-deep pb-10 pt-32 sm:min-h-[44vh] sm:pb-14 sm:pt-40">
+        <ImageReveal
+          src={AGAINST_WALL.src}
+          alt=""
+          ratio="16/9"
+          priority
           immediate
+          className="absolute inset-0 -z-10 h-full w-full"
+          imgClassName="object-cover object-[center_22%]"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-brand-ink-deep via-brand-ink-deep/85 to-brand-ink-deep/45"
         />
 
+        <div className="container-site relative">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-sky">
+            About
+          </p>
+          <TextReveal
+            as="h1"
+            lines={["Victor Kiplimo,", "journalist."]}
+            className="font-display mt-4 text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-[4rem]"
+            immediate
+          />
+          <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-white/75">
+            Reporting from {PROFILE.base} — campus systems, Kenyan culture and student life.
+          </p>
+        </div>
+      </header>
+
+      <div className="container-site pt-16 sm:pt-20">
         {/* Text and image enter from opposite sides — the one place on the
             site where a directional reveal carries meaning. */}
-        <div className="mt-16 grid gap-14 lg:grid-cols-[1.1fr_1fr]">
+        <div className="grid gap-14 lg:grid-cols-[1.1fr_1fr]">
           <Reveal variant="fade-right">
             <div className="space-y-6 text-[1.05rem] leading-[1.8] text-foreground/90">
               <p>
@@ -152,7 +179,7 @@ export default function About() {
             it is a plain column, which is the right answer there. */}
         <section className="mt-24 sm:mt-28">
           <p className="rule-label">Portraits</p>
-          <Stagger className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5" step="normal">
+          <Stagger className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-5" step="normal">
             {GALLERY.map((portrait, i) => (
               <StaggerItem key={portrait.src} index={i}>
                 <figure className={i % 2 === 1 ? "lg:translate-y-8" : ""}>

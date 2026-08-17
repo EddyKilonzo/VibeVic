@@ -706,6 +706,30 @@
     @apply mx-auto w-full max-w-[720px] px-5 sm:px-6;
   }
 
+  /*
+   * The sheet an article is set on.
+   *
+   * Very slightly warm and very slightly lifted off the page ground — enough
+   * that the prose sits on something rather than floating on the site's blue
+   * white, which is what makes a long read feel like a page instead of a
+   * screen. The tint is under a percent of saturation; any more and it stops
+   * reading as paper and starts reading as a coloured box.
+   *
+   * Only from `sm` up. On a phone the sheet *is* the screen: giving it a
+   * radius, a border and side padding would just narrow the measure to buy a
+   * frame nobody can see the edges of.
+   */
+  .paper {
+    background-color: hsl(38 44% 99.2%);
+  }
+  @media (min-width: 640px) {
+    .paper {
+      border-radius: 1rem;
+      border: 1px solid hsl(var(--border));
+      box-shadow: var(--shadow-primary);
+    }
+  }
+
   /* ── Newsprint / paper grain overlay ──────────────────────────
      feTurbulence fractal noise as an inline SVG data-URI mask.    */
   .grain::before {

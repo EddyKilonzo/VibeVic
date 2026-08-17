@@ -10,13 +10,11 @@ import { transitions } from "@/lib/motion";
 // reduced-motion and touch guards below cannot be forgotten at a call site.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import RbCurvedLoop from "./CurvedLoop.jsx";
-import RbLineSidebar from "./LineSidebar.jsx";
 import RbScrollExpand from "./ScrollExpand.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
 
 const CurvedLoopBase = RbCurvedLoop as any;
-const LineSidebarBase = RbLineSidebar as any;
 const ScrollExpandBase = RbScrollExpand as any;
 const SpecularButtonBase = RbSpecularButton as any;
 const CountUpBase = RbCountUp as any;
@@ -160,44 +158,6 @@ export function PillNav({
         })}
       </ul>
     </nav>
-  );
-}
-
-/* ── Line sidebar ────────────────────────────────────────────── */
-
-/**
- * A ruled index whose lines bend toward the pointer.
- *
- * Used as the chapter rail beside a narrated article. Colours are passed from
- * the brand tokens rather than left on the library's purple default.
- */
-export function LineIndex({
-  items,
-  activeIndex = null,
-  onSelect,
-  className,
-}: {
-  items: string[];
-  activeIndex?: number | null;
-  onSelect?: (index: number) => void;
-  className?: string;
-}) {
-  const reduced = useReducedMotion();
-
-  return (
-    <LineSidebarBase
-      items={items}
-      className={className}
-      defaultActive={activeIndex}
-      onItemClick={(_: string, index: number) => onSelect?.(index)}
-      accentColor="hsl(207 90% 54%)"
-      textColor="hsl(220 9% 44%)"
-      markerColor="hsl(214 20% 78%)"
-      // Zero proximity radius means the lines simply do not move.
-      proximityRadius={reduced ? 0 : 110}
-      maxShift={reduced ? 0 : 22}
-      smoothing={reduced ? 1 : 100}
-    />
   );
 }
 

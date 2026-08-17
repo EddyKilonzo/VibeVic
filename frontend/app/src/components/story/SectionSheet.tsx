@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import type { Story } from "@/data/types";
+import { cn } from "@/lib/utils";
 import { Overlay } from "@/components/ui/Overlay";
 
 /**
@@ -17,10 +18,13 @@ import { Overlay } from "@/components/ui/Overlay";
  */
 export function SectionSheet({
   story,
+  activeIndex,
   open,
   onClose,
 }: {
   story: Story;
+  /** Which section the reader is in, from the scroll spy. -1 before the first. */
+  activeIndex: number;
   open: boolean;
   onClose: () => void;
 }) {
@@ -47,27 +51,51 @@ export function SectionSheet({
     <Overlay open={open} onClose={onClose} from="bottom" label="Sections in this story">
       <div className="pb-2">
         <p className="rule-label px-1 pb-3">In this story</p>
+        {/* The section the reader is in is marked, so the sheet answers "where
+            am I" as well as "where can I go". Marked with a rule and a colour
+            rather than only a colour, and with `aria-current`, so it is not a
+            hue doing the work on its own. */}
         <ol className="flex flex-col">
-          {headings.map((heading, i) => (
-            <li key={heading.id}>
-              <button
-                type="button"
-                onClick={() => jump(heading.id)}
-                className="focus-ring group flex w-full items-center gap-4 rounded-lg px-1 py-3.5 text-left transition-colors hover:bg-secondary"
-              >
-                <span className="w-6 shrink-0 text-[11px] font-semibold tabular-nums text-accent">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="font-display min-w-0 flex-1 text-[15px] font-semibold leading-snug">
-                  {heading.text}
-                </span>
-                <ArrowRight
-                  className="nudge-x h-4 w-4 shrink-0 text-muted-foreground group-hover:text-accent"
-                  aria-hidden
-                />
-              </button>
-            </li>
-          ))}
+          {headings.map((heading, i) => {
+            const here = i === activeIndex;
+
+            return (
+              <li key={heading.id}>
+                <button
+                  type="button"
+                  onClick={() => jump(heading.id)}
+                  aria-current={here ? "true" : undefined}
+                  className={cn(
+                    "focus-ring group flex w-full items-center gap-4 rounded-lg py-3.5 pl-3 pr-1 text-left transition-colors hover:bg-secondary",
+                    here ? "bg-secondary/70" : "border-l-2 border-transparent",
+                    here && "border-l-2 border-accent",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "w-6 shrink-0 text-[11px] font-semibold tabular-nums",
+                      here ? "text-accent" : "text-muted-foreground",
+                    )}
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-display min-w-0 flex-1 text-[15px] font-semibold leading-snug",
+                      here && "text-primary",
+                    )}
+                  >
+                    {heading.text}
+                    {here && <span className="sr-only"> — you are here</span>}
+                  </span>
+                  <ArrowRight
+                    className="nudge-x h-4 w-4 shrink-0 text-muted-foreground group-hover:text-accent"
+                    aria-hidden
+                  />
+                </button>
+              </li>
+            );
+          })}
         </ol>
       </div>
     </Overlay>

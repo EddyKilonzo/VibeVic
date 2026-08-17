@@ -64,8 +64,12 @@ export const AGAINST_WALL = frame(
 );
 
 /**
- * The About page's gallery band. `SHOOTING` is deliberately absent — it leads
- * that page's biography column, and a picture that appears twice on one page
- * reads as a shortage of pictures rather than a choice.
+ * The About page's gallery band.
+ *
+ * Two, not four. That page now shows `AGAINST_WALL` in its hero and
+ * `SHOOTING` beside the biography, so these are the ones left — which works
+ * out at each of the four appearing exactly once on the page. A picture
+ * repeating on a single screen reads as a shortage of pictures rather than as
+ * a choice, and there is no shortage.
  */
-export const GALLERY: Portrait[] = [PORTRAIT, WITH_CAMERA, AGAINST_WALL];
+export const GALLERY: Portrait[] = [PORTRAIT, WITH_CAMERA];

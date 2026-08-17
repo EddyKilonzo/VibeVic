@@ -26,10 +26,18 @@ export function VideoEmbed({
   video,
   className,
   priority = false,
+  onPlay,
 }: {
   video: Video;
   className?: string;
   priority?: boolean;
+  /**
+   * Fired once, when the viewer presses play and the iframe is created.
+   *
+   * The page above uses it to decide whether the player is worth keeping on
+   * screen — there is no point docking a poster nobody has started.
+   */
+  onPlay?: () => void;
 }) {
   const [active, setActive] = useState(false);
   const reduced = useReducedMotion();
@@ -38,6 +46,7 @@ export function VideoEmbed({
   const start = () => {
     if (state === "playing" || state === "paused") stop();
     setActive(true);
+    onPlay?.();
   };
 
   return (

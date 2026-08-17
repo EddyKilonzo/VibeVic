@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { api } from "@/data/api";
+import type { Story as StoryRecord } from "@/data/types";
 import { PROFILE, genreName, relatedStories } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
@@ -12,7 +11,6 @@ import { storyCover } from "@/lib/cover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
-import { useAsync } from "@/hooks/useAsync";
 import { useActiveSection } from "@/hooks/useActiveSection";
 import { useReadingPosition } from "@/hooks/useReadingPosition";
 import { useFollowAlong } from "@/hooks/useFollowAlong";
@@ -27,18 +25,33 @@ import { ResumeReading } from "@/components/story/ResumeReading";
 import { QuoteSelection } from "@/components/story/QuoteSelection";
 import { ReadingControls, useReadingScale } from "@/components/story/ReadingControls";
 import { StoryCard } from "@/components/story/StoryCard";
-import { ArticleSkeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/States";
-import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
 
-export default function Story({ slug }: { slug: string }) {
+/**
+ * The article.
+ *
+ * ── Why the story arrives as a prop ──────────────────────────────────────
+ * It used to fetch itself: `useAsync(() => api.story(slug))`, a client-side
+ * call that resolves after hydration. The consequence was invisible in a
+ * browser and fatal for search — the server response contained a skeleton and
+ * nothing else. No `<h1>`, no `<article>`, not one sentence of the piece. A
+ * crawler fetching an article got 34KB of layout and no article, and had to
+ * execute JavaScript to find out there was anything there at all.
+ *
+ * The route already knows the story: it is static data, resolved at build
+ * time, and it is what `generateMetadata` reads. Passing it down means this
+ * component renders the full piece in the server response, and hydration
+ * takes over an article that is already on the page rather than building one.
+ *
+ * The component stays a client component because everything *around* the
+ * prose is interactive — narration, the reading HUD, the section spy, the
+ * quote tool. Those hydrate as before; the words no longer wait for them.
+ */
+export default function Story({ slug, story }: { slug: string; story: StoryRecord }) {
   const articleRef = useRef<HTMLElement>(null);
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const scale = useReadingScale();
   const reduced = useReducedMotion();
-
-  const { data: story, loading, error, reload } = useAsync(() => api.story(slug), [slug]);
 
   // Every following-along feature on this page reads from the same two facts:
   // which heading the reader is under, and how far through they are. Both are
@@ -66,26 +79,10 @@ export default function Story({ slug }: { slug: string }) {
 
   useFollowAlong(activeBlockId, preferences.followAlong && listening);
 
-  if (loading) return <ArticleSkeleton />;
-
-  if (error || !story) {
-    return (
-      <div className="container-article pt-40">
-        <ErrorState
-          title="This story isn't here."
-          description="The link may be wrong, or the piece may have been unpublished."
-          onRetry={reload}
-        />
-        <div className="mt-8 text-center">
-          <Button as={Link} href="/stories" variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back to all stories
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  // No loading branch and no error branch any more. The story is resolved
+  // before this renders, and a slug that matches nothing is a 404 from the
+  // route rather than a 200 carrying an apology — which is what a crawler
+  // needs, and what a reader deserves too.
   const related = relatedStories(story);
 
   return (

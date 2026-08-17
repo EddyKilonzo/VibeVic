@@ -25,16 +25,28 @@ import { PageTransition } from "@/components/motion";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
 
+/**
+ * `soon` marks a section that is routed but has no screen yet.
+ *
+ * Seven of these nine are placeholders, and until now nothing in the sidebar
+ * said so — they looked exactly like the two that work, so the only way to
+ * find out was to click each one and read the same "isn't built yet" card
+ * seven times. Marking them costs a dot and turns a maze into a map.
+ *
+ * They stay in the nav rather than being hidden. A section that vanishes is
+ * one nobody can plan around; a section marked "soon" is a roadmap the person
+ * using the product can actually see.
+ */
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: "/admin/stories", label: "Stories", icon: FileText },
-  { href: "/admin/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/admin/media", label: "Media", icon: Image },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/readers", label: "Readers", icon: Users },
-  { href: "/admin/genres", label: "Genres & tags", icon: Tags },
-  { href: "/admin/awards", label: "Awards", icon: Trophy },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/ideas", label: "Ideas", icon: Lightbulb, soon: true },
+  { href: "/admin/media", label: "Media", icon: Image, soon: true },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, soon: true },
+  { href: "/admin/readers", label: "Readers", icon: Users, soon: true },
+  { href: "/admin/genres", label: "Genres & tags", icon: Tags, soon: true },
+  { href: "/admin/awards", label: "Awards", icon: Trophy, soon: true },
+  { href: "/admin/settings", label: "Settings", icon: Settings, soon: true },
 ];
 
 /**
@@ -281,7 +293,23 @@ function SidebarLink({
             />
           )}
           <Icon className="icon-pop relative h-4 w-4 shrink-0" aria-hidden />
-          {!collapsed && <span className="relative truncate">{item.label}</span>}
+          {!collapsed && (
+            <>
+              <span className="relative min-w-0 flex-1 truncate">{item.label}</span>
+              {/* A dot, not the word "soon". Nine rows each carrying a badge
+                  is a sidebar of badges; the dot reads as "different" at a
+                  glance and the title says which way. It is not the only
+                  signal — the section's own screen states it plainly. */}
+              {item.soon && (
+                <span
+                  className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-foreground/40"
+                  title="Not built yet"
+                  aria-label="Not built yet"
+                  role="img"
+                />
+              )}
+            </>
+          )}
         </>
       )}
     </NavLink>

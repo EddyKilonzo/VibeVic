@@ -28,6 +28,7 @@ import { stagger, transitions } from "@/lib/motion";
 import { formatRelative } from "@/lib/format";
 import { notify } from "@/lib/toast";
 import { useAutosave, type SaveStatus } from "@/hooks/useAutosave";
+import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
@@ -106,15 +107,58 @@ export default function StoryWorkspace({ id }: { id?: string }) {
     setDraft({ ...existing, body: [...existing.body] });
   }
 
-  /* Autosave — stands in for the CMS write. */
+  /**
+   * Autosave.
+   *
+   * This used to be `setTimeout(450)` around a discarded argument, and every
+   * label attached to it was therefore a claim about something that had not
+   * happened — "Saved 2 minutes ago" over a draft that existed only in React
+   * state, and lost in full the moment the tab closed. It writes to the
+   * browser now, which is the only store this product has until the API
+   * lands, and the indicator says which store that is.
+   */
   const save = useCallback(async (value: Story) => {
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    // Nothing is persisted yet: the seed content is read-only, so this is the
-    // single place a real PUT would go.
-    void value;
+    writeDraft(value);
   }, []);
 
   const { status, savedAt } = useAutosave(draft, save);
+
+  /**
+   * A local draft newer than the seed copy.
+   *
+   * Offered, never applied. The stored draft and the published story can
+   * legitimately disagree, and picking one automatically is how somebody's
+   * afternoon disappears — so the workspace opens the published copy, which
+   * is the one the site is serving, and says the other exists.
+   */
+  const [stored, setStored] = useState<StoredDraft | null>(null);
+  const [restoreOffer, setRestoreOffer] = useState(true);
+  const targetId = existing?.id ?? "new";
+
+  /**
+   * Read once the sheet is on the page, via a ref callback.
+   *
+   * Not in render: this route is prerendered, so storage read during the
+   * first client pass disagrees with the HTML React is hydrating against.
+   * Not in an effect body either — that is the cascading-render pattern, and
+   * the ref callback fires at exactly the moment we need and re-fires when
+   * `targetId` changes it, which is also when the offer should come back.
+   */
+  const pickUpDraft = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      setStored(readDraft(targetId));
+      setRestoreOffer(true);
+    },
+    [targetId],
+  );
+
+  const restore = () => {
+    if (!stored) return;
+    setDraft({ ...stored.story, body: [...stored.story.body] });
+    setRestoreOffer(false);
+    notify.success("Local draft restored", `Saved ${formatRelative(stored.savedAt)}`);
+  };
 
   const wordCount = useMemo(
     () =>
@@ -175,16 +219,29 @@ export default function StoryWorkspace({ id }: { id?: string }) {
       }),
     }));
 
+  /**
+   * Sets the draft's own status field. It does not publish anything.
+   *
+   * The toast used to read "Story published", which was false in the way that
+   * matters most: the site had not changed, no request had been made, and the
+   * writer had every reason to believe their piece was live. Marking a draft
+   * as ready is a real and useful act — it is just not the same act, and the
+   * interface now uses the same word for it that the writer would.
+   */
   const setStatus = (next: StoryStatus) => {
     setDraft((d) => ({ ...d, status: next }));
     notify.success(
-      next === "published" ? "Story published" : next === "scheduled" ? "Story scheduled" : "Moved to drafts",
-      draft.title || "Untitled",
+      next === "published"
+        ? "Marked ready to publish"
+        : next === "scheduled"
+          ? "Marked as scheduled"
+          : "Moved back to drafts",
+      "Saved on this device — the site is unchanged.",
     );
   };
 
   return (
-    <div className="mx-auto max-w-[900px] pb-24">
+    <div ref={pickUpDraft} className="mx-auto max-w-[900px] pb-24">
       <Reveal variant="fade-up">
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -199,18 +256,48 @@ export default function StoryWorkspace({ id }: { id?: string }) {
 
           <div className="ml-auto flex items-center gap-2">
             <NarrationPreview draft={draft} />
+            {/* "Mark ready", not "Publish". There is no API to publish to, and
+                a button that says the word does not become true for being
+                pressed — it just sends the writer away believing the piece is
+                live. The line under the sheet says where the work actually
+                is. */}
             {draft.status === "published" ? (
               <Button size="sm" variant="outline" onClick={() => setStatus("draft")}>
-                Unpublish
+                Move to drafts
               </Button>
             ) : (
               <Button size="sm" onClick={() => setStatus("published")}>
-                Publish
+                Mark ready
               </Button>
             )}
           </div>
         </div>
       </Reveal>
+
+      {/* The offer to restore, when a newer local copy exists. Never applied
+          on its own — see `lib/drafts`. */}
+      {stored && restoreOffer && stored.savedAt > (existing?.updatedAt ?? "") && (
+        <Reveal
+          variant="fade-up"
+          delay={30}
+          className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-accent/30 bg-accent/[0.07] p-3.5"
+        >
+          <p className="min-w-0 flex-1 text-sm leading-snug text-muted-foreground">
+            <span className="font-semibold text-primary">
+              You have an unsent draft of this piece
+            </span>{" "}
+            on this device, saved {formatRelative(stored.savedAt)}. The published copy is open.
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button size="sm" onClick={restore}>
+              Open the draft
+            </Button>
+            <Button size="sm" variant="quiet" onClick={() => setRestoreOffer(false)}>
+              Keep this one
+            </Button>
+          </div>
+        </Reveal>
+      )}
 
       {/* Headline and standfirst */}
       {/* The writing surface: a raised sheet the draft lives on, so the
@@ -255,15 +342,29 @@ export default function StoryWorkspace({ id }: { id?: string }) {
           <span>
             {draft.body.length} {draft.body.length === 1 ? "block" : "blocks"}
           </span>
+          {/* Same pill vocabulary as the story list, and the same contrast
+              fix: `text-accent` on `bg-accent/12` measured 2.8:1 at 11px
+              semibold, where 4.5:1 applies. */}
           <span
             className={cn(
-              "ml-auto rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-              draft.status === "published" ? "bg-accent/12 text-accent" : "bg-muted",
+              "ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
+              draft.status === "published"
+                ? "bg-primary text-primary-foreground"
+                : draft.status === "scheduled"
+                  ? "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35"
+                  : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
             )}
           >
-            {draft.status}
+            {draft.status === "published" ? "ready" : draft.status}
           </span>
         </div>
+
+        {/* Where the work is. Stated on the sheet rather than left for the
+            writer to infer from a toast they have already dismissed. */}
+        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+          Drafts are held in this browser. Nothing here reaches the public site
+          yet — that arrives with the API.
+        </p>
       </Reveal>
 
       {/* Blocks */}
@@ -314,15 +415,19 @@ export default function StoryWorkspace({ id }: { id?: string }) {
 function SaveIndicator({ status, savedAt }: { status: SaveStatus; savedAt: Date | null }) {
   const reduced = useReducedMotion();
 
+  // "on this device" is doing real work in these labels. A bare "Saved" over
+  // a browser-only store is the same promise a CMS makes, and the writer has
+  // no way to tell the difference until they open the site on another machine
+  // and find nothing there.
   const label =
     status === "saving"
       ? "Saving…"
       : status === "unsaved"
         ? "Unsaved changes"
         : status === "error"
-          ? "Couldn't save"
+          ? "Couldn't save — copy your work"
           : savedAt
-            ? `Saved ${formatRelative(savedAt.toISOString())}`
+            ? `Saved on this device ${formatRelative(savedAt.toISOString())}`
             : "Up to date";
 
   return (
@@ -469,7 +574,17 @@ function BlockRow({
       )}
       data-dragging={held || undefined}
     >
-      {/* Gutter controls — invisible until this block is touched. */}
+      {/* Gutter controls.
+
+          They used to be `lg:flex` and nothing else, parked 96px outside the
+          sheet where there is only room for them on a wide screen. Below
+          `lg` that left no drag handle and no way to insert between two
+          blocks — the entire reordering capability, and half the composing
+          one, simply did not exist on a tablet. The order of an article is
+          not a desktop concern.
+
+          So: outside the sheet where there is room, and inside it as a row
+          above the block where there is not. */}
       <div
         className={cn(
           "absolute -left-24 top-1 hidden items-center gap-0.5 transition-opacity duration-normal lg:flex",
@@ -488,7 +603,7 @@ function BlockRow({
           type="button"
           onClick={() => onInsert("paragraph")}
           aria-label="Add a block below"
-          className="focus-ring flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-primary"
+          className="focus-ring flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
         >
           <Plus className="h-4 w-4" aria-hidden />
         </button>
@@ -496,10 +611,34 @@ function BlockRow({
 
       <div
         className={cn(
-          "rounded-md border border-transparent px-3 py-2 transition-colors duration-normal",
+          "rounded-lg border border-transparent px-3 py-2 transition-colors duration-normal",
           (active || held) && "border-border bg-card",
         )}
       >
+        {/* The same two controls, in the sheet, below `lg`. Always visible
+            rather than revealed on hover: there is no hover on the devices
+            this branch exists for, and a control that only appears on a state
+            a touch screen cannot enter is a control that is not there. */}
+        <div className="mb-1.5 flex items-center gap-0.5 lg:hidden">
+          <button
+            type="button"
+            onPointerDown={(e) => controls.start(e)}
+            aria-label="Drag to reorder"
+            className="focus-ring tap-square flex h-8 w-8 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => onInsert("paragraph")}
+            aria-label="Add a block below"
+            className="focus-ring tap-square flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+          </button>
+          <span className="rule-label ml-1.5 truncate">{BLOCK_LABEL[block.type]}</span>
+        </div>
+
         <BlockEditor block={block} onChange={onChange} onFocus={onFocus} onBlur={onBlur} />
 
         {/* Actions — one row, only while focused. */}

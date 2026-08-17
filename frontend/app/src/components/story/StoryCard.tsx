@@ -96,6 +96,13 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           ratio="16/10"
           hoverZoom
           priority={isFeature}
+          // The feature's cover is 38% of the card, and the card is a bento
+          // cell — not the third-of-a-viewport the default assumes.
+          sizes={
+            isFeature
+              ? "(min-width: 1024px) 40vw, (min-width: 640px) 38vw, 100vw"
+              : "(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw"
+          }
           // `w-full` is load-bearing, and its absence was the bug where the
           // cover covered the headline. `ImageReveal` sets `aspect-ratio`
           // inline; give an element a definite height and an aspect ratio and

@@ -296,6 +296,9 @@ export function PictureWall({
             src={tile.img}
             alt={tile.alt ?? ""}
             ratio={`${tile.width}/${tile.height}`}
+            // Two columns on a phone, two inside the band from `lg`. The
+            // default's 33vw would fetch a wider file than any tile uses.
+            sizes="(min-width: 1024px) 28vw, (min-width: 640px) 40vw, 100vw"
             delay={index * 60}
             hoverZoom
             className="group rounded-xl shadow-primary"

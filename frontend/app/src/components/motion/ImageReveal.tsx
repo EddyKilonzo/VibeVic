@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Image from "next/image";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,15 @@ export interface ImageRevealProps {
    * wherever it is available without risking a blank card where it is not.
    */
   fallbackSrc?: string;
+  /**
+   * The rendered width at each breakpoint, for the optimiser's srcset.
+   *
+   * The default assumes a card in a multi-column grid, because that is what
+   * most of these are. Pass a real value for anything that is genuinely wide
+   * — a hero, a full-bleed cover — or the browser will pick from the small end
+   * of the set and the picture will be soft.
+   */
+  sizes?: string;
 }
 
 /** How far outside the viewport a frame starts fetching. */
@@ -67,6 +77,7 @@ export function ImageReveal({
   hoverZoom = false,
   priority = false,
   fallbackSrc,
+  sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
   className,
   imgClassName,
 }: ImageRevealProps) {
@@ -109,6 +120,41 @@ export function ImageReveal({
    * flag can simply be read. Setting state from one is a commit-phase update,
    * not the cascading-render effect pattern.
    */
+  /**
+   * Whether Next's optimiser can do anything with this source.
+   *
+   * Generated covers are `data:image/svg+xml,…` — already inline, already
+   * tiny, and not resizable. Sending one through `/_next/image` costs a round
+   * trip to be handed back bytes the document was carrying anyway. Everything
+   * else — local files, YouTube posters, his WordPress uploads — goes through
+   * the optimiser and comes back as AVIF or WebP at the size actually needed.
+   */
+  const optimisable = shouldLoad && !source.startsWith("data:");
+
+  /** Shared by both branches below so the fallback logic cannot drift apart. */
+  const handleLoad = useCallback(
+    (event: { currentTarget: HTMLImageElement }) => {
+      // A YouTube poster that does not exist is not an error — the CDN answers
+      // 200 with a 120×90 grey placeholder. So when a fallback was supplied, a
+      // suspiciously small image counts as a miss and steps down the same way
+      // a real failure would.
+      const width = event.currentTarget.naturalWidth;
+      if (fallbackSrc && source !== fallbackSrc && width > 0 && width < PLACEHOLDER_WIDTH) {
+        setSource(fallbackSrc);
+        return;
+      }
+      setLoaded(true);
+    },
+    [fallbackSrc, source],
+  );
+
+  const handleError = useCallback(() => {
+    // Step down once, then give up — a broken image should still resolve its
+    // frame rather than hang hidden behind the placeholder.
+    if (fallbackSrc && source !== fallbackSrc) setSource(fallbackSrc);
+    else setLoaded(true);
+  }, [fallbackSrc, source]);
+
   const settle = useCallback(
     (element: HTMLImageElement | null) => {
       if (!element || !element.complete || element.naturalWidth === 0) return;
@@ -150,39 +196,46 @@ export function ImageReveal({
             : undefined
         }
       >
-        <img
-          // Remounted when the source changes, so the ref callback below runs
-          // again for the fallback rather than only for the first attempt.
-          key={source}
-          ref={settle}
-          // Undefined until the frame is near, so nothing is requested for a
-          // card the reader may never scroll to. `eager` is correct once it is
-          // set: the decision has already been made here.
-          src={shouldLoad ? source : undefined}
-          alt={alt}
-          loading="eager"
-          decoding="async"
-          fetchPriority={priority ? "high" : "auto"}
-          onLoad={(event) => {
-            // A YouTube poster that does not exist is not an error — the CDN
-            // answers 200 with a 120×90 grey placeholder. So when a fallback
-            // was supplied, a suspiciously small image counts as a miss and
-            // steps down the same way a real failure would.
-            const width = event.currentTarget.naturalWidth;
-            if (fallbackSrc && source !== fallbackSrc && width > 0 && width < 200) {
-              setSource(fallbackSrc);
-              return;
-            }
-            setLoaded(true);
-          }}
-          onError={() => {
-            // Step down once, then give up — a broken image should still
-            // resolve its frame rather than hang hidden behind the placeholder.
-            if (fallbackSrc && source !== fallbackSrc) setSource(fallbackSrc);
-            else setLoaded(true);
-          }}
-          className={cn("h-full w-full object-cover", hoverZoom && "media-zoom", imgClassName)}
-        />
+        {optimisable ? (
+          <Image
+            // Remounted when the source changes, so the ref callback below runs
+            // again for the fallback rather than only for the first attempt.
+            key={source}
+            ref={settle}
+            src={source}
+            alt={alt}
+            fill
+            // Without this every card requests a full-width image. The default
+            // `100vw` is a promise that the picture fills the viewport, and
+            // most of these are a third of a column.
+            sizes={sizes}
+            priority={priority}
+            // `priority` already sets fetchPriority and disables lazy loading;
+            // for everything else the near-viewport check above has decided,
+            // so eager is right and Next's own lazying would only re-litigate
+            // it against a clipped box — the bug that left cards blank.
+            loading={priority ? undefined : "eager"}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={cn("object-cover", hoverZoom && "media-zoom", imgClassName)}
+          />
+        ) : (
+          // Data-URI covers. The optimiser cannot resize a generated SVG, and
+          // routing one through it costs a round trip to be handed back the
+          // bytes we already had inline.
+          <img
+            key={source}
+            ref={settle}
+            src={shouldLoad ? source : undefined}
+            alt={alt}
+            loading="eager"
+            decoding="async"
+            fetchPriority={priority ? "high" : "auto"}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={cn("h-full w-full object-cover", hoverZoom && "media-zoom", imgClassName)}
+          />
+        )}
       </motion.div>
     </div>
   );

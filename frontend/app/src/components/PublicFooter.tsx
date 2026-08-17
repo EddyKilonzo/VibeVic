@@ -62,27 +62,35 @@ export function PublicFooter() {
               life — published as video, and written up here.
             </p>
 
-            {/* Each account says what is on it. Three logos in a row tells a
-                reader where he is; a line each tells them which one they
-                actually want. */}
-            <ul className="mt-6 space-y-3">
+            {/* Two columns rather than one. Six accounts, each with a handle
+                and a line of explanation, made a stack about four hundred
+                pixels tall down the left of the footer — taller than the two
+                link columns beside it, so the footer ended on a long tail of
+                social links with white space either side of it. Paired, the
+                block finishes level with the rest.
+
+                The note drops away below `sm`: on a phone the grid is already
+                two narrow columns, and a second line of small grey text under
+                each handle turns it into a wall. */}
+            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3">
               {SOCIAL_ACCOUNTS.map((account) => (
-                <li key={account.id}>
+                <li key={account.id} className="min-w-0">
                   <a
                     href={account.url}
                     target="_blank"
                     rel="noreferrer noopener"
+                    title={account.note}
                     className="focus-ring group flex items-start gap-2.5 text-sm"
                   >
                     <SocialIcon
                       id={account.id}
                       className="icon-tilt mt-0.5 h-4 w-4 shrink-0 text-primary"
                     />
-                    <span>
-                      <span className="underline-grow font-semibold text-primary">
+                    <span className="min-w-0">
+                      <span className="underline-grow block truncate font-semibold text-primary">
                         {account.handle}
                       </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                      <span className="mt-0.5 hidden text-xs leading-snug text-muted-foreground sm:block">
                         {account.note}
                       </span>
                     </span>

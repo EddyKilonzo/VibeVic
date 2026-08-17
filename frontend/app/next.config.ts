@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
       // Stock photography, used only as atmosphere — never as reporting.
       // See src/data/imagery.ts for the rule and the full list.
       { protocol: "https", hostname: "images.unsplash.com" },
+      // Covers and in-article pictures on his own WordPress site, which is
+      // where the written archive was imported from. Listed so the optimiser
+      // will resize them: without this Next refuses the host and the raw
+      // originals — some of them well over a megabyte — ship to phones.
+      { protocol: "https", hostname: "vicunfiltered.wordpress.com" },
+      { protocol: "https", hostname: "*.files.wordpress.com" },
     ],
     // Sized for the breakpoints the mobile-first brief calls out.
     deviceSizes: [320, 375, 430, 640, 768, 1024, 1280, 1536],

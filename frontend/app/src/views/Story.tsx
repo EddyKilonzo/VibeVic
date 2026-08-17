@@ -209,6 +209,10 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                   ratio="16/10"
                   priority
                   immediate
+                  // A fixed 360px column from `lg` up, full width below it.
+                  // This is the article's LCP candidate, so the size it asks
+                  // for is the size it should get.
+                  sizes="(min-width: 1024px) 360px, 100vw"
                   className="rounded-2xl shadow-primary"
                 />
               </Reveal>

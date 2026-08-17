@@ -122,7 +122,7 @@ export default function Story({ slug }: { slug: string }) {
 
             The masthead is transparent over this, which is why the top
             padding clears it and the scrim is heaviest at the top. */}
-        <header className="relative isolate flex min-h-[58vh] items-end overflow-hidden bg-brand-ink-deep pb-10 pt-32 sm:min-h-[66vh] sm:pb-14 sm:pt-40">
+        <header className="relative isolate flex min-h-[44vh] items-end overflow-hidden bg-brand-ink-deep pb-9 pt-28 sm:min-h-[48vh] sm:pb-12 sm:pt-36">
           <ImageReveal
             src={coverFor(story.slug)}
             alt=""
@@ -149,7 +149,7 @@ export default function Story({ slug }: { slug: string }) {
               </Reveal>
 
               <Reveal variant="fade-up" delay={60}>
-                <h1 className="font-display mt-4 text-[2.1rem] font-semibold leading-[1.08] tracking-tight text-balance text-white sm:text-[3.1rem] lg:text-[3.6rem]">
+                <h1 className="font-display mt-3.5 text-[1.95rem] font-semibold leading-[1.08] tracking-tight text-balance text-white sm:text-[2.7rem] lg:text-[3.1rem]">
                   {story.title}
                 </h1>
               </Reveal>

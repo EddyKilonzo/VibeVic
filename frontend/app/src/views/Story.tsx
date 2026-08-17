@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/data/api";
@@ -10,6 +11,7 @@ import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { coverFor } from "@/lib/cover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { transitions } from "@/lib/motion";
 import { useAsync } from "@/hooks/useAsync";
 import { useActiveSection } from "@/hooks/useActiveSection";
 import { useReadingPosition } from "@/hooks/useReadingPosition";
@@ -24,7 +26,6 @@ import { ReadingHUD } from "@/components/story/ReadingHUD";
 import { ResumeReading } from "@/components/story/ResumeReading";
 import { QuoteSelection } from "@/components/story/QuoteSelection";
 import { ReadingControls, useReadingScale } from "@/components/story/ReadingControls";
-import { PlaceholderNotice } from "@/components/story/PlaceholderNotice";
 import { StoryCard } from "@/components/story/StoryCard";
 import { ArticleSkeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/States";
@@ -35,6 +36,7 @@ export default function Story({ slug }: { slug: string }) {
   const articleRef = useRef<HTMLElement>(null);
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const scale = useReadingScale();
+  const reduced = useReducedMotion();
 
   const { data: story, loading, error, reload } = useAsync(() => api.story(slug), [slug]);
 
@@ -122,66 +124,91 @@ export default function Story({ slug }: { slug: string }) {
 
             The masthead is transparent over this, which is why the top
             padding clears it and the scrim is heaviest at the top. */}
-        <header className="relative isolate flex min-h-[44vh] items-end overflow-hidden bg-brand-ink-deep pb-9 pt-28 sm:min-h-[48vh] sm:pb-12 sm:pt-36">
-          <ImageReveal
-            src={coverFor(story.slug)}
-            alt=""
-            ratio="16/9"
-            priority
-            immediate
-            className="absolute inset-0 -z-10 h-full w-full"
-            imgClassName="object-cover"
-          />
-          <span
-            aria-hidden
-            className="absolute inset-0 -z-10 bg-gradient-to-b from-brand-ink-deep/85 via-brand-ink-deep/55 to-brand-ink-deep/95"
-          />
+        {/* The ground here is the comb, at the one weight it is allowed to be
+            loud — there is no body copy in this band for it to compete with.
+            It replaced a dark scrim over the cover art: those covers are
+            generated gradients, so a gradient wash over a gradient was two
+            gradients arguing, and the title was reading as a caption on a
+            picture rather than as the top of a piece.
 
+            The cover survives as a plate beside the headline instead of
+            underneath it, which is also the only honest place for it — it is
+            generated art, not a photograph of anything, and at full bleed it
+            implied it was. */}
+        <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
           <div className="container-site relative">
-            <div className="max-w-[46rem]">
-              <Reveal variant="fade-up" distance="sm">
-                <Link
-                  href={`/stories?genre=${story.genre}`}
-                  className="focus-ring underline-grow text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-sky"
-                >
-                  {genreName(story.genre)}
-                </Link>
-              </Reveal>
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:gap-16">
+              <div>
+                <Reveal variant="fade-up" distance="sm">
+                  <Link
+                    href={`/stories?genre=${story.genre}`}
+                    className="focus-ring kicker underline-grow"
+                  >
+                    {genreName(story.genre)}
+                  </Link>
+                </Reveal>
 
-              <Reveal variant="fade-up" delay={60}>
-                <h1 className="font-display mt-3.5 text-[1.95rem] font-semibold leading-[1.08] tracking-tight text-balance text-white sm:text-[2.7rem] lg:text-[3.1rem]">
-                  {story.title}
+                {/* Word by word, each rising out from behind its own mask.
+                    A headline is the one place on a reading page where the
+                    entrance can be the thing you notice — after this the
+                    animation budget goes entirely on not distracting anyone.
+                    The words stay ordinary inline text inside the masks, so
+                    selection, search and screen readers see one sentence. */}
+                <h1 className="font-display mt-3.5 flex flex-wrap gap-x-[0.26em] text-[1.95rem] font-semibold leading-[1.08] tracking-tight sm:text-[2.7rem] lg:text-[3.1rem]">
+                  {story.title.split(" ").map((word, i) => (
+                    <span key={`${word}-${i}`} className="block overflow-hidden pb-[0.12em]">
+                      <motion.span
+                        className="block"
+                        initial={reduced ? false : { y: "115%" }}
+                        animate={{ y: "0%" }}
+                        transition={{ ...transitions.editorial, delay: 0.1 + i * 0.045 }}
+                      >
+                        {word}
+                      </motion.span>
+                    </span>
+                  ))}
                 </h1>
-              </Reveal>
 
-              <Reveal variant="fade-up" delay={120}>
-                <p className="mt-5 max-w-[52ch] text-pretty text-lg leading-relaxed text-white/80">
-                  {story.dek}
-                </p>
-              </Reveal>
+                <Reveal variant="fade-up" delay={260}>
+                  <p className="mt-5 max-w-[52ch] text-pretty text-lg leading-relaxed text-muted-foreground">
+                    {story.dek}
+                  </p>
+                </Reveal>
 
-              <Reveal variant="fade-up" delay={160}>
-                <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/70">
-                  {/* Byline portrait. Decorative — the name beside it already
-                      carries the attribution, so it stays out of the reading
-                      order rather than repeating it to a screen reader. */}
-                  <PortraitFrame
-                    portrait={PORTRAIT}
-                    size={40}
-                    className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white/25"
-                  />
-                  <span className="font-medium text-white">{PROFILE.name}</span>
-                  <span aria-hidden className="h-3 w-px bg-white/30" />
-                  <time dateTime={story.publishedAt}>{formatDate(story.publishedAt)}</time>
-                  <span aria-hidden className="h-3 w-px bg-white/30" />
-                  <span>{story.readingMinutes} min read</span>
-                  {story.publication && (
-                    <>
-                      <span aria-hidden className="h-3 w-px bg-white/30" />
-                      <span>Originally in {story.publication}</span>
-                    </>
-                  )}
-                </div>
+                <Reveal variant="fade-up" delay={320}>
+                  <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+                    {/* Byline portrait. Decorative — the name beside it already
+                        carries the attribution, so it stays out of the reading
+                        order rather than repeating it to a screen reader. */}
+                    <PortraitFrame
+                      portrait={PORTRAIT}
+                      size={40}
+                      className="h-10 w-10 shrink-0 rounded-full shadow-raised ring-1 ring-border"
+                    />
+                    <span className="font-medium text-foreground">{PROFILE.name}</span>
+                    <span aria-hidden className="h-3 w-px bg-border" />
+                    <time dateTime={story.publishedAt}>{formatDate(story.publishedAt)}</time>
+                    <span aria-hidden className="h-3 w-px bg-border" />
+                    <span>{story.readingMinutes} min read</span>
+                    {story.publication && (
+                      <>
+                        <span aria-hidden className="h-3 w-px bg-border" />
+                        <span>Originally in {story.publication}</span>
+                      </>
+                    )}
+                  </div>
+                </Reveal>
+              </div>
+
+              <Reveal variant="fade-scale" delay={180} className="max-lg:hidden">
+                <ImageReveal
+                  src={coverFor(story.slug)}
+                  alt=""
+                  ratio="4/5"
+                  priority
+                  immediate
+                  className="rounded-2xl shadow-primary"
+                />
               </Reveal>
             </div>
           </div>
@@ -229,14 +256,6 @@ export default function Story({ slug }: { slug: string }) {
                 <ResumeReading progress={saved} target={articleRef} onDismiss={decline} />
               )}
 
-              {/* Template pieces say so before a reader has invested any time
-                  in them, which on this layout means beside the first
-                  paragraph rather than after the last. */}
-              {story.placeholder && (
-                <div className="mt-4">
-                  <PlaceholderNotice />
-                </div>
-              )}
             </aside>
 
             <div className="min-w-0 lg:order-1">

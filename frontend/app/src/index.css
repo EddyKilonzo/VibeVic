@@ -559,6 +559,15 @@
   .honeycomb-strong::before {
     background-color: var(--comb-ink-strong);
   }
+  /*
+   * The loud one. Reserved for hero grounds that carry a headline and nothing
+   * else to read — at this weight the lattice is a *material*, which is the
+   * whole point of putting it behind a title, and exactly why it must never
+   * appear behind body copy.
+   */
+  .honeycomb-intense::before {
+    background-color: hsl(var(--primary) / 0.17);
+  }
 
   /*
    * Pointer response.

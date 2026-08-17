@@ -9,6 +9,7 @@
 export { Reveal, FadeIn, FadeUp, FadeInScale, type RevealVariant } from "./Reveal";
 export { Stagger, StaggerItem, useStaggerDelay } from "./Stagger";
 export { TextReveal } from "./TextReveal";
+export { Typewriter } from "./Typewriter";
 export { ImageReveal } from "./ImageReveal";
 export { Parallax } from "./Parallax";
 export { Magnetic } from "./MagneticButton";

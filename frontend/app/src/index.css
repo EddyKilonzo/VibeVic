@@ -953,6 +953,19 @@
    * fifth they stop moving; beyond that the fan is wider than the header and
    * starts eating the card on top.
    */
+  /*
+   * ── Where this may and may not be used ───────────────────────────────
+   * Only on a container whose children are uniform, self-contained, opaque
+   * cards. It was briefly applied to mixed bento sections — a portrait cell,
+   * a text panel, a nested grid of facts, a row of stat plates — and stacking
+   * those did exactly what stacking unlike things does: the tall ones parked
+   * over the short ones and the short ones were never seen. A card stack is
+   * for a list of the same thing.
+   *
+   * The last child is deliberately *not* sticky. A sticky final card pins
+   * itself under the header and stays there while the next section scrolls up
+   * behind it, which reads as the page having snagged.
+   */
   @media (max-width: 1023px) {
     .stack-mobile {
       display: block;
@@ -963,19 +976,29 @@
       margin-bottom: 1rem;
     }
     .stack-mobile > *:nth-child(2) {
-      top: calc(5.5rem + 12px);
+      top: calc(5.5rem + 10px);
     }
     .stack-mobile > *:nth-child(3) {
-      top: calc(5.5rem + 24px);
+      top: calc(5.5rem + 20px);
     }
-    .stack-mobile > *:nth-child(4) {
-      top: calc(5.5rem + 36px);
-    }
-    .stack-mobile > *:nth-child(n + 5) {
-      top: calc(5.5rem + 48px);
+    /* Capped at three steps. Past that the fan is deeper than the masthead and
+       the parked cards start covering the one on top of the stack. */
+    .stack-mobile > *:nth-child(n + 4) {
+      top: calc(5.5rem + 30px);
     }
     .stack-mobile > *:last-child {
+      position: static;
       margin-bottom: 0;
+    }
+  }
+
+  /* One card is not a stack, and neither is two. Below three the sticky
+     behaviour is pure cost: a single card pinned under the header while its
+     section scrolls away is a bug, not an effect. */
+  @media (max-width: 1023px) {
+    .stack-mobile > *:first-child:nth-last-child(-n + 2),
+    .stack-mobile > *:first-child:nth-last-child(-n + 2) ~ * {
+      position: static;
     }
   }
 

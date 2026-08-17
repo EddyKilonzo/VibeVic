@@ -219,7 +219,12 @@ export default function Home() {
           Under `lg` every cell falls back to full width and the bento becomes
           an ordinary column, which is the honest layout on a phone. */}
       <section className="container-site mt-20 sm:mt-24">
-        <div className="stack-mobile grid gap-4 lg:grid-cols-6 lg:gap-5">
+        {/* Not stacked on mobile, deliberately. The children here are a
+            portrait cell, a text panel, a nested grid of facts, three stat
+            plates and a photo strip — stacking unlike things parks the tall
+            ones over the short ones, and the short ones are never seen. A
+            plain column is the honest layout for a mixed bento on a phone. */}
+        <div className="grid gap-4 lg:grid-cols-6 lg:gap-5">
           {/* A · Portrait, held down the left across two bands. */}
           <Reveal
             variant="fade-up"

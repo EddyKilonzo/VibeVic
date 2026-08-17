@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Victor Kiplimo">
+  <!--
+    The home-screen icon. Same mark as `icon.svg`, redrawn rather than scaled.
+
+    iOS renders this at 180px and applies its own rounding, so the tile is
+    square here — a rounded rect underneath a rounded mask leaves a pale seam
+    at the corners. At this size the cell can carry a second, lighter ring
+    behind it, which is the honeycomb the site actually uses and would be mud
+    at 16px.
+  -->
+  <rect width="180" height="180" fill="#0E47A1"/>
+  <g fill="none" stroke-linejoin="round">
+    <path
+      d="M90 22 L149 56 L149 124 L90 158 L31 124 L31 56 Z"
+      stroke="#ffffff"
+      stroke-opacity="0.22"
+      stroke-width="10"
+    />
+    <path
+      d="M90 51 L124 70.5 L124 109.5 L90 129 L56 109.5 L56 70.5 Z"
+      stroke="#ffffff"
+      stroke-width="12"
+    />
+  </g>
+</svg>

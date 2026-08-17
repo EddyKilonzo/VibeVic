@@ -27,6 +27,7 @@ import {
   Stagger,
   StaggerItem,
   TextReveal,
+  Typewriter,
 } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 
@@ -337,7 +338,9 @@ export default function About() {
             {FIELD_CLIP.caption}
           </p>
 
-          <div className="stack-mobile mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+          {/* Also not stacked: a 9:16 video beside two 4:5 stills is three
+              different shapes, and the clip parked over the photographs. */}
+          <div className="mt-8 grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
             <FieldClip src={FIELD_CLIP.src} title={FIELD_CLIP.title} />
 
             {/* Tilted frames here rather than plain plates: these two need a
@@ -370,9 +373,15 @@ export default function About() {
           <p className="rule-label">Quote of the week</p>
           <figure className="mt-5">
             <blockquote cite="https://en.wikipedia.org/wiki/Carl_Jung">
-              <p className="font-display max-w-[34ch] text-balance text-2xl font-semibold leading-[1.35] text-primary sm:text-[2rem]">
-                “{QUOTE_OF_THE_WEEK.text}”
-              </p>
+              {/* Typed out on arrival, and again each time it is scrolled back
+                  into view. The quotation is short and sits alone in its band,
+                  which is the only place on a reading site where watching text
+                  appear is worth the reader's attention rather than a delay
+                  between them and the words. */}
+              <Typewriter
+                text={`“${QUOTE_OF_THE_WEEK.text}”`}
+                className="font-display max-w-[34ch] text-balance text-2xl font-semibold leading-[1.35] text-primary sm:text-[2rem]"
+              />
             </blockquote>
             <figcaption className="mt-5 text-sm text-muted-foreground">
               — <cite className="not-italic font-semibold">{QUOTE_OF_THE_WEEK.author}</cite>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Victor Kiplimo">
+  <!--
+    The site's own mark: one cell of the honeycomb that runs through every
+    page, in the brand navy.
+
+    Drawn as geometry rather than as text. An SVG favicon containing a <text>
+    element renders in whatever font the browser happens to resolve, which is
+    not the site's — a monogram that falls back to Times on one machine and
+    Arial on another is not a mark. A path is the same shape everywhere.
+
+    Sized for 16px first: the hexagon is stroked at 3 units in a 32 unit box,
+    which stays a legible outline at favicon size instead of collapsing into a
+    blob the way a filled shape does. The tile is rounded rather than square so
+    it reads as an icon in a tab strip full of them.
+  -->
+  <rect width="32" height="32" rx="7" fill="#0E47A1"/>
+  <path
+    d="M16 6.5 L24.2 11.25 L24.2 20.75 L16 25.5 L7.8 20.75 L7.8 11.25 Z"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+</svg>

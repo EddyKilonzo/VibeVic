@@ -9,6 +9,7 @@ import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ImageReveal, Reveal } from "@/components/motion";
 import { BookmarkButton } from "./BookmarkButton";
+import { ReadProgress } from "./ReadProgress";
 
 export interface StoryCardProps {
   story: Story;
@@ -169,8 +170,13 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
               <Headphones className="icon-rise h-3.5 w-3.5" aria-hidden />
               Listen
             </span>
+            {/* Pushed to the right of the meta row, where it reads as a note
+                about the reader rather than a fact about the piece. Renders
+                nothing at all until this browser has a mark for it. */}
+            <ReadProgress slug={story.slug} className="ml-auto" />
+
             <ArrowUpRight
-              className="nudge-x ml-auto h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
+              className="nudge-x h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-accent"
               aria-hidden
             />
           </div>

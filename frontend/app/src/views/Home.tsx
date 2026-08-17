@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, GraduationCap, Headphones, MapPin, Youtube } from "lucide-react";
-import { PROFILE, SOCIAL_ACCOUNTS, publishedStories } from "@/data/content";
+import { GENRES, PROFILE, SOCIAL_ACCOUNTS, publishedStories, storiesByGenre } from "@/data/content";
 import { AGAINST_WALL, PORTRAIT, SHOOTING, WITH_CAMERA } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
-import { CHANNEL, TOPICS, longFormVideos, totalViews, videosByTopic } from "@/data/videos";
+import { CHANNEL, VIDEOS, longFormVideos, totalViews } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -126,10 +126,10 @@ export default function Home() {
             {/* The beats, on hairlines — real links, not decoration. */}
             <div data-seq="decor" className="rail mt-8 w-full sm:mt-10">
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {TOPICS.map((topic) => (
+                {GENRES.map((topic) => (
                   <Link
                     key={topic.slug}
-                    href={`/videos?topic=${topic.slug}`}
+                    href={`/genres#${topic.slug}`}
                     className="surface-compact focus-ring tap inline-flex items-center rounded-full px-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-normal hover:border-accent/50 hover:text-primary sm:h-8"
                   >
                     {topic.name}
@@ -364,9 +364,16 @@ export default function Home() {
             narrow ones stay terse. The count is real: it is how many reports
             are filed under that beat. */}
         <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5" step="tight">
-          {TOPICS.map((topic, i) => {
-            const wide = i === 0 || i === 3;
-            const count = videosByTopic(topic.slug).length;
+          {/* Iterates GENRES, not the four video topics: three of the beats
+              exist only in the writing, and a "what I cover" section that
+              omits what he covers is the one thing it cannot do. Every third
+              cell runs wide so seven read as woven rows rather than a wall. */}
+          {GENRES.map((topic, i) => {
+            const wide = i % 3 === 0;
+            // Compared as plain strings: `topic.slug` is a genre, and three of
+            // the genres are deliberately not video topics.
+            const count = VIDEOS.filter((video) => video.topic === topic.slug).length;
+            const written = storiesByGenre(topic.slug).length;
 
             return (
               <StaggerItem
@@ -375,8 +382,11 @@ export default function Home() {
                 className={wide ? "lg:col-span-4" : "lg:col-span-2"}
               >
                 <Reveal variant="fade-up" distance="sm" className="h-full">
+                  {/* Into `/genres`, not a filtered video feed — three of the
+                      seven have no video at all, so `?topic=` would land the
+                      reader on an empty archive. */}
                   <Link
-                    href={`/videos?topic=${topic.slug}`}
+                    href={`/genres#${topic.slug}`}
                     className="surface surface-hover group focus-ring relative flex h-full flex-col overflow-hidden p-6 sm:p-7"
                   >
                     <span
@@ -395,11 +405,23 @@ export default function Home() {
                       >
                         {topic.name}
                       </p>
-                      <span className="font-display shrink-0 text-sm font-semibold tabular-nums text-primary">
-                        {count}
-                        <span className="ml-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          {count === 1 ? "report" : "reports"}
-                        </span>
+                      {/* Both halves, because "3 reports" on a beat that also
+                          has two written pieces undercounts the work, and a
+                          beat that is writing-only would otherwise read as
+                          empty. Zeroes are dropped rather than printed. */}
+                      <span className="shrink-0 text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        {count > 0 && (
+                          <span className="block">
+                            <span className="font-display text-sm text-primary">{count}</span>{" "}
+                            {count === 1 ? "report" : "reports"}
+                          </span>
+                        )}
+                        {written > 0 && (
+                          <span className="mt-0.5 block">
+                            <span className="font-display text-sm text-primary">{written}</span>{" "}
+                            written
+                          </span>
+                        )}
                       </span>
                     </div>
                     <p
@@ -559,3 +581,4 @@ export default function Home() {
     </>
   );
 }
+

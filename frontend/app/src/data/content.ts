@@ -55,7 +55,7 @@ export const PROFILE = {
  * is stored below is the plain profile address in each case.
  */
 export interface SocialAccount {
-  id: "youtube" | "instagram" | "substack";
+  id: "youtube" | "instagram" | "substack" | "tiktok" | "x" | "facebook";
   label: string;
   handle: string;
   url: string;
@@ -84,6 +84,29 @@ export const SOCIAL = {
     handle: "@victorkiplimo",
     url: "https://substack.com/@victorkiplimo",
     note: "Longer writing, straight to your inbox",
+  },
+  tiktok: {
+    id: "tiktok",
+    label: "TikTok",
+    handle: "@kiplimovic",
+    url: "https://www.tiktok.com/@kiplimovic",
+    note: "Short vertical cuts from the field",
+  },
+  x: {
+    id: "x",
+    label: "X",
+    handle: "@late_bloomer999",
+    url: "https://x.com/late_bloomer999",
+    note: "Running commentary and links",
+  },
+  facebook: {
+    id: "facebook",
+    label: "Facebook",
+    // A numeric profile URL rather than a vanity handle, so there is no
+    // username to display — the label carries it instead of inventing one.
+    handle: "Victor Kiplimo",
+    url: "https://www.facebook.com/profile.php?id=61550855067186",
+    note: "Where the local audience is",
   },
 } as const satisfies Record<string, SocialAccount>;
 
@@ -151,11 +174,21 @@ export const QUOTE_OF_THE_WEEK = {
   author: "Carl Gustav Jung",
 } as const;
 
-/** Iteration order for follow rails: video first, because the work is video. */
+/**
+ * Iteration order for follow rails.
+ *
+ * Roughly by weight of the work: the channel first because the reporting is
+ * video, then the two places the writing lives, then the shorter-form and
+ * social accounts. Not alphabetical — a reader scanning this should meet the
+ * places with the most work on them first.
+ */
 export const SOCIAL_ACCOUNTS: SocialAccount[] = [
   SOCIAL.youtube,
   SOCIAL.substack,
   SOCIAL.instagram,
+  SOCIAL.tiktok,
+  SOCIAL.x,
+  SOCIAL.facebook,
 ];
 
 /**

@@ -11,7 +11,17 @@ const CEILING = 0.94;
 /** Positions older than this are not offered — the reader has moved on. */
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
-type Positions = Record<string, { progress: number; at: number }>;
+/**
+ * `finished` is stored rather than inferred.
+ *
+ * Reaching the end used to *delete* the mark, on the reasoning that there was
+ * nothing left to resume. True, and it threw away the more useful fact: which
+ * pieces the reader has already read. A deleted mark and a never-opened piece
+ * are indistinguishable, so an archive could not tell you what you had
+ * finished. The flag is set once and the mark is kept.
+ */
+type Mark = { progress: number; at: number; finished?: boolean };
+type Positions = Record<string, Mark>;
 
 function read(): Positions {
   if (typeof window === "undefined") return {};
@@ -67,6 +77,56 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/* ── Read state, for anything that lists articles ────────────────────────── */
+
+/** How far through a piece the reader is, and whether they got to the end. */
+export interface ReadState {
+  /** 0–1. */
+  progress: number;
+  finished: boolean;
+}
+
+/**
+ * Cached for the same reason as `offers`: `useSyncExternalStore` compares with
+ * `Object.is`, and a getter that builds a fresh object per call would report a
+ * change on every render and spin forever.
+ */
+const states = new Map<string, ReadState | null>();
+
+function stateFor(slug: string): ReadState | null {
+  if (states.has(slug)) return states.get(slug) ?? null;
+
+  const entry = read()[slug];
+  const value: ReadState | null = entry
+    ? { progress: entry.progress, finished: entry.finished === true }
+    : null;
+
+  states.set(slug, value);
+  return value;
+}
+
+/** Called after a write, so open listings pick the new mark up immediately. */
+function invalidate() {
+  offers.clear();
+  states.clear();
+  listeners.forEach((listener) => listener());
+}
+
+/**
+ * Read state for one piece, for a card or a list row.
+ *
+ * `null` until the client has looked, and `null` for anything never opened —
+ * the caller renders nothing in both cases, which is right: an archive should
+ * not decorate every item with "0% read".
+ */
+export function useReadState(slug: string): ReadState | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => stateFor(slug),
+    () => null,
+  );
+}
+
 /**
  * Remembers how far into a piece the reader got, and offers it back.
  *
@@ -109,13 +169,26 @@ export function useReadingPosition(slug: string) {
     const persist = () => {
       const progress = latest.current;
       const positions = read();
+      const previous = positions[slug];
 
-      if (progress < FLOOR || progress > CEILING) {
-        // Finished, or never really started. Either way there is nothing worth
-        // resuming, and leaving a stale mark would offer the wrong place.
-        delete positions[slug];
+      if (progress > CEILING) {
+        // Read to the end. Recorded rather than deleted — see the note on
+        // `Mark`. Progress is pinned to 1 so a listing can say "finished"
+        // without having to decide whether 0.96 counts.
+        positions[slug] = { progress: 1, at: Date.now(), finished: true };
+      } else if (progress < FLOOR) {
+        // Barely opened. Anything already known about this piece is better
+        // than overwriting it with "they glanced at it once" — a reader who
+        // finished a piece last week and reopens the top of it has not
+        // unfinished it.
+        if (!previous) return;
       } else {
-        positions[slug] = { progress, at: Date.now() };
+        positions[slug] = {
+          progress,
+          at: Date.now(),
+          // Finishing is not undone by starting again.
+          finished: previous?.finished,
+        };
       }
 
       write(positions);
@@ -125,9 +198,10 @@ export function useReadingPosition(slug: string) {
     document.addEventListener("visibilitychange", persist);
     return () => {
       persist();
-      // Drop the cached offer so the next visit to this piece reads the mark
-      // that was just written rather than the one this visit started with.
-      offers.delete(slug);
+      // Drop the caches so anything still mounted — a related-stories rail, an
+      // archive behind a client-side navigation — reads the mark just written
+      // rather than the one this visit started with.
+      invalidate();
       window.removeEventListener("pagehide", persist);
       document.removeEventListener("visibilitychange", persist);
     };

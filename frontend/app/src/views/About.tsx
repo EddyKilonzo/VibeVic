@@ -150,20 +150,29 @@ export default function About() {
             site where a directional reveal carries meaning. */}
         <div className="grid gap-14 lg:grid-cols-[1.1fr_1fr]">
           <Reveal variant="fade-right">
+            {/* ── His words, and only his words ─────────────────────
+                This block used to carry three paragraphs I had written in his
+                voice — about reporting on his own college, about short-form
+                being deliberate. They read well and he never said them. On a
+                journalist's own About page, invented first-person copy is a
+                fabricated quotation with extra steps, so it is gone.
+
+                What is left is his introduction from Vic Unfiltered, verbatim,
+                plus one line of plain third-person fact that makes no claim
+                about how he thinks. */}
             <div className="space-y-6 text-[1.05rem] leading-[1.8] text-foreground/90">
-              {/* His own introduction, verbatim from Vic Unfiltered. A house
-                  voice writing *about* him always reads a shade like a press
-                  release; these are the sentences he chose. */}
-              <p className="font-display text-[1.2rem] font-semibold leading-[1.5] text-foreground">
+              <p className="font-display text-[1.35rem] font-semibold leading-[1.45] text-foreground">
                 {ABOUT_INTRO.greeting}
               </p>
               {ABOUT_INTRO.lines.map((line) => (
-                <p key={line}>{line}</p>
+                <p key={line} className="max-w-[46ch]">
+                  {line}
+                </p>
               ))}
-              <p>
-                I'm a journalist based in {PROFILE.base}, and a {PROFILE.educationStatus} at{" "}
-                <span className="font-semibold text-primary">{PROFILE.education}</span>. I report,
-                shoot and edit my own pieces, and publish them on{" "}
+              <p className="border-t border-border pt-6 text-[0.95rem] text-muted-foreground">
+                Victor is a {PROFILE.educationStatus} at{" "}
+                <span className="font-semibold text-primary">{PROFILE.education}</span>, based in{" "}
+                {PROFILE.base}. He films and edits his own reports and publishes them on{" "}
                 <a
                   href={CHANNEL.url}
                   target="_blank"
@@ -172,18 +181,16 @@ export default function About() {
                 >
                   {CHANNEL.handle}
                 </a>
+                , and writes at{" "}
+                <a
+                  href="https://vicunfiltered.wordpress.com"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline-grow font-medium text-primary"
+                >
+                  Vic Unfiltered
+                </a>
                 .
-              </p>
-              <p>
-                Most of the work so far has been about the place I study — how the institution
-                runs, what changes when a process like procurement moves online, and what students
-                carry that never appears in an official statement. Reporting on your own college
-                means the people in the story are people you will see again, which is a discipline
-                rather than a conflict. Alongside that sit cultural pieces and commissioned work.
-              </p>
-              <p>
-                Everything is short-form on purpose. A two-minute report that someone finishes is
-                worth more than a ten-minute one they close halfway through.
               </p>
             </div>
 

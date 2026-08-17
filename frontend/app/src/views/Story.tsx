@@ -137,7 +137,7 @@ export default function Story({ slug }: { slug: string }) {
             implied it was. */}
         <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
           <div className="container-site relative">
-            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:gap-16">
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-16">
               <div>
                 <Reveal variant="fade-up" distance="sm">
                   <Link
@@ -200,11 +200,16 @@ export default function Story({ slug }: { slug: string }) {
                 </Reveal>
               </div>
 
-              <Reveal variant="fade-scale" delay={180} className="max-lg:hidden">
+              {/* 16:10, because that is the shape `coverFor` generates. Any
+                  other ratio here means `object-cover` quietly crops the art
+                  the page just asked for — and on a phone the plate was
+                  hidden outright, which is not "it does not fit", it is "it
+                  is not there". */}
+              <Reveal variant="fade-scale" delay={180}>
                 <ImageReveal
                   src={coverFor(story.slug)}
                   alt=""
-                  ratio="4/5"
+                  ratio="16/10"
                   priority
                   immediate
                   className="rounded-2xl shadow-primary"

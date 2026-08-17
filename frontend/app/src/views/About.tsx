@@ -36,40 +36,43 @@ export default function About() {
   return (
     <div>
       {/* ── Hero ───────────────────────────────────────────────────
-          Short on purpose. A biography page's hero has one job — put a face
-          to the name before the first sentence about him — and a full screen
-          of it would only delay the part with the information in it. The
-          portrait sits behind the title at low contrast rather than beside
-          it, so the headline still reads as the page's opening rather than as
-          a caption on a photograph. */}
-      <header className="relative isolate flex min-h-[38vh] items-end overflow-hidden bg-brand-ink-deep pb-10 pt-32 sm:min-h-[44vh] sm:pb-14 sm:pt-40">
-        <ImageReveal
-          src={AGAINST_WALL.src}
-          alt=""
-          ratio="16/9"
-          priority
-          immediate
-          className="absolute inset-0 -z-10 h-full w-full"
-          imgClassName="object-cover object-[center_22%]"
-        />
-        <span
-          aria-hidden
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-brand-ink-deep via-brand-ink-deep/85 to-brand-ink-deep/45"
-        />
+          The portrait is beside the title, not behind it, and at its own 3:4.
+          Full bleed it was a 1080×1440 picture cropped into a band four
+          hundred pixels tall — a horizontal sliver of a coat, with the man it
+          is a photograph of outside the frame. A hero image that has to be
+          cropped past recognition is not doing a hero's job.
 
+          The ground is the comb at its loud weight, matching the article
+          hero. Nothing here is body copy, which is the condition for using
+          it. */}
+      <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
         <div className="container-site relative">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-sky">
-            About
-          </p>
-          <TextReveal
-            as="h1"
-            lines={["Victor Kiplimo,", "journalist."]}
-            className="font-display mt-4 text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-[4rem]"
-            immediate
-          />
-          <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-white/75">
-            Reporting from {PROFILE.base} — campus systems, Kenyan culture and student life.
-          </p>
+          <div className="grid items-center gap-10 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] lg:gap-16">
+            <div>
+              <p className="rule-label">About</p>
+              <TextReveal
+                as="h1"
+                lines={["Victor Kiplimo,", "journalist."]}
+                className="font-display mt-4 text-[2.4rem] font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.6rem]"
+                immediate
+              />
+              <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-muted-foreground">
+                Reporting from {PROFILE.base} — campus systems, Kenyan culture and student life.
+              </p>
+            </div>
+
+            <Reveal variant="fade-scale" delay={140}>
+              <ImageReveal
+                src={AGAINST_WALL.src}
+                alt={AGAINST_WALL.alt}
+                ratio="3/4"
+                priority
+                immediate
+                className="mx-auto max-w-[260px] rounded-2xl shadow-primary sm:max-w-none"
+                imgClassName="object-cover object-top"
+              />
+            </Reveal>
+          </div>
         </div>
       </header>
 

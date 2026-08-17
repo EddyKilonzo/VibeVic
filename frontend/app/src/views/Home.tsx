@@ -153,9 +153,12 @@ export default function Home() {
                 className={cn(
                   "group focus-ring relative block overflow-hidden rounded-xl bg-brand-ink-deep",
                   "shadow-floating ring-1 ring-white/50",
-                  "aspect-[3/4] sm:aspect-[4/5]",
-                  // The middle card stands proud; the outer two drop, so the
-                  // row has a centre without any of them being cropped.
+                  // 16:9, the shape the posters actually are. These were 3:4
+                  // and 4:5 boxes holding 16:9 thumbnails, which threw away
+                  // nearly half the width of every frame — the title cards on
+                  // several of these reports were cropped clean off.
+                  "aspect-video",
+                  // The middle card stands proud, so the row has a centre.
                   i === 1 ? "sm:-translate-y-5" : "",
                 )}
               >

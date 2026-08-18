@@ -1,0 +1,267 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import Link from "next/link";
+import { Bookmark, BookOpen, Headphones, ShieldCheck, Trash2, Users } from "lucide-react";
+import { publishedStories, storyBySlug } from "@/data/content";
+import { useBookmarks } from "@/context/BookmarksProvider";
+import { useReadState } from "@/hooks/useReadingPosition";
+import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
+import { formatPercent, formatRelative } from "@/lib/format";
+import { Reveal } from "@/components/motion";
+import { ReadProgress } from "@/components/story/ReadProgress";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/States";
+
+/**
+ * Readers.
+ *
+ * ── The screen has to start by admitting what it is ──────────────────────
+ * There is no audience data. No accounts, no server, no third-party analytics
+ * script anywhere in the app — that last one is a deliberate product decision
+ * rather than an omission, and it is why nothing here can report how many
+ * people read anything.
+ *
+ * The tempting version of this screen invents a plausible-looking audience
+ * out of the one browser it can see: "23 readers", drawn from twenty-three
+ * page views on the journalist's own laptop. That number would be believed,
+ * repeated, and wrong. So the screen shows exactly what the device knows —
+ * what has been saved, how far through each piece this browser got, what it
+ * has played aloud — and labels every panel as this device.
+ *
+ * ── Why it is still worth a screen ───────────────────────────────────────
+ * Two reasons. The reading state is genuinely useful to the person running
+ * the newsroom: it is the archive as their own reader sees it, including
+ * which pieces are still unopened. And the second panel states, in one place,
+ * exactly what the site does and does not collect about the people who read
+ * it — which is the thing a journalist gets asked about their own site.
+ */
+export default function AdminReaders() {
+  const stories = publishedStories();
+  const { slugs, remove } = useBookmarks();
+
+  /**
+   * Everything on this screen comes out of browser storage, and the route is
+   * prerendered — so nothing storage-backed is rendered until the page is up.
+   *
+   * That includes the bookmarks, which arrive through context rather than
+   * through a read of my own: the provider fills them in from `localStorage`
+   * during its first render, so a panel that counted them immediately would
+   * be describing a list the server render knew nothing about. `ready` is the
+   * gate, set by the same ref callback that reads the playback.
+   */
+  const [ready, setReady] = useState(false);
+  const [audio, setAudio] = useState<AudioSummary[] | null>(null);
+  const load = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    setAudio(summariseAll());
+    setReady(true);
+  }, []);
+
+  const saved = ready ? slugs : [];
+
+  const plays = audio?.reduce((n, s) => n + s.plays, 0) ?? 0;
+
+  return (
+    <div ref={load} className="mx-auto max-w-[1100px]">
+      <Reveal variant="fade-up">
+        <p className="rule-label">Newsroom</p>
+        <h1 className="font-display display-2 mt-2 font-semibold">Readers</h1>
+        <p className="mt-3 max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+          The site has no accounts, no server and no analytics script, so there is no audience
+          to report on. What this browser knows about its own reading is below, labelled as
+          such — nothing here is an estimate of anybody else.
+        </p>
+      </Reveal>
+
+      {/* The statement first, because every panel under it has to be read in
+          its light. A caveat at the bottom of a page of figures is a caveat
+          nobody reads. */}
+      <Reveal
+        variant="fade-up"
+        delay={40}
+        className="surface honeycomb honeycomb-strong mt-8 overflow-hidden p-5 sm:p-6"
+      >
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
+          <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
+        </span>
+        <h2 className="font-display mt-4 text-lg font-semibold tracking-tight">
+          What the site collects about readers
+        </h2>
+
+        <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Fact
+            term="Nothing, off the device"
+            detail="No analytics script is loaded on any page. There is no tag manager, no pixel and no third-party embed on the reading surface except YouTube's player on video pages."
+          />
+          <Fact
+            term="Saved stories, locally"
+            detail="Bookmarks live in this browser's own storage and are never sent anywhere. That is why they are not tied to an account — reading and saving are not gated."
+          />
+          <Fact
+            term="Reading position, locally"
+            detail="How far into a piece you got, written on the way out of the page so it can be offered back. One fraction per story, in this browser."
+          />
+          <Fact
+            term="One cookie, for the workspace"
+            detail="The newsroom passphrase cookie, which readers never receive. It is httpOnly and holds a hash, not the passphrase."
+          />
+        </dl>
+
+        <p className="mt-5 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">
+          Audience figures would need an API with consent handling behind it. Until that
+          exists, this screen would rather say nothing than guess.
+        </p>
+      </Reveal>
+
+      {/* ── Saved on this device ───────────────────────────────── */}
+      <Reveal variant="fade-up" className="mt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="rule-label">Saved on this device</p>
+            <h2 className="font-display mt-1 text-lg font-semibold tracking-tight">
+              {!ready
+                ? "Reading this browser"
+                : saved.length === 0
+                  ? "Nothing saved"
+                  : `${saved.length} saved ${saved.length === 1 ? "story" : "stories"}`}
+            </h2>
+          </div>
+          {plays > 0 && (
+            <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Headphones className="h-4 w-4" aria-hidden />
+              {plays} {plays === 1 ? "play" : "plays"} recorded ·{" "}
+              <Link href="/admin/analytics" className="focus-ring underline-grow font-semibold text-primary">
+                see the detail
+              </Link>
+            </p>
+          )}
+        </div>
+
+        <div className="surface mt-4 overflow-hidden">
+          {saved.length === 0 ? (
+            <EmptyState
+              icon={<Bookmark className="h-5 w-5" aria-hidden />}
+              title="No saved stories in this browser"
+              description="Saving a piece on the public site puts it here. It is the reader's own list, kept on their device — this one shows yours."
+              className="border-0"
+              action={
+                <Button as={Link} href="/stories" variant="outline" size="sm">
+                  Open the archive
+                </Button>
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border">
+              {saved.map((slug) => {
+                const story = storyBySlug(slug);
+                return (
+                  <li
+                    key={slug}
+                    className="group flex items-center gap-4 p-4 transition-colors duration-normal hover:bg-secondary/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/stories/${slug}`}
+                        className="focus-ring underline-grow block truncate text-sm font-semibold"
+                      >
+                        {story?.title ?? slug}
+                      </Link>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {story
+                          ? `Published ${formatRelative(story.publishedAt)}`
+                          : "This piece is no longer in the archive"}
+                      </p>
+                    </div>
+
+                    <ReadProgress slug={slug} className="hidden shrink-0 sm:inline-flex" />
+
+                    <button
+                      type="button"
+                      onClick={() => remove(slug)}
+                      aria-label={`Remove ${story?.title ?? slug} from saved`}
+                      className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </Reveal>
+
+      {/* ── The archive, as this browser has read it ───────────── */}
+      <Reveal variant="fade-up" className="surface mt-5 overflow-hidden">
+        <div className="p-5 pb-4">
+          <p className="rule-label">The archive on this device</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Every published piece, with how far this browser got. A piece with no mark has not
+            been opened here — which is not the same as unread.
+          </p>
+        </div>
+
+        <ul className="divide-y divide-border border-t border-border">
+          {stories.map((story) => (
+            <ArchiveRow key={story.id} slug={story.slug} title={story.title} saved={saved.includes(story.slug)} />
+          ))}
+        </ul>
+      </Reveal>
+
+      <Reveal
+        variant="fade-up"
+        delay={60}
+        className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-dashed border-border p-4"
+      >
+        <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-muted-foreground">
+          When the API lands, this screen is where consented audience data would go — and the
+          panel at the top is the promise it would have to keep.
+        </p>
+      </Reveal>
+    </div>
+  );
+}
+
+/**
+ * One archive row.
+ *
+ * `useReadState` is a hook, so the per-story read state has to be read in a
+ * component of its own rather than in a loop — and it returns `null` through
+ * the server render and the first client pass, which is exactly what keeps
+ * this list free of hydration mismatches.
+ */
+function ArchiveRow({ slug, title, saved }: { slug: string; title: string; saved: boolean }) {
+  const state = useReadState(slug);
+
+  return (
+    <li className="flex items-center gap-4 p-4 transition-colors duration-normal hover:bg-secondary/50">
+      <BookOpen
+        className={saved ? "h-4 w-4 shrink-0 text-primary" : "h-4 w-4 shrink-0 text-muted-foreground/50"}
+        aria-hidden
+      />
+      <Link href={`/stories/${slug}`} className="focus-ring min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{title}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {state === null
+            ? "Not opened in this browser"
+            : state.finished
+              ? "Finished here"
+              : `${formatPercent(state.progress)} in`}
+          {saved && " · saved"}
+        </p>
+      </Link>
+      <ReadProgress slug={slug} className="shrink-0" />
+    </li>
+  );
+}
+
+function Fact({ term, detail }: { term: string; detail: string }) {
+  return (
+    <div className="border-t border-border pt-4 sm:border-0 sm:pt-0">
+      <dt className="text-sm font-semibold">{term}</dt>
+      <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail}</dd>
+    </div>
+  );
+}

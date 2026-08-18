@@ -119,6 +119,30 @@ function invalidate() {
  * the caller renders nothing in both cases, which is right: an archive should
  * not decorate every item with "0% read".
  */
+/** How many pieces this browser holds a mark for. Used by the workspace's
+ *  storage summary, which reports what is on the device rather than guessing. */
+export function readingMarkCount(): number {
+  return Object.keys(read()).length;
+}
+
+/**
+ * Forgets every mark.
+ *
+ * Offered in Settings because the marks are the reader's own record and there
+ * has to be a way to clear it. The caches are invalidated rather than left to
+ * expire, so an archive rendered behind this screen stops claiming a progress
+ * it no longer has.
+ */
+export function clearReadingPositions(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* Nothing to clear. */
+  }
+  invalidate();
+}
+
 export function useReadState(slug: string): ReadState | null {
   return useSyncExternalStore(
     subscribe,

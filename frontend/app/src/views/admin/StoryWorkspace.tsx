@@ -44,6 +44,7 @@ import { toggleEmphasis, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
+import { StoryChecks } from "@/components/admin/StoryChecks";
 
 let idSeq = 0;
 const newId = () => `nb${Date.now()}-${++idSeq}`;
@@ -104,8 +105,18 @@ export default function StoryWorkspace({ id }: { id?: string }) {
   const existing = id ? storyById(id) : undefined;
   const reduced = useReducedMotion();
 
+  /**
+   * The blank draft carries the route's id when there is one.
+   *
+   * Autosave keys on `draft.id`, so a piece that exists only locally — one
+   * started from an idea, say — used to be written under "new" no matter
+   * which URL it was open at. Two of them would overwrite each other, and
+   * neither could be reopened from the drafts list. Taking the id from the
+   * route fixes both, and it is safe to do here rather than in a callback
+   * because a prop is the same value on the server and on the client.
+   */
   const [draft, setDraft] = useState<Story>(() =>
-    existing ? { ...existing, body: [...existing.body] } : BLANK,
+    existing ? { ...existing, body: [...existing.body] } : { ...BLANK, id: id ?? "new" },
   );
   const [activeBlock, setActiveBlock] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -145,7 +156,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
    */
   const [stored, setStored] = useState<StoredDraft | null>(null);
   const [restoreOffer, setRestoreOffer] = useState(true);
-  const targetId = existing?.id ?? "new";
+  const targetId = existing?.id ?? id ?? "new";
 
   /**
    * Read once the sheet is on the page, via a ref callback.
@@ -181,14 +192,26 @@ export default function StoryWorkspace({ id }: { id?: string }) {
   const pickUpDraft = useCallback(
     (node: HTMLDivElement | null) => {
       if (!node) return;
-      setStored(readDraft(targetId));
-      setRestoreOffer(true);
+      const local = readDraft(targetId);
+
+      if (id && !existing && local) {
+        // A piece with no published copy: this local draft is not a rival
+        // version of anything, it is the only version there is. Offering it
+        // behind a banner would mean opening an empty editor over somebody's
+        // writing and then autosaving the blank over it.
+        setDraft({ ...local.story, body: [...local.story.body] });
+        setStored(null);
+      } else {
+        setStored(local);
+        setRestoreOffer(true);
+      }
+
       // Same pass, same reason: both stores are read once the sheet is up
       // rather than during render, which this prerendered route would hydrate
       // against a different answer.
       setBeats(allBeats());
     },
-    [targetId],
+    [targetId, id, existing],
   );
 
   const restore = () => {
@@ -514,6 +537,10 @@ export default function StoryWorkspace({ id }: { id?: string }) {
           })}
         </div>
       </div>
+
+      {/* The deterministic checks, reading the live draft. Collapsed until
+          asked for — see the note in the component. */}
+      <StoryChecks draft={draft} />
     </div>
   );
 }

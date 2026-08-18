@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/views/admin/AdminPlaceholder";
+import AdminIdeas from "@/views/admin/AdminIdeas";
 
 export const metadata: Metadata = { title: "Ideas" };
 
-/**
- * Routed but not yet built. The nav links here on purpose — a dead link in a
- * sidebar is worse than a screen that says plainly what is coming.
- */
 export default function IdeasRoute() {
-  return <AdminPlaceholder title="Ideas" />;
+  return <AdminIdeas />;
 }

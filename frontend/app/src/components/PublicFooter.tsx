@@ -156,6 +156,21 @@ export function PublicFooter() {
               {PROFILE.email}
             </a>
           </p>
+          {/* The newsroom, named for what it is to the person who uses it
+              rather than for the route it sits on. Down here with the
+              copyright rather than up in "More" because it is not reading —
+              every other link in this footer leads somewhere a visitor can
+              go, and this one leads to a passphrase.
+
+              Listing it at all is safe: the lock is the middleware, which
+              never serves an admin route without the cookie, so a hidden
+              link was only ever hiding the door and not closing it. */}
+          <Link
+            href="/admin"
+            className="focus-ring underline-grow tap inline-flex items-center transition-colors hover:text-primary"
+          >
+            Journal
+          </Link>
         </div>
       </div>
     </footer>

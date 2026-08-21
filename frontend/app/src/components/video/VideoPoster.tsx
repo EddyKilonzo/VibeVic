@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { posterFor } from "@/data/videos";
 import { cn } from "@/lib/utils";
 
@@ -37,8 +37,33 @@ export function VideoPoster({
 }) {
   const [size, setSize] = useState<"max" | "hq">("max");
 
+  const stepDown = useCallback(
+    () => setSize((s) => (s === "max" ? "hq" : s)),
+    [],
+  );
+
+  /**
+   * Catches the poster that finished before React got here.
+   *
+   * `onLoad` and `onError` only fire for images still in flight when
+   * hydration attaches them. Server-rendered markup routinely loses that
+   * race — the browser starts fetching during HTML parse — and a poster that
+   * already failed fires nothing, leaving a broken image no handler will ever
+   * hear about. On mount the outcome is readable instead of waited for:
+   * `complete` with a zero `naturalWidth` is a request that failed, and a
+   * width this small is YouTube's grey placeholder arriving with a 200.
+   */
+  const inspectOnMount = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (!img?.complete) return;
+      if (img.naturalWidth === 0 || img.naturalWidth < PLACEHOLDER_MAX_WIDTH) stepDown();
+    },
+    [stepDown],
+  );
+
   return (
     <img
+      ref={inspectOnMount}
       src={posterFor(id, size)}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
@@ -55,9 +80,9 @@ export function VideoPoster({
       // arrived is the only signal there is.
       onLoad={(event) => {
         const width = event.currentTarget.naturalWidth;
-        if (size === "max" && width > 0 && width < PLACEHOLDER_MAX_WIDTH) setSize("hq");
+        if (size === "max" && width > 0 && width < PLACEHOLDER_MAX_WIDTH) stepDown();
       }}
-      onError={() => setSize((s) => (s === "max" ? "hq" : s))}
+      onError={stepDown}
       // `object-cover` is doing real work on the fallback: `hqdefault` is 4:3
       // with black bars, and covering a 16:9 box crops exactly the 12.5% at
       // each edge that the bars occupy.

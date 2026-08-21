@@ -179,9 +179,28 @@ export const totalViews = (): number => VIDEOS.reduce((sum, v) => sum + v.views,
  */
 export type PosterSize = "max" | "hq" | "sd";
 
+/**
+ * Uploads YouTube never generated a `maxresdefault` frame for.
+ *
+ * Checked against i.ytimg.com rather than assumed: these three answer the
+ * maxres URL with a real 404, while every other upload here serves a frame
+ * over 68KB. Recorded because the alternative — asking for the frame and
+ * recovering when it fails — cannot work in markup rendered on the server.
+ * The browser begins fetching a poster while it is still parsing the HTML,
+ * so for these three the `error` event fires before React has hydrated and
+ * attached its handler. React does not replay it, the step-down never runs,
+ * and the card keeps a broken image. Knowing here costs one line each and
+ * means the first URL in the HTML is already the right one.
+ *
+ * If YouTube backfills a maxres frame for one of these, deleting its id
+ * restores the sharp poster; nothing else needs to change.
+ */
+const WITHOUT_MAXRES = new Set(["f895dzgYWlE", "2BBoHfY5pC4", "SUc2PxRU2vo"]);
+
 export const posterFor = (id: string, size: PosterSize = "max"): string => {
+  const best: PosterSize = size === "max" && WITHOUT_MAXRES.has(id) ? "hq" : size;
   const file =
-    size === "max" ? "maxresdefault" : size === "hq" ? "hqdefault" : "sddefault";
+    best === "max" ? "maxresdefault" : best === "hq" ? "hqdefault" : "sddefault";
   return `https://i.ytimg.com/vi/${id}/${file}.jpg`;
 };
 

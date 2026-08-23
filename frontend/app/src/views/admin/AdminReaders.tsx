@@ -80,7 +80,13 @@ export default function AdminReaders() {
       <Reveal
         variant="fade-up"
         delay={40}
-        className="surface honeycomb honeycomb-strong mt-8 overflow-hidden p-5 sm:p-6"
+        // Frosted rather than solid, and `glass-strong` on this one because
+        // it is the panel the rest of the page is read in the light of.
+        // `.glass` sets its own border, ground and shadow but no radius —
+        // that is `.surface`'s job and this is not one — so the corner is
+        // stated here. The lattice on the workspace ground shows through the
+        // blur, which is the whole point of frosting it.
+        className="glass-strong honeycomb honeycomb-strong mt-8 overflow-hidden rounded-xl p-5 sm:p-6"
       >
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
           <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
@@ -138,7 +144,7 @@ export default function AdminReaders() {
           )}
         </div>
 
-        <div className="surface mt-4 overflow-hidden">
+        <div className="glass mt-4 overflow-hidden rounded-xl">
           {saved.length === 0 ? (
             <EmptyState
               icon={<Bookmark className="h-5 w-5" aria-hidden />}
@@ -193,7 +199,7 @@ export default function AdminReaders() {
       </Reveal>
 
       {/* ── The archive, as this browser has read it ───────────── */}
-      <Reveal variant="fade-up" className="surface mt-5 overflow-hidden">
+      <Reveal variant="fade-up" className="glass mt-5 overflow-hidden rounded-xl">
         <div className="p-5 pb-4">
           <p className="rule-label">The archive on this device</p>
           <p className="mt-1 text-sm text-muted-foreground">

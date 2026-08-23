@@ -150,7 +150,11 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
               <div>
                 <Reveal variant="fade-up" distance="sm">
                   <Link
-                    href={`/stories?genre=${story.genre}`}
+                    /* The beat's own page, not `/stories?genre=…`. The query
+                       view is canonicalised to `/stories`, so linking it from
+                       every article pointed the site's densest internal link
+                       at a URL that deliberately does not rank. */
+                    href={`/beats/${story.genre}`}
                     className="focus-ring kicker underline-grow"
                   >
                     {genreLabel(story.genre)}

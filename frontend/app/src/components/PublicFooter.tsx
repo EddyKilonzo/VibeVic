@@ -138,7 +138,7 @@ export function PublicFooter() {
                 <StaggerItem key={topic.slug} index={i}>
                   <Reveal variant="fade" as="li">
                     <Link
-                      href={`/genres#${topic.slug}`}
+                      href={`/beats/${topic.slug}`}
                       className="focus-ring underline-grow tap inline-flex items-center text-sm font-semibold text-foreground transition-colors hover:text-primary"
                     >
                       {topic.name}
@@ -148,7 +148,7 @@ export function PublicFooter() {
                         {childBeats(topic.slug).map((child) => (
                           <Link
                             key={child.slug}
-                            href={`/genres#${child.slug}`}
+                            href={`/beats/${child.slug}`}
                             className="focus-ring tap text-xs text-muted-foreground transition-colors hover:text-primary"
                           >
                             {child.name}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Story from "@/views/Story";
-import { PROFILE, publishedStories, storyBySlug } from "@/data/content";
+import { PROFILE, genreBySlug, parentBeat, publishedStories, storyBySlug } from "@/data/content";
 import { stripInline } from "@/lib/inline";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
@@ -22,6 +22,22 @@ export function generateStaticParams() {
  */
 export const dynamicParams = false;
 
+/**
+ * The snippet Google prints under the headline.
+ *
+ * The standfirst is the right source for it, but the imported pieces carry
+ * WordPress's own "In Summary" lead-in, so every search result opened with
+ * two words of another CMS's furniture. Google also truncates at about 160
+ * characters and will happily cut mid-word, so this stops at a sentence or a
+ * space instead.
+ */
+function metaDescription(dek: string, limit = 158): string {
+  const clean = stripInline(dek).replace(/^\s*in summary[:\s—-]*/i, "").trim();
+  if (clean.length <= limit) return clean;
+  const cut = clean.slice(0, limit);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(". ") + 1, cut.lastIndexOf(" "))).trim()}…`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -39,7 +55,7 @@ export async function generateMetadata({
   // Metadata is plain text by definition. Emphasis markers left in a
   // description are rendered literally by Google, Slack and every share card
   // that exists — "the **council** refused" in a search result.
-  const description = stripInline(story.dek);
+  const description = metaDescription(story.dek);
 
   return {
     title: story.title,
@@ -95,7 +111,7 @@ export default async function StoryRoute({ params }: { params: Promise<{ slug: s
     headline: story.title,
     // Plain text, same as the meta description above — structured data is
     // read by machines that will not un-asterisk it.
-    description: stripInline(story.dek),
+    description: metaDescription(story.dek),
     image: [storyCover(story)],
     datePublished: story.publishedAt,
     dateModified: story.updatedAt || story.publishedAt,
@@ -121,12 +137,42 @@ export default async function StoryRoute({ params }: { params: Promise<{ slug: s
     ...(story.sourceUrl ? { sameAs: story.sourceUrl } : {}),
   };
 
+  /**
+   * Where this piece sits.
+   *
+   * A breadcrumb is the difference between a result that reads as a URL and
+   * one that reads as "Beats › News › Kenya". It is built from the real
+   * taxonomy — the beat the story is actually filed under and its parent, if
+   * it has one — so it can never claim a path the site does not have.
+   */
+  const beat = genreBySlug(story.genre);
+  const beatParent = parentBeat(story.genre);
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Writing", url: absoluteUrl("/stories") },
+      ...(beatParent ? [{ name: beatParent.name, url: absoluteUrl(`/beats/${beatParent.slug}`) }] : []),
+      ...(beat ? [{ name: beat.name, url: absoluteUrl(`/beats/${beat.slug}`) }] : []),
+      { name: story.title, url: absoluteUrl(`/stories/${story.slug}`) },
+    ].map((crumb, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: crumb.name,
+      item: crumb.url,
+    })),
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         // The payload is built from our own typed data, not from user input.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
       <Story slug={slug} story={story} />
     </>

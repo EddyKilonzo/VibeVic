@@ -160,7 +160,7 @@ export default function Home() {
                 {TOP_BEATS.map((topic) => (
                   <Link
                     key={topic.slug}
-                    href={`/genres#${topic.slug}`}
+                    href={`/beats/${topic.slug}`}
                     className="surface-compact focus-ring tap inline-flex items-center rounded-full px-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-normal hover:border-accent/50 hover:text-primary sm:h-8"
                   >
                     {topic.name}
@@ -423,7 +423,7 @@ export default function Home() {
                       seven have no video at all, so `?topic=` would land the
                       reader on an empty archive. */}
                   <Link
-                    href={`/genres#${topic.slug}`}
+                    href={`/beats/${topic.slug}`}
                     className="surface surface-hover group focus-ring relative flex h-full flex-col overflow-hidden p-6 sm:p-7"
                   >
                     <span

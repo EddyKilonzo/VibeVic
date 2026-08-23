@@ -73,7 +73,13 @@ export default function Genres() {
                     Beat {index + 1} of {TOP_BEATS.length}
                   </p>
                   <h2 className="font-display display-2 mt-3 font-semibold text-balance">
-                    {topic.name}
+                    {/* The heading is the link to the beat's own page. This
+                        screen is the hub — everything on one scroll — and the
+                        subject pages are what a search result should land on,
+                        so every beat named here points at its own address. */}
+                    <Link href={`/beats/${topic.slug}`} className="focus-ring underline-grow">
+                      {topic.name}
+                    </Link>
                   </h2>
                   <p className="mt-4 max-w-[56ch] text-lg leading-relaxed text-muted-foreground">
                     {topic.description}
@@ -116,7 +122,7 @@ export default function Genres() {
                       <li key={child.slug}>
                         {count > 0 ? (
                           <Link
-                            href={`#${child.slug}`}
+                            href={`/beats/${child.slug}`}
                             className="surface-compact focus-ring tap inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors duration-normal hover:border-accent/50 hover:text-primary"
                           >
                             {child.name}
@@ -190,7 +196,9 @@ export default function Genres() {
                       <div className="min-w-0">
                         <p className="rule-label">{topic.name}</p>
                         <h3 className="font-display display-3 mt-2 font-semibold text-balance">
-                          {child.name}
+                          <Link href={`/beats/${child.slug}`} className="focus-ring underline-grow">
+                            {child.name}
+                          </Link>
                         </h3>
                         <p className="mt-3 max-w-[56ch] leading-relaxed text-muted-foreground">
                           {child.description}

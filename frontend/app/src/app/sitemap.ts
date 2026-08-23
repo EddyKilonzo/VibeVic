@@ -50,15 +50,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  // A beat earns a URL by having work on it, not by existing in a list.
+  /*
+   * A beat earns a URL by having work on it, not by existing in a list.
+   *
+   * These used to be `/genres#slug`, which is not an address: a crawler drops
+   * the fragment, so twenty-one entries collapsed into one page and no
+   * subject had a URL that could rank for it. Each beat has a real page now.
+   */
   const beatPages: MetadataRoute.Sitemap = GENRES.filter(
     (genre) =>
       storiesByGenre(genre.slug).length > 0 ||
       VIDEOS.some((video) => inGenre(videoBeat(video), genre.slug)),
   ).map((genre) => ({
-    url: `${SITE_URL}/genres#${genre.slug}`,
+    url: `${SITE_URL}/beats/${genre.slug}`,
     changeFrequency: "monthly",
-    priority: 0.5,
+    // Parents gather a whole family and are the pages worth surfacing first.
+    priority: genre.parent ? 0.5 : 0.6,
   }));
 
   return [...staticPages, ...storyPages, ...videoPages, ...beatPages];

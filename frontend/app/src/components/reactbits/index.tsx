@@ -16,6 +16,7 @@ import RbScrollExpand from "./ScrollExpand.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
 import RbTiltedCard from "./TiltedCard.jsx";
+import { LOCALE } from "@/lib/format";
 
 const CurvedLoopBase = RbCurvedLoop as any;
 const ScrollExpandBase = RbScrollExpand as any;
@@ -540,7 +541,7 @@ export function SpringCountUp({
   const reduced = useReducedMotion();
 
   if (reduced) {
-    return <span className={className}>{to.toLocaleString()}</span>;
+    return <span className={className}>{to.toLocaleString(LOCALE)}</span>;
   }
 
   return (
@@ -548,7 +549,7 @@ export function SpringCountUp({
       <span aria-hidden>
         <CountUpBase to={to} separator={separator} duration={1.6} />
       </span>
-      <span className="sr-only">{to.toLocaleString()}</span>
+      <span className="sr-only">{to.toLocaleString(LOCALE)}</span>
     </span>
   );
 }

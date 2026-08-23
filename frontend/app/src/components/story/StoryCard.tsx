@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Headphones } from "lucide-react";
 import type { Story } from "@/data/types";
-import { genreName } from "@/data/content";
+import { genreLabel, genreName } from "@/data/content";
 import { storyCover } from "@/lib/cover";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -130,7 +130,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           )}
         >
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="kicker">{genreName(story.genre)}</p>
+            <p className="kicker">{genreLabel(story.genre)}</p>
             {/* Template pieces are labelled in the listing too, so a reader
                 knows before they click rather than after. */}
             {story.placeholder && (

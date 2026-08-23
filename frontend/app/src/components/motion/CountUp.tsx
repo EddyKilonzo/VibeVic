@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { animate, useInView, useReducedMotion } from "motion/react";
+import { LOCALE } from "@/lib/format";
 
 export interface CountUpProps {
   value: number;
@@ -54,7 +55,7 @@ export function CountUp({
   // information, and the count is only ever the presentation of it.
   const shown = reduced ? value : display;
 
-  const formatted = shown.toLocaleString(undefined, {
+  const formatted = shown.toLocaleString(LOCALE, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -69,7 +70,7 @@ export function CountUp({
       </span>
       <span className="sr-only">
         {prefix}
-        {value.toLocaleString()}
+        {value.toLocaleString(LOCALE)}
         {suffix}
       </span>
     </span>

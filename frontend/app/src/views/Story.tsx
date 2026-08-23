@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import type { Story as StoryRecord } from "@/data/types";
-import { PROFILE, genreName, relatedStories } from "@/data/content";
+import { PROFILE, genreLabel, relatedStories } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { storyCover } from "@/lib/cover";
@@ -153,7 +153,7 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                     href={`/stories?genre=${story.genre}`}
                     className="focus-ring kicker underline-grow"
                   >
-                    {genreName(story.genre)}
+                    {genreLabel(story.genre)}
                   </Link>
                 </Reveal>
 
@@ -306,7 +306,15 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
                 screen before the footer and left the page ending on a bare
                 column. Keeping the related cards in this column gives the
                 sticky box something to hold onto all the way down. */}
-            <div className="min-w-0 lg:order-1">
+            {/* The bottom padding is the rail's footing.
+                A sticky box travels only as far as its containing block, and
+                the aside's height is the grid row's height — which is set by
+                *this* column. Padding on the grid does not help: it sits
+                outside the row, so the rail still came unpinned on the last
+                line of related cards and drifted up the screen with a screen
+                of page still to go. Padding here lengthens the row itself,
+                which is what the rail stands on. */}
+            <div className="min-w-0 lg:order-1 lg:pb-28">
               {/* Padding on the sheet, on a phone as well as a desktop.
                   It was `px-0 py-2`: the tint started eight pixels above the
                   first line and ended flush with the sides of the text, so

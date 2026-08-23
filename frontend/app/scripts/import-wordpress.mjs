@@ -25,19 +25,28 @@ const API = `https://public-api.wordpress.com/rest/v1.1/sites/${SITE}/posts/?num
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "writing.generated.ts");
 
 /**
- * WordPress categories to this site's genres.
+ * WordPress categories to this site's beats.
  *
- * Unmapped categories fall to `features`, which is the honest default: it is
- * the beat that means "longer work that is not one of the others", so nothing
- * is filed somewhere it does not belong just to avoid a gap.
+ * The right-hand side is a slug from `GENRES` in `src/data/content.ts`,
+ * parent or child. Where the source category is already as specific as one of
+ * the child beats, it files there — a post categorised "Conservation and
+ * ecology" belongs under `science-conservation`, not merely under science —
+ * because a story can be promoted to its parent by reading the family, and
+ * can never be made more specific after the fact.
+ *
+ * Unmapped categories fall to `news`, the catch-all beat. `FALLBACK` is
+ * deliberately the least specific slug in the taxonomy: filing an unknown
+ * category anywhere narrower would be a guess wearing a label.
  */
+const FALLBACK = "news";
+
 const GENRE_BY_CATEGORY = {
   "psychology & neuroscience": "science",
-  agriculture: "science",
-  "conservation and ecology": "environment",
-  "national news": "politics",
-  productivity: "student-life",
-  news: "features",
+  agriculture: "agriculture",
+  "conservation and ecology": "science-conservation",
+  "national news": "news-kenya",
+  productivity: "lifestyle-productivity",
+  news: FALLBACK,
 };
 
 /** Entities WordPress emits. Kept small and explicit rather than regex-guessed. */
@@ -156,16 +165,16 @@ const words = (blocks) =>
 /**
  * Most posts carry two categories, one of which is the catch-all "News".
  * Taking whichever the API happens to list first filed a piece about student
- * internships under features because "News" came back before "Productivity".
- * So every match is collected and the specific one wins; `features` is only
- * reached when nothing else does.
+ * internships under the catch-all because "News" came back before
+ * "Productivity". So every match is collected and the specific one wins;
+ * `FALLBACK` is only reached when nothing else does.
  */
 function genreFor(categories) {
   const hits = Object.keys(categories ?? {})
     .map((name) => GENRE_BY_CATEGORY[decode(name).toLowerCase()])
     .filter(Boolean);
 
-  return hits.find((g) => g !== "features") ?? hits[0] ?? "features";
+  return hits.find((g) => g !== FALLBACK) ?? hits[0] ?? FALLBACK;
 }
 
 /**
@@ -286,5 +295,5 @@ writeFileSync(OUT, file, "utf8");
 
 console.log(`Imported ${stories.length} stories -> ${OUT}`);
 for (const s of stories) {
-  console.log(`  ${s.publishedAt}  ${s.genre.padEnd(12)}  ${s.readingMinutes}m  ${s.title}`);
+  console.log(`  ${s.publishedAt}  ${s.genre.padEnd(22)}  ${s.readingMinutes}m  ${s.title}`);
 }

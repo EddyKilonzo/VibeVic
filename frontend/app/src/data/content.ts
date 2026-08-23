@@ -1,5 +1,5 @@
 import type { Award, Genre, Publication, Story } from "./types";
-import { CHANNEL, TOPICS, VIDEOS } from "./videos";
+import { CHANNEL, VIDEOS } from "./videos";
 import { WORDPRESS_STORIES } from "./writing.generated";
 
 /**
@@ -192,36 +192,175 @@ export const SOCIAL_ACCOUNTS: SocialAccount[] = [
 ];
 
 /**
- * Genres for the written archive.
+ * The beats.
  *
- * The first four mirror the video topics, so the two halves of the archive
- * filter the same way. The three after them exist because the writing does not
- * fit inside the video beats and pretending otherwise would file a piece about
- * antimicrobial resistance in poultry under "campus reporting". The video
- * covers his college; the writing ranges wider, and the filters should say so.
+ * Two levels: six subjects the site covers, and the specific ground inside
+ * each. A story is filed against exactly one slug — a parent when the piece
+ * is simply about that subject, a child when it belongs somewhere narrower —
+ * and everything that counts work under a beat walks the family rather than
+ * matching the slug alone (see `storiesByGenre`).
+ *
+ * ── Why this replaced the old seven ──────────────────────────────────────
+ * The previous list mirrored the four video topics plus three written-only
+ * beats, which described the channel rather than the site: it had a beat for
+ * his college and none for faith, agriculture or history, which is most of
+ * what the writing is actually about. The video topics still exist in
+ * `data/videos` and still filter `/videos`; `TOPIC_BEAT` there maps each one
+ * into this taxonomy so the beats page can keep showing reports and writing
+ * side by side.
+ *
+ * Child slugs carry their parent as a prefix. That is not decoration: the
+ * slug is the foreign key on every story and it appears in URLs, so `history`
+ * the beat and a future `faith-history` must never be able to collide.
  */
 export const GENRES: Genre[] = [
-  ...TOPICS.map((topic) => ({
-    slug: topic.slug,
-    name: topic.name,
-    description: topic.description,
-  })),
   {
-    slug: "science",
-    name: "Science & health",
-    description: "Research, medicine and the science behind everyday decisions.",
+    slug: "agriculture",
+    name: "Agriculture",
+    description:
+      "Farming as an industry and a livelihood — what is grown, what it costs, and what the practice leaves behind.",
+  },
+
+  {
+    slug: "faith",
+    name: "Faith",
+    description: "Belief as it is lived: in scripture, in testimony, and in the week between Sundays.",
   },
   {
-    slug: "environment",
-    name: "Environment",
-    description: "Conservation, wildlife and the technology being pointed at both.",
+    slug: "faith-devotionals",
+    parent: "faith",
+    name: "Devotionals",
+    description: "Short readings that stay with one passage long enough to say something about it.",
   },
   {
-    slug: "politics",
-    name: "Politics",
+    slug: "faith-testimonies",
+    parent: "faith",
+    name: "Testimonies & stories",
+    description: "First-hand accounts, told by the people they happened to.",
+  },
+
+  {
+    slug: "history",
+    name: "History",
+    description: "How the present got here, told from the record rather than from memory.",
+  },
+
+  {
+    slug: "lifestyle",
+    name: "Lifestyle",
+    description:
+      "The ordinary decisions — what to eat, where to live, how to spend a day — taken seriously.",
+  },
+  {
+    slug: "lifestyle-health",
+    parent: "lifestyle",
+    name: "Health & Nutrition",
+    description: "What the evidence says about eating, sleeping and staying well.",
+  },
+  {
+    slug: "lifestyle-home",
+    parent: "lifestyle",
+    name: "Home & Interior Design",
+    description: "Rooms, materials, and the small changes that make a space work.",
+  },
+  {
+    slug: "lifestyle-productivity",
+    parent: "lifestyle",
+    name: "Productivity",
+    description: "Work, study and attention — what helps, and what only feels like it does.",
+  },
+  {
+    slug: "lifestyle-travel",
+    parent: "lifestyle",
+    name: "Travel",
+    description: "Places, routes, and what it costs to get to them.",
+  },
+  {
+    slug: "lifestyle-art",
+    parent: "lifestyle",
+    name: "Art & Culture",
+    description: "Music, performance and the cultural weeks that shape how people see themselves.",
+  },
+
+  {
+    slug: "news",
+    name: "News",
+    description: "What happened, who said it, and what follows from it.",
+  },
+  {
+    slug: "news-africa",
+    parent: "news",
+    name: "Africa",
+    description: "The continent's politics and economies, covered from inside them.",
+  },
+  {
+    slug: "news-world",
+    parent: "news",
+    name: "World news",
+    description: "What is happening elsewhere, and why it reaches here.",
+  },
+  {
+    slug: "news-kenya",
+    parent: "news",
+    name: "Kenya",
     description: "National politics, and what is said in public by the people running it.",
   },
+  {
+    slug: "news-sports",
+    parent: "news",
+    name: "Sports",
+    description: "Results, the athletes behind them, and the systems behind the athletes.",
+  },
+
+  {
+    slug: "science",
+    name: "Science",
+    description: "Research, medicine and the evidence behind everyday decisions.",
+  },
+  {
+    slug: "science-tech",
+    parent: "science",
+    name: "AI & Tech",
+    description: "The tools, the people building them, and what they change.",
+  },
+  {
+    slug: "science-conservation",
+    parent: "science",
+    name: "Conservation & Ecology",
+    description: "Wildlife, habitat, and the technology now pointed at both.",
+  },
+  {
+    slug: "science-energy",
+    parent: "science",
+    name: "Energy & Electricity",
+    description: "Generation, grids, and the cost of keeping the lights on.",
+  },
+  {
+    slug: "science-engineering",
+    parent: "science",
+    name: "Engineering",
+    description: "Things that get built, and what it takes to build them.",
+  },
 ];
+
+/**
+ * The six, in order.
+ *
+ * Anywhere with room for a list of beats but not for a taxonomy — the home
+ * bento, the hero rail, the footer's top line, a sitemap of sections — reads
+ * this rather than `GENRES`, which is three times longer.
+ */
+export const TOP_BEATS: Genre[] = GENRES.filter((g) => !g.parent);
+
+/**
+ * Where a new piece lands before anyone has said what it is.
+ *
+ * The catch-all beat, deliberately: the editor's beat control opens on this
+ * and a writer changes it, which is honest about the fact that nothing has
+ * been decided yet. It used to be whatever happened to be first in the list,
+ * which quietly filed every new draft under Agriculture.
+ */
+export const DEFAULT_BEAT = "news";
 
 /**
  * The written archive.
@@ -288,10 +427,47 @@ export const storyById = (id: string): Story | undefined => STORIES.find((s) => 
 
 export const genreBySlug = (slug: string): Genre | undefined => GENRES.find((g) => g.slug === slug);
 
+/** The beats filed directly under this one. Empty for a child, and for a leaf parent. */
+export const childBeats = (slug: string): Genre[] => GENRES.filter((g) => g.parent === slug);
+
+/**
+ * A slug and everything under it.
+ *
+ * The reason every count and filter goes through this: a story about Kenyan
+ * politics is filed `news-kenya`, so a `News` section that matched on the
+ * slug alone would report zero pieces while sitting directly above them.
+ * Called with a child, it is just that child — nothing inherits upwards.
+ */
+export const genreFamily = (slug: string): string[] => [
+  slug,
+  ...childBeats(slug).map((g) => g.slug),
+];
+
+/** The parent beat of a child slug, or undefined for a top-level one. */
+export const parentBeat = (slug: string): Genre | undefined => {
+  const parent = genreBySlug(slug)?.parent;
+  return parent ? genreBySlug(parent) : undefined;
+};
+
+/** True when `storySlug` belongs to `filterSlug` — itself or one of its children. */
+export const inGenre = (storySlug: string, filterSlug: string): boolean =>
+  storySlug === filterSlug || genreBySlug(storySlug)?.parent === filterSlug;
+
 export const storiesByGenre = (slug: string): Story[] =>
-  publishedStories().filter((s) => s.genre === slug);
+  publishedStories().filter((s) => inGenre(s.genre, slug));
 
 export const genreName = (slug: string): string => genreBySlug(slug)?.name ?? slug;
+
+/**
+ * "News · Kenya" — the child under the beat it belongs to.
+ *
+ * For anywhere a beat is named out of context (a story card, an admin row),
+ * where "Kenya" alone does not say which half of the archive it is from.
+ */
+export const genreLabel = (slug: string): string => {
+  const parent = parentBeat(slug);
+  return parent ? `${parent.name} · ${genreName(slug)}` : genreName(slug);
+};
 
 /**
  * What to read next.
@@ -347,7 +523,9 @@ export function searchStories(query: string): Story[] {
         { text: story.title.toLowerCase(), weight: 6 },
         { text: story.dek.toLowerCase(), weight: 3 },
         { text: story.tags.join(" ").toLowerCase(), weight: 3 },
-        { text: genreName(story.genre).toLowerCase(), weight: 2 },
+        // The full path, so a search for "news" reaches the pieces filed
+        // under Kenya and a search for "kenya" still reaches them directly.
+        { text: genreLabel(story.genre).toLowerCase(), weight: 2 },
         {
           text: story.body
             .map((b) => ("text" in b ? b.text : "items" in b ? b.items.join(" ") : ""))

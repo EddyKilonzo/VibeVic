@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { VIDEOS } from "@/data/videos";
-import { GENRES, storiesByGenre } from "@/data/content";
+import { VIDEOS, videoBeat } from "@/data/videos";
+import { TOP_BEATS, childBeats, inGenre, storiesByGenre } from "@/data/content";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { StoryCard } from "@/components/story/StoryCard";
@@ -31,13 +31,14 @@ import { PageHero } from "@/components/hero/PageHero";
  * The pills in the hero jump between the sections below rather than
  * navigating away, so the nav is the page's table of contents.
  *
- * ── It runs on genres, not on video topics ───────────────────────────────
- * It used to iterate the four video topics, which meant that the moment the
- * written archive arrived, three whole beats — science and health, the
- * environment, politics — existed in the filters on `/stories` and were
- * invisible on the page whose entire job is to show what he covers. Reading
- * from `GENRES` means a subject appears here because work exists under it,
- * whether that work is filmed or written.
+ * ── Two levels, six sections ─────────────────────────────────────────────
+ * The taxonomy is a tree: six beats, each with the specific subjects beneath
+ * it. Only the six get a section, because twenty-one headings is an index and
+ * not a page. Inside a section the children appear twice — once as the chip
+ * row under the description, which names the whole beat's ground whether or
+ * not anything is published on it yet, and again as a sub-heading above their
+ * own work when they have some. A child with nothing filed under it is a chip
+ * and nothing more: it is a subject he covers, not a promise of an article.
  */
 export default function Genres() {
   return (
@@ -46,14 +47,18 @@ export default function Genres() {
         label="Beats"
         title="What I cover"
         lead="Everything filed under each subject is below — reports and writing together. The filmed work centres on his college; the writing ranges wider."
-        rail={<PillNav items={GENRES.map((g) => ({ label: g.name, href: `#${g.slug}` }))} />}
+        rail={<PillNav items={TOP_BEATS.map((g) => ({ label: g.name, href: `#${g.slug}` }))} />}
       />
 
-      {GENRES.map((topic, index) => {
-        // Compared as plain strings: the written-only genres are not video
-        // topics, so this is legitimately empty for three of the seven.
-        const videos = VIDEOS.filter((video) => video.topic === topic.slug);
+      {TOP_BEATS.map((topic, index) => {
+        // Videos file against the channel's own four topics, so they reach a
+        // beat through `videoBeat` rather than by matching the slug.
+        const videos = VIDEOS.filter((video) => inGenre(videoBeat(video), topic.slug));
+        // The whole family: pieces filed on the beat itself and on anything
+        // under it. Split below so each child can carry its own heading.
         const written = storiesByGenre(topic.slug);
+        const children = childBeats(topic.slug);
+        const onParent = written.filter((story) => story.genre === topic.slug);
 
         return (
           <section
@@ -65,7 +70,7 @@ export default function Genres() {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <p className="rule-label">
-                    Beat {index + 1} of {GENRES.length}
+                    Beat {index + 1} of {TOP_BEATS.length}
                   </p>
                   <h2 className="font-display display-2 mt-3 font-semibold text-balance">
                     {topic.name}
@@ -98,6 +103,35 @@ export default function Genres() {
                   </div>
                 </div>
               </div>
+
+              {/* The ground this beat covers. A chip with work behind it is a
+                  link into the archive filtered to that subject; one without
+                  is deliberately not a link, because a filter that lands on
+                  an empty page is worse than no filter at all. */}
+              {children.length > 0 && (
+                <ul className="mt-7 flex flex-wrap items-center gap-2">
+                  {children.map((child) => {
+                    const count = storiesByGenre(child.slug).length;
+                    return (
+                      <li key={child.slug}>
+                        {count > 0 ? (
+                          <Link
+                            href={`#${child.slug}`}
+                            className="surface-compact focus-ring tap inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors duration-normal hover:border-accent/50 hover:text-primary"
+                          >
+                            {child.name}
+                            <span className="tabular-nums text-muted-foreground">{count}</span>
+                          </Link>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-dashed border-border px-3.5 py-1.5 text-xs font-semibold text-muted-foreground">
+                            {child.name}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </Reveal>
 
             {videos.length > 0 ? (
@@ -125,15 +159,15 @@ export default function Genres() {
             {/* Full cards, on the same grid as the reports above.
                 These used to be compact list rows — a date, a title, a line of
                 metadata — which was fine when writing was a footnote to the
-                video. It is not any more: three of the seven beats have no
-                video at all, and on those the compact rows were the entire
-                section, so the page showed a heading, two counts and a list
-                where every other beat showed work. Same card, same weight. */}
-            {written.length > 0 && (
+                video. It is not any more: most beats have no video at all, and
+                on those the compact rows were the entire section, so the page
+                showed a heading, two counts and a list where every other beat
+                showed work. Same card, same weight. */}
+            {onParent.length > 0 && (
               <div className={videos.length > 0 ? "mt-14" : "mt-10"}>
                 {videos.length > 0 && <p className="rule-label mb-6">Written on this beat</p>}
                 <Stagger className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-                  {written.map((story, i) => (
+                  {onParent.map((story, i) => (
                     <StaggerItem key={story.id} index={i}>
                       <StoryCard story={story} />
                     </StaggerItem>
@@ -141,6 +175,46 @@ export default function Genres() {
                 </Stagger>
               </div>
             )}
+
+            {/* One block per child that has work, each addressable on its own
+                — `/genres#science-conservation` is the page for that subject,
+                the same way the beat above it is. */}
+            {children.map((child) => {
+              const stories = storiesByGenre(child.slug);
+              if (stories.length === 0) return null;
+
+              return (
+                <div key={child.slug} id={child.slug} className="mt-14 scroll-mt-28">
+                  <Reveal variant="fade-up">
+                    <div className="flex flex-wrap items-end justify-between gap-4 border-t border-border pt-6">
+                      <div className="min-w-0">
+                        <p className="rule-label">{topic.name}</p>
+                        <h3 className="font-display display-3 mt-2 font-semibold text-balance">
+                          {child.name}
+                        </h3>
+                        <p className="mt-3 max-w-[56ch] leading-relaxed text-muted-foreground">
+                          {child.description}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        <span className="font-display text-base text-primary">
+                          {stories.length}
+                        </span>{" "}
+                        {stories.length === 1 ? "piece" : "pieces"}
+                      </p>
+                    </div>
+                  </Reveal>
+
+                  <Stagger className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                    {stories.map((story, i) => (
+                      <StaggerItem key={story.id} index={i}>
+                        <StoryCard story={story} />
+                      </StaggerItem>
+                    ))}
+                  </Stagger>
+                </div>
+              );
+            })}
           </section>
         );
       })}

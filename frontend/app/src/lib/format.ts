@@ -1,5 +1,21 @@
 /** Formatting helpers shared by the public site and the admin. */
 
+/**
+ * One locale, named.
+ *
+ * Every formatter here used to pass `undefined`, which means "whatever the
+ * runtime's default is" — and the runtime is two different machines. Node
+ * resolved to en-GB and rendered "27 February 2026" into the HTML; a browser
+ * set to en-US rendered "February 27, 2026" over the top of it, and React
+ * threw a hydration error on every story page and re-rendered the tree. A
+ * date is content, and content cannot depend on the reader's system settings
+ * without being wrong for half of them at build time.
+ *
+ * en-GB because it is the convention the site is written in and the one the
+ * published pages already carry: day before month, no comma.
+ */
+export const LOCALE = "en-GB";
+
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "long",
@@ -8,14 +24,14 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 
 export function formatDate(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(+date) ? iso : date.toLocaleDateString(undefined, DATE_FORMAT);
+  return Number.isNaN(+date) ? iso : date.toLocaleDateString(LOCALE, DATE_FORMAT);
 }
 
 export function formatShortDate(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(+date)
     ? iso
-    : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+    : date.toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** "3 days ago", "last month" — for admin lists where recency is the point. */
@@ -24,7 +40,7 @@ export function formatRelative(iso: string): string {
   if (Number.isNaN(then)) return iso;
 
   const diff = Date.now() - then;
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" });
   const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
     ["year", 31536000000],
     ["month", 2592000000],
@@ -57,7 +73,7 @@ export function formatDuration(totalSeconds: number): string {
 }
 
 export function formatCompact(value: number): string {
-  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+  return new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 }).format(
     value,
   );
 }

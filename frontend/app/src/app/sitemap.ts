@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { GENRES, publishedStories, storiesByGenre } from "@/data/content";
-import { VIDEOS } from "@/data/videos";
+import { GENRES, inGenre, publishedStories, storiesByGenre } from "@/data/content";
+import { VIDEOS, videoBeat } from "@/data/videos";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -54,7 +54,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const beatPages: MetadataRoute.Sitemap = GENRES.filter(
     (genre) =>
       storiesByGenre(genre.slug).length > 0 ||
-      VIDEOS.some((video) => video.topic === genre.slug),
+      VIDEOS.some((video) => inGenre(videoBeat(video), genre.slug)),
   ).map((genre) => ({
     url: `${SITE_URL}/genres#${genre.slug}`,
     changeFrequency: "monthly",

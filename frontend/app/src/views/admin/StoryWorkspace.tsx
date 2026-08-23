@@ -30,7 +30,7 @@ import {
   Type,
 } from "lucide-react";
 import type { Block, BlockType, Genre, Story, StoryStatus } from "@/data/types";
-import { GENRES, storyById } from "@/data/content";
+import { DEFAULT_BEAT, GENRES, storyById } from "@/data/content";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { formatRelative } from "@/lib/format";
@@ -45,6 +45,7 @@ import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
+import { BeatOptions } from "@/components/admin/BeatOptions";
 
 let idSeq = 0;
 const newId = () => `nb${Date.now()}-${++idSeq}`;
@@ -81,7 +82,7 @@ const BLANK: Story = {
   slug: "",
   title: "",
   dek: "",
-  genre: GENRES[0]?.slug ?? "features",
+  genre: DEFAULT_BEAT,
   tags: [],
   status: "draft",
   publishedAt: new Date().toISOString().slice(0, 10),
@@ -396,11 +397,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             >
               {/* Beats opened in the workspace are listed here too — a beat
                   you cannot file anything under is a beat you did not open. */}
-              {beats.map((g) => (
-                <option key={g.slug} value={g.slug}>
-                  {g.name}
-                </option>
-              ))}
+              <BeatOptions beats={beats} />
             </select>
           </label>
           <span aria-hidden className="h-3 w-px bg-border" />

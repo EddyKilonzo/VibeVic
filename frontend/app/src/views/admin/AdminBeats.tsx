@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Plus, Tags, Trash2 } from "lucide-react";
-import { GENRES, storiesByGenre } from "@/data/content";
-import { VIDEOS } from "@/data/videos";
+import { GENRES, inGenre, parentBeat, storiesByGenre } from "@/data/content";
+import { VIDEOS, videoBeat } from "@/data/videos";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -89,12 +89,29 @@ export default function AdminBeats() {
 
             <ul className="mt-5 divide-y divide-border">
               {GENRES.map((beat) => {
-                const reports = VIDEOS.filter((v) => v.topic === beat.slug).length;
+                const reports = VIDEOS.filter((v) => inGenre(videoBeat(v), beat.slug)).length;
                 const written = storiesByGenre(beat.slug).length;
+                const child = !!parentBeat(beat.slug);
                 return (
-                  <li key={beat.slug} className="flex items-baseline gap-4 py-3 first:pt-0">
+                  <li
+                    key={beat.slug}
+                    className={cn(
+                      "flex items-baseline gap-4 py-3 first:pt-0",
+                      // Indented rather than grouped into separate lists: the
+                      // whole point of this panel is that it is the filing
+                      // system, in filing order.
+                      child && "pl-4",
+                    )}
+                  >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{beat.name}</p>
+                      <p
+                        className={cn(
+                          "truncate text-sm",
+                          child ? "font-medium text-muted-foreground" : "font-semibold",
+                        )}
+                      >
+                        {beat.name}
+                      </p>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
                         /{beat.slug}
                       </p>

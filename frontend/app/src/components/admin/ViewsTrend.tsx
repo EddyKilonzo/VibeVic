@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { VIDEOS } from "@/data/videos";
+import { LOCALE } from "@/lib/format";
 
 /**
  * Views held by the catalogue, by publication month.
@@ -48,7 +49,7 @@ export function ViewsTrend() {
         const [y, m] = month.split("-");
         const previous = rows[rows.length - 1]?.cumulative ?? 0;
         rows.push({
-          month: new Date(Number(y), Number(m) - 1).toLocaleDateString(undefined, {
+          month: new Date(Number(y), Number(m) - 1).toLocaleDateString(LOCALE, {
             month: "short",
             year: "2-digit",
           }),
@@ -87,7 +88,7 @@ export function ViewsTrend() {
             axisLine={false}
             width={56}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-            tickFormatter={(v: number) => v.toLocaleString()}
+            tickFormatter={(v: number) => v.toLocaleString(LOCALE)}
           />
           <Tooltip
             cursor={{ stroke: "hsl(var(--accent))", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -99,7 +100,7 @@ export function ViewsTrend() {
               padding: "8px 10px",
             }}
             formatter={(value: number, name) => [
-              value.toLocaleString(),
+              value.toLocaleString(LOCALE),
               name === "cumulative" ? "Views to date" : "Added that month",
             ]}
           />

@@ -153,6 +153,31 @@ export const videosByTopic = (topic: TopicSlug): Video[] => VIDEOS.filter((v) =>
 export const topicName = (slug: TopicSlug): string =>
   TOPICS.find((t) => t.slug === slug)?.name ?? slug;
 
+/**
+ * Video topics, filed into the written taxonomy.
+ *
+ * The two vocabularies stay separate on purpose: `TOPICS` is what the channel
+ * publishes under and is what `/videos` filters by, while `GENRES` in
+ * `data/content` is what the site covers. Without a bridge between them the
+ * beats page — whose whole premise is reports and writing on one screen —
+ * would show every beat with zero reports the moment the beats stopped being
+ * named after the video topics.
+ *
+ * These four are judgement calls about where the existing reports belong, not
+ * facts about the videos: campus reporting from Eldoret is Kenyan news, the
+ * cultural-week pieces are art and culture, and the features have no narrower
+ * home than the catch-all. Change them here and the beats page follows.
+ */
+export const TOPIC_BEAT: Record<TopicSlug, string> = {
+  campus: "news-kenya",
+  culture: "lifestyle-art",
+  "student-life": "lifestyle",
+  features: "news",
+};
+
+/** The beat slug a video files under. */
+export const videoBeat = (video: Video): string => TOPIC_BEAT[video.topic] ?? "news";
+
 export const relatedVideos = (video: Video, limit = 3): Video[] => {
   const pool = VIDEOS.filter((v) => v.id !== video.id);
   const sameTopic = pool.filter((v) => v.topic === video.topic);

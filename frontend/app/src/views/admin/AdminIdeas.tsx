@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Lightbulb, Plus, Trash2 } from "lucide-react";
 import type { Genre, Story } from "@/data/types";
-import { GENRES, genreName } from "@/data/content";
+import { DEFAULT_BEAT, GENRES, genreLabel } from "@/data/content";
 import { allBeats } from "@/lib/beats";
 import { writeDraft } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import { notify } from "@/lib/toast";
 import { insert, remove, update, useNewsroom } from "@/data/newsroom/useNewsroom";
 import type { Idea, IdeaStage } from "@/data/newsroom/types";
 import { Reveal } from "@/components/motion";
+import { BeatOptions } from "@/components/admin/BeatOptions";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 
@@ -233,7 +234,7 @@ export default function AdminIdeas() {
                               </p>
                             )}
                             <p className="mt-1.5 text-xs text-muted-foreground">
-                              {genreName(idea.genre)} · added {formatRelative(idea.createdAt)}
+                              {genreLabel(idea.genre)} · added {formatRelative(idea.createdAt)}
                             </p>
                           </div>
 
@@ -324,7 +325,7 @@ export default function AdminIdeas() {
 function IdeaForm() {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [genre, setGenre] = useState(GENRES[0]?.slug ?? "features");
+  const [genre, setGenre] = useState(DEFAULT_BEAT);
   const [priority, setPriority] = useState<Idea["priority"]>("medium");
   const [beats, setBeats] = useState<Genre[]>(GENRES);
   const reduced = useReducedMotion();
@@ -399,11 +400,7 @@ function IdeaForm() {
           onChange={(e) => setGenre(e.target.value)}
           className="focus-ring mt-2 h-11 w-full rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-accent"
         >
-          {beats.map((b) => (
-            <option key={b.slug} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
+          <BeatOptions beats={beats} />
         </select>
 
         <p className="rule-label mt-5">Priority</p>

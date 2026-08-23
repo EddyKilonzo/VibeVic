@@ -14,10 +14,10 @@ import {
   YAxis,
 } from "recharts";
 import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
-import { GENRES, STORIES, storyBySlug } from "@/data/content";
+import { TOP_BEATS, STORIES, storyBySlug } from "@/data/content";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
 import { summariseAll } from "@/lib/voice/analytics";
-import { formatCompact, formatPercent, formatTime } from "@/lib/format";
+import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { Reveal } from "@/components/motion";
 import { StatCard } from "@/components/admin/StatCard";
 import { BeatShare } from "@/components/admin/BeatShare";
@@ -147,7 +147,7 @@ export default function Dashboard() {
               after there were seven, which is the failure mode of writing a
               count into a sentence. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            Reports and writing together, across all {GENRES.length} subjects.
+            Reports and writing together, across all {TOP_BEATS.length} beats.
           </p>
           <div className="mt-6">
             <BeatShare />
@@ -196,7 +196,7 @@ export default function Dashboard() {
                     fontSize: 12,
                     padding: "8px 10px",
                   }}
-                  formatter={(value: number) => [value.toLocaleString(), "Views"]}
+                  formatter={(value: number) => [value.toLocaleString(LOCALE), "Views"]}
                 />
                 {/* Recharts' own entrance, held to the system's slow token and
                     switched off entirely under reduced motion. */}
@@ -216,7 +216,7 @@ export default function Dashboard() {
                     position="right"
                     className="fill-muted-foreground"
                     fontSize={11}
-                    formatter={(v: number) => v.toLocaleString()}
+                    formatter={(v: number) => v.toLocaleString(LOCALE)}
                   />
                 </Bar>
               </BarChart>

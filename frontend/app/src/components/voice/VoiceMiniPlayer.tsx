@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Pause, Play, SkipForward, X } from "lucide-react";
+import { Pause, Play, RotateCcw, SkipBack, SkipForward, SlidersHorizontal, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import { transitions } from "@/lib/motion";
 import { useVoice } from "@/context/VoiceProvider";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { AudioBars } from "./AudioBars";
+import { FollowAlongToggle, SpeedMenu, VoiceMenu } from "./VoiceControls";
 
 /**
  * Mobile bottom player.
@@ -15,15 +18,41 @@ import { AudioBars } from "./AudioBars";
  * screen speculatively, and sits above the safe-area inset so it clears the
  * home indicator. The article gets matching bottom padding while it is
  * visible (see Story.tsx), so it cannot cover the last paragraph.
+ *
+ * ── Why the settings drawer exists ──────────────────────────────────────
+ * The full player is a desktop-width row, and on a phone it is scrolled far
+ * above the fold the moment listening starts — which left the reading voice
+ * and the speed reachable only by scrolling back up to a control they had
+ * already left behind. They live here too now, one tap away, in a drawer that
+ * is closed by default so the bar stays a bar.
  */
 export function VoiceMiniPlayer() {
-  const { state, article, elapsed, total, toggle, stop, nextChapter, preferences } = useVoice();
+  const {
+    state,
+    article,
+    elapsed,
+    total,
+    toggle,
+    stop,
+    restart,
+    nextChapter,
+    previousChapter,
+    preferences,
+  } = useVoice();
   const desktop = useIsDesktop();
   const reduced = useReducedMotion();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const visible = !desktop && !!article && (state === "playing" || state === "paused");
   const playing = state === "playing";
   const progress = total > 0 ? Math.min(1, elapsed / total) : 0;
+  const hasChapters = (article?.chapters.length ?? 0) > 1;
+
+  /* A drawer left open on a bar that has gone away would spring back open on
+     the next article. */
+  useEffect(() => {
+    if (!visible) setSettingsOpen(false);
+  }, [visible]);
 
   return (
     <AnimatePresence>
@@ -46,6 +75,42 @@ export function VoiceMiniPlayer() {
                 transition={{ duration: 0 }}
               />
             </div>
+
+            {/* The drawer sits above the transport, so the menus inside it —
+                which all open upward — have the whole screen to open into
+                rather than the 56px of bar below them. */}
+            <AnimatePresence initial={false}>
+              {settingsOpen && (
+                <motion.div
+                  key="settings"
+                  initial={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={transitions.normal}
+                  className="overflow-hidden border-b border-border/60"
+                >
+                  <div className="flex flex-wrap items-center gap-1 px-2 py-2">
+                    <MiniControl label="Restart from the beginning" onClick={restart}>
+                      <RotateCcw className="h-4 w-4" aria-hidden />
+                    </MiniControl>
+                    {hasChapters && (
+                      <MiniControl label="Previous section" onClick={previousChapter}>
+                        <SkipBack className="h-4 w-4" aria-hidden />
+                      </MiniControl>
+                    )}
+
+                    <span aria-hidden className="mx-1 h-5 w-px bg-border" />
+
+                    {/* Upward: this row sits on the bottom edge of the
+                        screen, so a panel opening downward would open into
+                        the home indicator. */}
+                    <SpeedMenu placement="up" />
+                    <VoiceMenu placement="up" />
+                    <FollowAlongToggle />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex items-center gap-3 px-4 py-2.5">
               <button
@@ -84,6 +149,18 @@ export function VoiceMiniPlayer() {
 
               <button
                 type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                aria-expanded={settingsOpen}
+                aria-label="Voice and speed"
+                className={cn(
+                  "focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors duration-normal",
+                  settingsOpen ? "bg-secondary text-primary" : "text-muted-foreground",
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
                 onClick={nextChapter}
                 aria-label="Next section"
                 className="focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground"
@@ -103,5 +180,27 @@ export function VoiceMiniPlayer() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function MiniControl({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="focus-ring tap-square flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
+    >
+      {children}
+    </button>
   );
 }

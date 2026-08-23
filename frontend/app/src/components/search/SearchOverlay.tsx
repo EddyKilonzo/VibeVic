@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CornerDownLeft, Search as SearchIcon } from "lucide-react";
-import { genreName, searchStories } from "@/data/content";
+import { genreLabel, searchStories } from "@/data/content";
 import { formatShortDate } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -162,7 +162,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                           {story.title}
                         </span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {genreName(story.genre)} · {formatShortDate(story.publishedAt)} ·{" "}
+                          {genreLabel(story.genre)} · {formatShortDate(story.publishedAt)} ·{" "}
                           {story.readingMinutes} min
                         </span>
                       </span>

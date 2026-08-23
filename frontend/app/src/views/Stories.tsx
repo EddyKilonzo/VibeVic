@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bookmark } from "lucide-react";
-import { GENRES } from "@/data/content";
+import { TOP_BEATS, childBeats, genreBySlug, inGenre } from "@/data/content";
 import { api } from "@/data/api";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
@@ -29,10 +29,21 @@ export default function Stories() {
 
   const stories = useMemo(() => {
     let list = data ?? [];
-    if (genre !== "all") list = list.filter((s) => s.genre === genre);
+    // `inGenre`, not equality: picking News has to bring back the pieces filed
+    // under Kenya and Africa, or the parent chips would all read empty.
+    if (genre !== "all") list = list.filter((s) => inGenre(s.genre, genre));
     if (savedOnly) list = list.filter((s) => slugs.includes(s.slug));
     return list;
   }, [data, genre, savedOnly, slugs]);
+
+  /**
+   * The top-level beat currently in play.
+   *
+   * A child filter keeps its parent's chip lit and its sibling row open, so
+   * moving between Kenya and Africa never looks like leaving News.
+   */
+  const activeParent = genre === "all" ? null : (genreBySlug(genre)?.parent ?? genre);
+  const siblings = activeParent ? childBeats(activeParent) : [];
 
   // Filtering is not navigation — `useQueryParams` keeps the reader in place.
   const setFilter = (next: Record<string, string | null>) => setParams(next);
@@ -57,10 +68,10 @@ export default function Stories() {
           <FilterChip active={genre === "all"} onClick={() => setFilter({ genre: null })}>
             All
           </FilterChip>
-          {GENRES.map((g) => (
+          {TOP_BEATS.map((g) => (
             <FilterChip
               key={g.slug}
-              active={genre === g.slug}
+              active={genre === g.slug || activeParent === g.slug}
               onClick={() => setFilter({ genre: g.slug })}
             >
               {g.name}
@@ -85,6 +96,44 @@ export default function Stories() {
             {slugs.length > 0 && <span className="tabular-nums opacity-70">{slugs.length}</span>}
           </FilterChip>
         </div>
+
+        {/* The subjects inside the chosen beat, revealed only once one is
+            chosen. Showing all twenty-one at once would put the filter bar
+            four rows deep before a reader has expressed any interest, and the
+            second row is where the archive actually gets specific. */}
+        <AnimatePresence initial={false}>
+          {siblings.length > 0 && (
+            <motion.div
+              key={activeParent}
+              initial={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              transition={transitions.normal}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-wrap items-center gap-2 pt-3">
+                <span className="rule-label mr-1">In this beat</span>
+                <FilterChip
+                  active={genre === activeParent}
+                  onClick={() => setFilter({ genre: activeParent })}
+                  pillId="beat-child-pill"
+                >
+                  All
+                </FilterChip>
+                {siblings.map((child) => (
+                  <FilterChip
+                    key={child.slug}
+                    active={genre === child.slug}
+                    onClick={() => setFilter({ genre: child.slug })}
+                    pillId="beat-child-pill"
+                  >
+                    {child.name}
+                  </FilterChip>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Reveal>
 
       <div className="mt-14 min-h-[40vh]">

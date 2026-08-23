@@ -3,10 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, GraduationCap, Headphones, MapPin, Youtube } from "lucide-react";
-import { GENRES, PROFILE, SOCIAL_ACCOUNTS, publishedStories, storiesByGenre } from "@/data/content";
+import {
+  PROFILE,
+  SOCIAL_ACCOUNTS,
+  TOP_BEATS,
+  childBeats,
+  inGenre,
+  publishedStories,
+  storiesByGenre,
+} from "@/data/content";
 import { AGAINST_WALL, PORTRAIT, SHOOTING, WITH_CAMERA } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
-import { CHANNEL, VIDEOS, longFormVideos, totalViews } from "@/data/videos";
+import { CHANNEL, VIDEOS, longFormVideos, totalViews, videoBeat } from "@/data/videos";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -149,7 +157,7 @@ export default function Home() {
             {/* The beats, on hairlines — real links, not decoration. */}
             <div data-seq="decor" className="rail mt-8 w-full sm:mt-10">
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {GENRES.map((topic) => (
+                {TOP_BEATS.map((topic) => (
                   <Link
                     key={topic.slug}
                     href={`/genres#${topic.slug}`}
@@ -392,17 +400,17 @@ export default function Home() {
             narrow ones stay terse. The count is real: it is how many reports
             are filed under that beat. */}
         <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5" step="tight">
-          {/* Iterates GENRES, not the four video topics: three of the beats
-              exist only in the writing, and a "what I cover" section that
-              omits what he covers is the one thing it cannot do. Every third
-              cell runs wide so seven read as woven rows rather than a wall. */}
-          {GENRES.map((topic, i) => {
-            const span = beatSpan(i, GENRES.length);
+          {/* The six top-level beats, not all twenty-one: the subjects under
+              each are named inside the cell instead, which keeps the section
+              a summary of what the site covers rather than a directory of it.
+              Video counts come through `videoBeat`, since the channel files
+              against its own four topics. */}
+          {TOP_BEATS.map((topic, i) => {
+            const span = beatSpan(i, TOP_BEATS.length);
             const wide = isWideBeat(span);
-            // Compared as plain strings: `topic.slug` is a genre, and three of
-            // the genres are deliberately not video topics.
-            const count = VIDEOS.filter((video) => video.topic === topic.slug).length;
+            const count = VIDEOS.filter((video) => inGenre(videoBeat(video), topic.slug)).length;
             const written = storiesByGenre(topic.slug).length;
+            const children = childBeats(topic.slug);
 
             return (
               <StaggerItem
@@ -461,6 +469,15 @@ export default function Home() {
                     >
                       {topic.description}
                     </p>
+                    {/* The subjects under this beat, named rather than
+                        counted. A reader deciding whether "Lifestyle" is for
+                        them is answered by "Health & Nutrition · Travel" and
+                        not at all by "5 subjects". */}
+                    {children.length > 0 && (
+                      <p className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+                        {children.map((child) => child.name).join(" · ")}
+                      </p>
+                    )}
                     <ArrowUpRight
                       className="nudge-x relative mt-5 h-4 w-4 text-muted-foreground transition-colors group-hover:text-accent"
                       aria-hidden

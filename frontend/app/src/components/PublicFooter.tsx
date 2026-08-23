@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { GENRES, PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import { PROFILE, SOCIAL_ACCOUNTS, TOP_BEATS, childBeats } from "@/data/content";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { SocialIcon } from "@/components/social/SocialIcon";
@@ -128,17 +128,34 @@ export function PublicFooter() {
             <Stagger
               as="ul"
               step="tight"
-              className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 md:grid-cols-1"
+              className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-1"
             >
-              {GENRES.map((topic, i) => (
+              {/* Parent, then the subjects under it — the same tree the beats
+                  page renders, which is what makes a footer worth reading
+                  rather than a second copy of the nav. The children are set
+                  smaller and quieter so the six stay scannable. */}
+              {TOP_BEATS.map((topic, i) => (
                 <StaggerItem key={topic.slug} index={i}>
                   <Reveal variant="fade" as="li">
                     <Link
                       href={`/genres#${topic.slug}`}
-                      className="focus-ring underline-grow tap inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
+                      className="focus-ring underline-grow tap inline-flex items-center text-sm font-semibold text-foreground transition-colors hover:text-primary"
                     >
                       {topic.name}
                     </Link>
+                    {childBeats(topic.slug).length > 0 && (
+                      <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                        {childBeats(topic.slug).map((child) => (
+                          <Link
+                            key={child.slug}
+                            href={`/genres#${child.slug}`}
+                            className="focus-ring tap text-xs text-muted-foreground transition-colors hover:text-primary"
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </span>
+                    )}
                   </Reveal>
                 </StaggerItem>
               ))}

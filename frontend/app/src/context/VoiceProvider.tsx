@@ -87,6 +87,16 @@ interface VoiceContextValue {
   seekToSegment: (index: number) => void;
   setRate: (rate: PlaybackRate) => void;
   setVoice: (voiceId: string | null) => void;
+  /**
+   * Speak one line in a voice, without choosing it.
+   *
+   * Reading the article is the only way to find out what a voice sounds like
+   * otherwise, and "Microsoft Zira" tells nobody anything. Returns the id
+   * currently sampling, via `sampling`, so the row can show it.
+   */
+  previewVoice: (voiceId: string) => void;
+  /** Voice id being sampled right now, or null. */
+  sampling: string | null;
   setFollowAlong: (enabled: boolean) => void;
   setVolume: (volume: number) => void;
 }
@@ -365,6 +375,49 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     [setPreferences],
   );
 
+  /**
+   * The sample line.
+   *
+   * One sentence, ordinary punctuation, no proper nouns a synthesiser will
+   * mangle differently from one voice to the next — the point is to compare
+   * the voices, not their handling of "Kiplimo".
+   */
+  const [sampling, setSampling] = useState<string | null>(null);
+
+  const previewVoice = useCallback(
+    (voiceId: string) => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      const synth = window.speechSynthesis;
+      const native = synth.getVoices().find((v) => v.voiceURI === voiceId);
+      if (!native) return;
+
+      /* Playback and the sample share one synthesiser, so the article has to
+         give way. Pausing rather than stopping keeps the place: the engine's
+         `resume` already copes with a queue that was cleared underneath it by
+         re-speaking the current sentence. */
+      if (state === "playing") engineRef.current?.pause();
+
+      synth.cancel();
+      // `cancel` on a paused synth leaves it paused, and a paused synth will
+      // not speak anything new — including this.
+      synth.resume();
+
+      const utterance = new SpeechSynthesisUtterance(
+        "This is how the article will sound in this voice.",
+      );
+      utterance.voice = native;
+      utterance.lang = native.lang;
+      utterance.rate = preferences.rate;
+      utterance.volume = preferences.volume;
+      utterance.onend = () => setSampling((id) => (id === voiceId ? null : id));
+      utterance.onerror = () => setSampling((id) => (id === voiceId ? null : id));
+
+      setSampling(voiceId);
+      synth.speak(utterance);
+    },
+    [state, preferences.rate, preferences.volume],
+  );
+
   const setFollowAlong = useCallback(
     (followAlong: boolean) => setPreferences((p) => ({ ...p, followAlong })),
     [setPreferences],
@@ -423,6 +476,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     seekToSegment: seekSegment,
     setRate,
     setVoice,
+    previewVoice,
+    sampling,
     setFollowAlong,
     setVolume,
   };

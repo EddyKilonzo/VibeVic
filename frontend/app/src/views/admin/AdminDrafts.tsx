@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { FileText, PenLine, Trash2 } from "lucide-react";
-import { genreName } from "@/data/content";
+import { genreLabel } from "@/data/content";
 import { formatRelative } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -125,7 +125,7 @@ export default function AdminDrafts() {
                           )}
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {genreName(record.story.genre)} · {words}{" "}
+                          {genreLabel(record.story.genre)} · {words}{" "}
                           {words === 1 ? "word" : "words"} · saved here{" "}
                           {formatRelative(record.savedAt)}
                         </p>

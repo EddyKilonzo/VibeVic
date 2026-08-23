@@ -1,7 +1,7 @@
 "use client";
 
-import { GENRES, storiesByGenre } from "@/data/content";
-import { VIDEOS } from "@/data/videos";
+import { TOP_BEATS, inGenre, storiesByGenre } from "@/data/content";
+import { VIDEOS, videoBeat } from "@/data/videos";
 
 /**
  * How the work divides across the beats.
@@ -25,8 +25,11 @@ import { VIDEOS } from "@/data/videos";
  * total; the label breaks it down.
  */
 export function BeatShare() {
-  const rows = GENRES.map((genre) => {
-    const reports = VIDEOS.filter((video) => video.topic === genre.slug).length;
+  // The six, each counting its own children: a chart with twenty-one rows,
+  // most of them empty, would say less about where the work goes than one
+  // with six.
+  const rows = TOP_BEATS.map((genre) => {
+    const reports = VIDEOS.filter((video) => inGenre(videoBeat(video), genre.slug)).length;
     const written = storiesByGenre(genre.slug).length;
     return { slug: genre.slug, name: genre.name, reports, written, total: reports + written };
   })

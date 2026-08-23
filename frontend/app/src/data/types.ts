@@ -110,6 +110,18 @@ export interface Genre {
   slug: string;
   name: string;
   description: string;
+  /**
+   * The beat this one sits under, if any.
+   *
+   * A flat list of twenty-one subjects is not a taxonomy, it is a wall — so
+   * the archive is two levels: six beats a reader can hold in their head, and
+   * the specific subjects underneath them. Only one level of nesting exists
+   * and nothing here should add a second: a story is filed against exactly
+   * one slug, parent or child, and everything that counts work under a parent
+   * (`storiesByGenre`, the beats page, the filters) walks the family rather
+   * than assuming a story sits on the parent itself.
+   */
+  parent?: string;
 }
 
 export interface Publication {

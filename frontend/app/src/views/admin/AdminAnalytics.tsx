@@ -6,7 +6,7 @@ import { BarChart3, Eye, Headphones, Info, Youtube } from "lucide-react";
 import { CHANNEL, VIDEOS, longFormVideos, shorts, topicName, totalViews, watchUrl } from "@/data/videos";
 import { STORIES, storyBySlug } from "@/data/content";
 import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
-import { formatCompact, formatPercent, formatTime } from "@/lib/format";
+import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/motion";
 import { StatCard } from "@/components/admin/StatCard";
@@ -231,7 +231,7 @@ export default function AdminAnalytics() {
 
                 <div className="shrink-0 text-right">
                   <p className="font-display text-lg font-semibold tabular-nums text-primary">
-                    {video.views.toLocaleString()}
+                    {video.views.toLocaleString(LOCALE)}
                   </p>
                   <p className="text-[11px] tabular-nums text-muted-foreground">
                     {formatPercent(share, 1)} of views

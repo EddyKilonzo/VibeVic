@@ -1,6 +1,7 @@
 import type { Block, Story } from "@/data/types";
 import type { Entity } from "@/data/newsroom/types";
 import type { ChecklistItem, Finding } from "./types";
+import { genreLabel } from "@/data/content";
 import { STOP_WORDS, sentences, textUnits, words } from "./text";
 
 /**
@@ -319,7 +320,7 @@ export function prePublicationChecklist(
       id: "genre",
       label: "Beat assigned",
       state: story.genre ? "met" : "unmet",
-      because: story.genre ? `Filed under ${story.genre}.` : "No beat chosen, so this will not appear under any topic.",
+      because: story.genre ? `Filed under ${genreLabel(story.genre)}.` : "No beat chosen, so this will not appear under any topic.",
     },
     {
       id: "length",

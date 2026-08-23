@@ -3,19 +3,18 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
+import { Clock, Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
 import type { Story, StoryStatus } from "@/data/types";
 import { api } from "@/data/api";
-import { genreName } from "@/data/content";
-import { formatRelative } from "@/lib/format";
+import { genreLabel } from "@/data/content";
+import { LOCALE, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
 import { useAsync } from "@/hooks/useAsync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { storyCover } from "@/lib/cover";
-import { ImageReveal } from "@/components/motion";
-import { Reveal } from "@/components/motion";
+import { ImageReveal, Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/States";
@@ -39,6 +38,43 @@ const STATUS_STYLE: Record<StoryStatus, string> = {
   scheduled: "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35",
   draft: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
 };
+
+/** The dot inside the pill — decoration, riding the pill's own fill. */
+const STATUS_DOT: Record<StoryStatus, string> = {
+  published: "bg-primary-foreground",
+  scheduled: "bg-accent",
+  draft: "bg-muted-foreground/50",
+};
+
+/**
+ * The card's left edge, coloured by state.
+ *
+ * Decoration on top of the pill, never instead of it: a 3px bar carries no
+ * text and says nothing to anything that does not see colour, so the pill
+ * beside it stays the thing that actually names the state. What the bar buys
+ * is scanning — a column of twenty cards sorts itself before a single word
+ * has been read.
+ */
+const STATUS_EDGE: Record<StoryStatus, string> = {
+  published: "bg-primary",
+  scheduled: "bg-accent",
+  draft: "bg-border",
+};
+
+function StatusPill({ status, className }: { status: StoryStatus; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
+        STATUS_STYLE[status],
+        className,
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[status])} aria-hidden />
+      {status}
+    </span>
+  );
+}
 
 export default function AdminStories() {
   const { data, loading } = useAsync(() => api.allStories(), []);
@@ -161,14 +197,15 @@ export default function AdminStories() {
         </div>
       </Reveal>
 
-      {/* The grid is a set of cards on the page ground, not rows inside one
-          panel — so the container only becomes a `.surface` in list view.
-          A card grid inside a card is two borders describing one thing. */}
-      <div className={cn("mt-6", view === "list" && "surface overflow-hidden")}>
+      {/* Both views are cards on the page ground, so neither sits inside a
+          panel — a card list inside a card is two borders describing one
+          thing. What separates them is density: the list is one wide card per
+          story with a thumbnail, the grid is a cover-led tile. */}
+      <div className="mt-6">
         {loading ? (
-          view === "grid" ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }, (_, i) => (
+          <div className={cn("grid", view === "grid" ? "gap-4 sm:grid-cols-2 xl:grid-cols-3" : "gap-3")}>
+            {Array.from({ length: view === "grid" ? 6 : 5 }, (_, i) =>
+              view === "grid" ? (
                 <div key={i} className="surface overflow-hidden">
                   <Skeleton className="aspect-[16/10] w-full rounded-none" />
                   <div className="space-y-2 p-4">
@@ -176,24 +213,22 @@ export default function AdminStories() {
                     <Skeleton className="h-3 w-1/2" />
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {Array.from({ length: 5 }, (_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4">
-                  <Skeleton className="h-4 flex-1" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
+              ) : (
+                <div key={i} className="surface flex items-center gap-4 p-4">
+                  <Skeleton className="hidden h-[58px] w-[92px] shrink-0 rounded-lg sm:block" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/5" />
+                    <Skeleton className="h-3 w-2/5" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
                 </div>
-              ))}
-            </div>
-          )
+              ),
+            )}
+          </div>
         ) : stories.length === 0 ? (
           <EmptyState
             title="No stories match"
             description="Try a different filter, or start something new."
-            className={view === "list" ? "border-0" : undefined}
             action={
               <Button as={Link} href="/admin/stories/new" variant="outline" size="sm">
                 New story
@@ -226,14 +261,10 @@ export default function AdminStories() {
                         sizes="(min-width: 1280px) 320px, (min-width: 640px) 45vw, 90vw"
                         className="media-zoom h-full w-full"
                       />
-                      <span
-                        className={cn(
-                          "absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize shadow-raised",
-                          STATUS_STYLE[story.status],
-                        )}
-                      >
-                        {story.status}
-                      </span>
+                      <StatusPill
+                        status={story.status}
+                        className="absolute left-3 top-3 shadow-raised"
+                      />
                     </div>
                   </Link>
 
@@ -244,14 +275,14 @@ export default function AdminStories() {
                       </p>
                     </Link>
                     <p className="mt-1.5 text-xs text-muted-foreground">
-                      {genreName(story.genre)} · edited {formatRelative(story.updatedAt)}
+                      {genreLabel(story.genre)} · edited {formatRelative(story.updatedAt)}
                     </p>
 
                     <div className="mt-auto flex items-center gap-3 pt-4">
                       {story.stats && (
                         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Headphones className="icon-lean h-3.5 w-3.5" aria-hidden />
-                          {story.stats.listens.toLocaleString()}
+                          {story.stats.listens.toLocaleString(LOCALE)}
                         </span>
                       )}
                       <button
@@ -269,7 +300,7 @@ export default function AdminStories() {
             </AnimatePresence>
           </ul>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="grid gap-3">
             <AnimatePresence initial={false}>
               {stories.map((story, i) => (
                 <motion.li
@@ -281,45 +312,74 @@ export default function AdminStories() {
                     y: 0,
                     transition: { ...transitions.normal, delay: Math.min(i, 8) * stagger.tight },
                   }}
-                  exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12, height: 0 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
                   transition={transitions.normal}
-                  className="group relative overflow-hidden"
+                  className="surface surface-hover group relative overflow-hidden"
                 >
-                  <div className="flex items-center gap-4 p-4 transition-colors duration-normal hover:bg-secondary/50">
+                  <span
+                    aria-hidden
+                    className={cn("absolute inset-y-0 left-0 w-[3px]", STATUS_EDGE[story.status])}
+                  />
+
+                  <div className="flex items-center gap-4 py-3 pl-4 pr-3 sm:gap-5 sm:py-4 sm:pl-5 sm:pr-4">
+                    {/* The cover, repeated from the destination the title
+                        already links to — so it is hidden from assistive tech
+                        and skipped by the keyboard rather than read out as a
+                        second identical link. */}
                     <Link
                       href={`/admin/stories/${story.id}`}
-                      className="focus-ring min-w-0 flex-1"
+                      tabIndex={-1}
+                      aria-hidden
+                      className="hidden h-[58px] w-[92px] shrink-0 overflow-hidden rounded-lg bg-secondary sm:block"
                     >
-                      <p className="truncate font-semibold tracking-tight">{story.title}</p>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {genreName(story.genre)} · edited {formatRelative(story.updatedAt)}
-                      </p>
+                      <ImageReveal
+                        src={storyCover(story)}
+                        alt=""
+                        ratio="16/10"
+                        sizes="92px"
+                        className="media-zoom h-full w-full"
+                      />
                     </Link>
 
-                    {story.stats && (
-                      <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                        <Headphones className="icon-lean h-3.5 w-3.5" aria-hidden />
-                        {story.stats.listens.toLocaleString()}
+                    <Link href={`/admin/stories/${story.id}`} className="focus-ring min-w-0 flex-1">
+                      <p className="font-display truncate text-[15px] font-semibold leading-snug tracking-tight">
+                        {story.title}
+                      </p>
+                      <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span className="truncate">{genreLabel(story.genre)}</span>
+                        <span aria-hidden className="text-border">
+                          ·
+                        </span>
+                        <span>edited {formatRelative(story.updatedAt)}</span>
+                        <span aria-hidden className="hidden text-border sm:inline">
+                          ·
+                        </span>
+                        <span className="hidden items-center gap-1.5 sm:inline-flex">
+                          <Clock className="icon-lean h-3.5 w-3.5" aria-hidden />
+                          {story.readingMinutes} min
+                        </span>
                       </span>
-                    )}
+                    </Link>
 
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-                        STATUS_STYLE[story.status],
+                    <div className="flex shrink-0 items-center gap-3">
+                      {story.stats && (
+                        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
+                          <Headphones className="icon-lean h-3.5 w-3.5" aria-hidden />
+                          {story.stats.listens.toLocaleString(LOCALE)}
+                        </span>
                       )}
-                    >
-                      {story.status}
-                    </span>
 
-                    <button
-                      type="button"
-                      onClick={() => remove(story)}
-                      aria-label={`Delete ${story.title}`}
-                      className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </button>
+                      <StatusPill status={story.status} />
+
+                      <button
+                        type="button"
+                        onClick={() => remove(story)}
+                        aria-label={`Delete ${story.title}`}
+                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
                   </div>
                 </motion.li>
               ))}

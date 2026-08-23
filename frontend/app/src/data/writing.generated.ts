@@ -12,7 +12,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "slug": "odm-leader-condemns-derogatory-remarks-at-odm-rally",
     "title": "ODM leader condemns derogatory remarks at ODM rally",
     "dek": "In Summary Orange Democratic Movement party leader Oburu Oginga has strongly denounced the use of sexually offensive language at ODM’s party rally in Ragumo, Kisumu County, on Wednesday.",
-    "genre": "politics",
+    "genre": "news-kenya",
     "tags": [
       "Catherine Omenya",
       "kenya politics",
@@ -122,7 +122,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "slug": "the-age-of-kenyas-tech-powered-conservation",
     "title": "The Age of Kenya’s Tech-Powered Conservation",
     "dek": "For millennia, humans and wildlife have had an unstable relationship, with human civilizations constantly encroaching on animal territories while the wild struggles to fight the losing…",
-    "genre": "environment",
+    "genre": "science-conservation",
     "tags": [
       "animals",
       "conservation",
@@ -384,7 +384,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "slug": "from-imposter-syndrome-to-breakthroughs-the-untold-human-side-of-internships-in-kenya",
     "title": "From Imposter Syndrome to Breakthroughs: The Untold Human Side of Internships in Kenya",
     "dek": "As the Kenyan professional landscape continues to evolve, young talents are stepping into the ring, eager to carve their paths.",
-    "genre": "student-life",
+    "genre": "lifestyle-productivity",
     "tags": [
       "imposter-syndrome",
       "mental-health",
@@ -502,7 +502,7 @@ export const WORDPRESS_STORIES: Story[] = [
     "slug": "drug-misuse-and-microbial-resistance-in-poultry-farming",
     "title": "Drug misuse and microbial resistance in poultry farming",
     "dek": "My aunt and uncle recently ventured into poultry farming.",
-    "genre": "science",
+    "genre": "agriculture",
     "tags": [
       "Agriculture",
       "antibiotics",

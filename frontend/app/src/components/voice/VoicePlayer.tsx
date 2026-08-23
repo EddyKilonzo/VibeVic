@@ -97,7 +97,10 @@ export function VoicePlayer({
       layout={reduced ? false : "position"}
       transition={transitions.normal}
       className={cn(
-        "surface p-4 sm:p-5",
+        // Roomier than the surfaces around it on purpose: this one holds a
+        // 48px control, a status line and a scrubber, and at p-4 the three
+        // sat on top of each other with the time reading flush to the edge.
+        "surface p-5 sm:p-6",
         className,
       )}
     >
@@ -129,18 +132,29 @@ export function VoicePlayer({
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <AudioBars active={playing} className="text-accent" />
-              {preparing
-                ? "Preparing audio…"
-                : state === "ended"
-                  ? "Finished"
-                  : hasChapters
-                    ? article.chapters[article.segments[segmentIndex]?.chapterIndex ?? 0]?.title
-                    : "Listening"}
+          {/* Wraps before it truncates.
+              This row lives in two very different boxes: the full-width
+              player under a standfirst, and the 240px sticky rail beside the
+              article. In the rail, label and clock together need more than
+              the ~130px left over after the play button, and squeezing them
+              onto one line turned "Listening" into "Li…". Letting the clock
+              drop to its own line costs 18px of height and keeps both
+              readable. `ml-auto` right-aligns it either way; the label still
+              truncates, because a chapter title can be any length at all. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 pb-0.5">
+            <p className="flex min-w-0 items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <AudioBars active={playing} className="shrink-0 text-accent" />
+              <span className="truncate">
+                {preparing
+                  ? "Preparing audio…"
+                  : state === "ended"
+                    ? "Finished"
+                    : hasChapters
+                      ? article.chapters[article.segments[segmentIndex]?.chapterIndex ?? 0]?.title
+                      : "Listening"}
+              </span>
             </p>
-            <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            <p className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">
               {formatTime(elapsed)}{" "}
               <span className="text-border">/</span>{" "}
               <span aria-label={`${formatTime(total - elapsed)} remaining`}>
@@ -169,7 +183,7 @@ export function VoicePlayer({
                 seekToSegment(Math.max(0, segmentIndex - 1));
               }
             }}
-            className="focus-ring group relative mt-2 h-6 cursor-pointer"
+            className="focus-ring group relative mt-2.5 h-6 cursor-pointer"
           >
             <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 overflow-hidden rounded-full bg-border">
               <motion.div
@@ -200,7 +214,7 @@ export function VoicePlayer({
       </div>
 
       {/* Secondary controls */}
-      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-border pt-3">
+      <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-border pt-3">
         <IconControl label="Restart from the beginning" onClick={restart}>
           <RotateCcw className="h-4 w-4" aria-hidden />
         </IconControl>

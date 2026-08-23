@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifyToken } from "@/lib/newsroom-token";
 
 /**
  * Access control for the newsroom.
@@ -32,13 +33,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE = "vv_newsroom";
 
-/** Web Crypto — the Node crypto module is not available in the edge runtime. */
-async function hash(value: string): Promise<string> {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -46,13 +40,27 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/newsroom-access") return NextResponse.next();
 
   const passphrase = process.env.NEWSROOM_PASSPHRASE;
-  const expected = passphrase ? await hash(passphrase) : null;
-  const presented = request.cookies.get(COOKIE)?.value;
+  const ok = await verifyToken(request.cookies.get(COOKIE)?.value);
 
-  if (expected && presented === expected) return NextResponse.next();
+  if (ok) return NextResponse.next();
+
+  /*
+   * An unauthenticated API call is answered, not redirected.
+   *
+   * A 307 to an HTML sign-in page is a useless reply to `fetch`, and the
+   * caller has to guess from a Content-Type that it was refused rather than
+   * served. 401 is the answer to the question that was actually asked.
+   */
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { error: passphrase ? "Not signed in to the newsroom." : "The newsroom is not configured." },
+      { status: 401 },
+    );
+  }
 
   const signIn = request.nextUrl.clone();
   signIn.pathname = "/newsroom-access";
+  signIn.search = "";
   // So a successful sign-in lands where they were headed.
   signIn.searchParams.set("next", pathname);
   if (!passphrase) signIn.searchParams.set("unconfigured", "1");
@@ -61,6 +69,15 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Every admin route, and nothing else. The public site is untouched.
-  matcher: ["/admin/:path*"],
+  /*
+   * The workspace, and the endpoints that serve it.
+   *
+   * `/admin/:path*` used to be the whole matcher, which quietly meant every
+   * route under `/api` was open — including one that spends money on a
+   * language model per call. A route being private has to be a property of
+   * where it lives, not something each handler remembers to check for
+   * itself; the handlers check anyway, because two locks on a door that
+   * costs money is the right number.
+   */
+  matcher: ["/admin/:path*", "/api/newsroom/:path*"],
 };

@@ -1,15 +1,44 @@
 import { Lock, ShieldAlert } from "lucide-react";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createHash, timingSafeEqual } from "node:crypto";
+import { SESSION_SECONDS, issueToken } from "@/lib/newsroom-token";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/motion";
 
 const COOKIE = "vv_newsroom";
-const MAX_AGE = 60 * 60 * 12; // Twelve hours — one working day, not forever.
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/**
+ * Failed attempts, per address, in this instance's memory.
+ *
+ * ── What this is and is not ──────────────────────────────────────────────
+ * It is a speed bump. Serverless instances come and go and do not share
+ * memory, so a determined attacker gets a fresh allowance whenever a new
+ * instance answers — this cannot be an access control and is not written as
+ * one. What it does buy is that the obvious attack, a script hammering one
+ * instance with a wordlist, stops being free.
+ *
+ * The real answer is a rate-limiting rule at the edge (Vercel WAF) or a
+ * shared store. Both are worth having; neither is a reason to leave the door
+ * ungated in the meantime.
+ */
+const attempts = new Map<string, { count: number; first: number }>();
+const WINDOW_MS = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 8;
+
+function tooManyAttempts(key: string): boolean {
+  const now = Date.now();
+  const seen = attempts.get(key);
+  if (!seen || now - seen.first > WINDOW_MS) {
+    attempts.set(key, { count: 1, first: now });
+    return false;
+  }
+  seen.count += 1;
+  return seen.count > MAX_ATTEMPTS;
 }
 
 /**
@@ -32,20 +61,44 @@ async function signIn(formData: FormData) {
 
   if (!passphrase) redirect("/newsroom-access?unconfigured=1");
 
+  // Keyed on the forwarded address. Spoofable, and it does not matter: this
+  // slows a script down, it does not decide who gets in.
+  const caller = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (tooManyAttempts(caller)) {
+    redirect(`/newsroom-access?error=1&next=${encodeURIComponent(next)}`);
+  }
+
   const a = Buffer.from(digest(passphrase));
   const b = Buffer.from(digest(submitted));
   const ok = a.length === b.length && timingSafeEqual(a, b);
 
   if (!ok) {
+    // A fixed pause on failure. Cheap for a person typing a passphrase once,
+    // expensive for anything trying a list of them.
+    await new Promise((resolve) => setTimeout(resolve, 400));
     redirect(`/newsroom-access?error=1&next=${encodeURIComponent(next)}`);
   }
 
-  (await cookies()).set(COOKIE, digest(passphrase), {
+  attempts.delete(caller);
+
+  /*
+   * A signed, expiring session — not the passphrase's hash.
+   *
+   * The cookie used to be a deterministic function of the secret: the same
+   * value on every device, valid until the passphrase itself changed, and
+   * expiring only because the browser had been asked nicely to forget it.
+   * The server states the expiry inside the token now and signs it, so a
+   * cookie that outlives its window is refused rather than honoured.
+   */
+  const token = await issueToken();
+  if (!token) redirect("/newsroom-access?unconfigured=1");
+
+  (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: MAX_AGE,
+    maxAge: SESSION_SECONDS,
   });
 
   // Only ever to a path on this site — an open redirect on a sign-in form is

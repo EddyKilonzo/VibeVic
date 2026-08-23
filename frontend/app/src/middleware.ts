@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { NEWSROOM_BASE, NEWSROOM_MOVED, ROUTE_ROOT } from "@/lib/newsroom-path";
 import { verifyToken } from "@/lib/newsroom-token";
 
 /**
@@ -39,10 +40,42 @@ export async function middleware(request: NextRequest) {
   // The sign-in page itself must stay reachable, or there is no way in.
   if (pathname === "/newsroom-access") return NextResponse.next();
 
+  /*
+   * The workspace answers on one path only.
+   *
+   * When it has been moved off the default, the route folder's own address
+   * stops working: a request to `/admin/*` gets a flat 404, the same reply
+   * the site gives for any path that does not exist. Not a redirect to the
+   * new one — that would hand the address to the first scanner that asked.
+   *
+   * The public path is mapped onto the real tree with a rewrite, so the
+   * routes, the links and the `next` parameter all keep working while the
+   * folder on disk stays `app/admin`.
+   */
+  if (NEWSROOM_MOVED && pathname.startsWith(`${ROUTE_ROOT}/`)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const passphrase = process.env.NEWSROOM_PASSPHRASE;
   const ok = await verifyToken(request.cookies.get(COOKIE)?.value);
 
-  if (ok) return NextResponse.next();
+  if (ok) {
+    const response =
+      NEWSROOM_MOVED && pathname.startsWith(`${NEWSROOM_BASE}/`)
+        ? NextResponse.rewrite(
+            new URL(`${ROUTE_ROOT}${pathname.slice(NEWSROOM_BASE.length)}${request.nextUrl.search}`, request.url),
+          )
+        : NextResponse.next();
+
+    /*
+     * Belt and braces on indexing. Every workspace page already sets
+     * `robots: { index: false }` in its metadata, but that only helps once a
+     * page has rendered — and these are pages a crawler should never be
+     * holding in the first place. The header says so before the body exists.
+     */
+    response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+    return response;
+  }
 
   /*
    * An unauthenticated API call is answered, not redirected.
@@ -79,5 +112,5 @@ export const config = {
    * itself; the handlers check anyway, because two locks on a door that
    * costs money is the right number.
    */
-  matcher: ["/admin/:path*", "/api/newsroom/:path*"],
+  matcher: ["/admin/:path*", "/desk/:path*", "/newsroom/:path*", "/api/newsroom/:path*"],
 };

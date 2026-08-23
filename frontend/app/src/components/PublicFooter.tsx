@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PROFILE, SOCIAL_ACCOUNTS, TOP_BEATS, childBeats } from "@/data/content";
+import { NEWSROOM_BASE } from "@/lib/newsroom-path";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { SocialIcon } from "@/components/social/SocialIcon";
@@ -173,21 +174,24 @@ export function PublicFooter() {
               {PROFILE.email}
             </a>
           </p>
-          {/* The newsroom, named for what it is to the person who uses it
-              rather than for the route it sits on. Down here with the
-              copyright rather than up in "More" because it is not reading —
-              every other link in this footer leads somewhere a visitor can
-              go, and this one leads to a passphrase.
+          {/* The newsroom link, now off by default.
+              The lock is still the middleware and a hidden link was never
+              what kept anyone out — that reasoning was right. What it missed
+              is that this link published the workspace's address on every
+              page of the site, to every crawler and every reader, which is a
+              free map for anything scanning for admin panels. The door being
+              solid is not a reason to put a sign on it.
 
-              Listing it at all is safe: the lock is the middleware, which
-              never serves an admin route without the cookie, so a hidden
-              link was only ever hiding the door and not closing it. */}
-          <Link
-            href="/admin"
-            className="focus-ring underline-grow tap inline-flex items-center transition-colors hover:text-primary"
-          >
-            Journal
-          </Link>
+              Set NEXT_PUBLIC_SHOW_NEWSROOM_LINK=1 to bring it back; the
+              person who uses the workspace knows where it is. */}
+          {process.env.NEXT_PUBLIC_SHOW_NEWSROOM_LINK === "1" && (
+            <Link
+              href={NEWSROOM_BASE}
+              className="focus-ring underline-grow tap inline-flex items-center transition-colors hover:text-primary"
+            >
+              Journal
+            </Link>
+          )}
         </div>
       </div>
     </footer>

@@ -5,11 +5,17 @@ import { SITE_URL } from "@/lib/site";
  * robots.txt
  *
  * ── What is disallowed, and what deliberately is not ─────────────────────
- * The newsroom, the sign-in page and the internal search results are kept out
- * of the crawl. The first two are private working areas; the third is an
- * infinite space of query permutations, and letting a crawler wander it
- * produces thousands of thin, near-duplicate URLs competing with the articles
- * they were supposed to lead to.
+ * Only the internal search results, which are an infinite space of query
+ * permutations: letting a crawler wander them produces thousands of thin,
+ * near-duplicate URLs competing with the articles they were supposed to lead
+ * to.
+ *
+ * The newsroom and its sign-in page used to be listed here, and that was
+ * backwards. This file is public, so a `Disallow` line is a published index
+ * of the paths worth looking at — the first place anything scanning a site
+ * reads. Both routes carry `robots: { index: false }` in their own metadata,
+ * which keeps them out of the index without announcing them, and neither is
+ * reachable without the passphrase anyway.
  *
  * Nothing else is blocked. In particular the CSS, the JavaScript and the
  * images are all crawlable: Google renders pages before judging them, and a
@@ -27,7 +33,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/admin/", "/newsroom-access", "/search"],
+      disallow: ["/search"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -330,12 +330,34 @@ function IdeaForm() {
   const [beats, setBeats] = useState<Genre[]>(GENRES);
   const reduced = useReducedMotion();
 
-  // Ref callback rather than an effect: the route is prerendered, and reading
-  // storage during the first client pass would disagree with the HTML being
-  // hydrated.
-  const load = (node: HTMLFormElement | null) => {
-    if (node) setBeats(allBeats());
-  };
+  /**
+   * Ref callback rather than an effect: the route is prerendered, and reading
+   * storage during the first client pass would disagree with the HTML being
+   * hydrated.
+   *
+   * ── Why it is wrapped, and why the guard is not optional ─────────────────
+   * This was a bare arrow function, and it took the whole screen down with
+   * "Maximum update depth exceeded". A ref callback is re-attached whenever
+   * its identity changes, and an inline arrow has a new identity on every
+   * render — so React called it again after each paint, it called `setBeats`,
+   * and `allBeats()` returns a freshly built array every time, so the state
+   * was always a new reference and always scheduled another render. An
+   * infinite loop with no growing value in it, which is why nothing about the
+   * screen hinted at the cause.
+   *
+   * `useCallback` stops the re-attachment. The comparison stops the render
+   * even in the case where something else does re-attach it: same beats, same
+   * array, no update.
+   */
+  const load = useCallback((node: HTMLFormElement | null) => {
+    if (!node) return;
+    setBeats((current) => {
+      const next = allBeats();
+      const same =
+        current.length === next.length && current.every((beat, i) => beat.slug === next[i].slug);
+      return same ? current : next;
+    });
+  }, []);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();

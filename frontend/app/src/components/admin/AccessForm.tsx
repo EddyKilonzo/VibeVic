@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/motion";
 
 const COOKIE = "vv_newsroom";
 const MAX_AGE = 60 * 60 * 12; // Twelve hours — one working day, not forever.
@@ -62,16 +63,31 @@ export function AccessForm({
   failed?: boolean;
 }) {
   return (
-    <div className="surface w-full max-w-[420px] p-7 sm:p-9">
-      <span className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
-        <Lock className="h-5 w-5" aria-hidden />
-      </span>
+    /* The card arrives, then its contents in order — lock, heading, sentence,
+       field. A door is the one screen where a beat of ceremony is the point:
+       it says the workspace is a separate place rather than another tab of
+       the same site. The whole sequence is under 400ms, and `Reveal` sits it
+       out entirely under `prefers-reduced-motion`. */
+    <Reveal
+      variant="fade-scale"
+      className="surface w-full max-w-[420px] p-7 sm:p-9"
+    >
+      <Reveal variant="fade-up" delay={90} distance="sm">
+        <span className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
+          <Lock className="h-5 w-5" aria-hidden />
+        </span>
+      </Reveal>
 
-      <h1 className="font-display display-3 mt-5 font-semibold">Newsroom access</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        The workspace holds drafts, sources and notes that are not published. It is not part of
-        the public site.
-      </p>
+      <Reveal variant="mask" delay={150}>
+        <h1 className="font-display display-3 mt-5 font-semibold">Newsroom access</h1>
+      </Reveal>
+
+      <Reveal variant="fade-up" delay={230} distance="sm">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          The workspace holds drafts, sources and notes that are not published. It is not part of
+          the public site.
+        </p>
+      </Reveal>
 
       {unconfigured ? (
         <div
@@ -115,10 +131,12 @@ export function AccessForm({
         </form>
       )}
 
-      <p className="mt-7 border-t border-border pt-5 text-[11px] leading-relaxed text-muted-foreground">
-        One shared passphrase, not an account system — there is no backend yet to hold users or
-        roles. It is replaced with real authentication when the API lands.
-      </p>
-    </div>
+      <Reveal variant="fade" delay={380}>
+        <p className="mt-7 border-t border-border pt-5 text-[11px] leading-relaxed text-muted-foreground">
+          One shared passphrase, not an account system — there is no backend yet to hold users or
+          roles. It is replaced with real authentication when the API lands.
+        </p>
+      </Reveal>
+    </Reveal>
   );
 }

@@ -77,7 +77,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         animate={{ width: collapsed ? 72 : 248 }}
         initial={false}
         transition={reduced ? { duration: 0 } : transitions.normal}
-        className="honeycomb honeycomb-invert sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground lg:flex"
+        // `shadow-deep` and a z-index, so the rail sits above the workspace
+        // rather than beside it. Without the stacking context the shadow is
+        // painted and then covered by the next sibling, which is the usual
+        // reason a sidebar shadow "does not work".
+        className="honeycomb honeycomb-invert sticky top-0 z-20 hidden h-screen shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground shadow-deep lg:flex"
       >
         <div className="flex h-16 items-center gap-3 px-5">
           <Link
@@ -153,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
-              className="honeycomb honeycomb-invert fixed inset-y-0 left-0 z-50 w-[260px] overflow-hidden bg-sidebar p-3 text-sidebar-foreground lg:hidden"
+              className="honeycomb honeycomb-invert fixed inset-y-0 left-0 z-50 w-[260px] overflow-hidden bg-sidebar p-3 text-sidebar-foreground shadow-deep lg:hidden"
               initial={reduced ? { opacity: 0 } : { x: "-100%" }}
               animate={reduced ? { opacity: 1 } : { x: 0 }}
               exit={reduced ? { opacity: 0 } : { x: "-100%" }}

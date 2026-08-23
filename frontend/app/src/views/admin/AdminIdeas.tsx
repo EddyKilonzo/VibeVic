@@ -17,6 +17,7 @@ import { insert, remove, update, useNewsroom } from "@/data/newsroom/useNewsroom
 import type { Idea, IdeaStage } from "@/data/newsroom/types";
 import { Reveal } from "@/components/motion";
 import { BeatOptions } from "@/components/admin/BeatOptions";
+import { PitchDesk } from "@/components/admin/PitchDesk";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 
@@ -460,6 +461,17 @@ function IdeaForm() {
           <Plus className="icon-pop h-4 w-4" aria-hidden />
           Note it
         </Button>
+
+        {/* Below the submit, not above it: noting the idea is the thing this
+            form is for, and a machine should not be standing between a
+            journalist and writing their own line down. Every suggestion it
+            makes takes a deliberate click to enter the note or the beat. */}
+        <PitchDesk
+          idea={title}
+          note={note}
+          onUseAngle={(text) => setNote((current) => (current ? `${current}\n\n${text}` : text))}
+          onUseBeat={setGenre}
+        />
       </form>
 
       <p className="mt-6 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">

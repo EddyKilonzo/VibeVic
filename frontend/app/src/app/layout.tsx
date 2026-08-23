@@ -4,6 +4,7 @@ import { PROFILE } from "@/data/content";
 import { CHANNEL } from "@/data/videos";
 import { AppProviders } from "@/components/AppProviders";
 import "@/index.css";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * Fonts are self-hosted by `next/font` rather than linked from Google.
@@ -33,7 +34,18 @@ const sans = Inter({
 const description = `${PROFILE.name} — journalist reporting from ${PROFILE.base}. Campus systems, Kenyan culture and student life, published as video on ${CHANNEL.handle}.`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://victorkiplimo.example"),
+  /**
+   * The origin every relative URL in the metadata resolves against.
+   *
+   * It was the literal placeholder, which meant the deployed site emitted
+   * canonicals, Open Graph URLs and sitemap entries pointing at a reserved
+   * domain that can never resolve — telling Google that the real address of
+   * every page is somewhere else. `SITE_URL` reads `NEXT_PUBLIC_SITE_URL`,
+   * which is the one place the origin is decided; when it is unset the
+   * fallback is still the placeholder, deliberately, because a URL that
+   * obviously cannot work is a bug you notice.
+   */
+  metadataBase: new URL(SITE_URL),
   title: {
     default: `${PROFILE.name} — ${PROFILE.role}`,
     template: `%s — ${PROFILE.name}`,

@@ -24,6 +24,7 @@ import { BeatShare } from "@/components/admin/BeatShare";
 import { ViewsTrend } from "@/components/admin/ViewsTrend";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
  * Newsroom overview.
@@ -75,7 +76,7 @@ export default function Dashboard() {
               <Youtube className="icon-tilt h-4 w-4" aria-hidden />
               Channel
             </Button>
-            <Button as={Link} href="/admin/stories/new" size="sm">
+            <Button as={Link} href={newsroomPath("/stories/new")} size="sm">
               <PenLine className="icon-lean h-4 w-4" aria-hidden />
               New story
             </Button>

@@ -36,17 +36,48 @@ function broadcast(key: string, value: unknown, self: Listener) {
 }
 
 export function useLocalStorage<T>(key: string, initial: T) {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const raw = window.localStorage.getItem(key);
-      return raw === null ? initial : (JSON.parse(raw) as T);
-    } catch {
-      return initial;
-    }
-  });
+  /**
+   * Starts at the fallback, always — even though the value is sitting right
+   * there in storage.
+   *
+   * ── Why the obvious version is wrong ─────────────────────────────────────
+   * This used to read storage inside the `useState` initialiser, which runs
+   * during the first client render. That render is the one React compares
+   * against the server's HTML, and the server has no storage to read — so
+   * every preference that differed from its default was a hydration mismatch:
+   * "the server rendered HTML didn't match the client", the tree thrown away
+   * and rebuilt. A collapsed admin sidebar produced exactly that, and so
+   * would a remembered grid view, a chosen reading size or a saved playback
+   * rate. Silent, because React recovers by re-rendering — and expensive,
+   * because recovering means discarding the server's work on that whole tree.
+   *
+   * So the stored value arrives one paint later, in an effect. The visible
+   * cost is that a remembered preference can flicker in on mount; the cost of
+   * the other order is a hydration error on every screen that has one.
+   */
+  const [value, setValue] = useState<T>(initial);
 
   // Identity for this instance, so a broadcast can skip its own author.
   const self = useRef<Listener>(() => {});
+
+  /**
+   * True once storage has been read. The write effect below waits for it —
+   * otherwise the first pass would write the *fallback* over the stored value
+   * before anybody had a chance to read it, which turns "remember this" into
+   * "forget this on every load".
+   */
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    loaded.current = false;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) setValue(JSON.parse(raw) as T);
+    } catch {
+      // Private mode, disabled storage, malformed JSON: keep the fallback.
+    }
+    loaded.current = true;
+  }, [key]);
 
   useEffect(() => {
     const listener: Listener = (next) => setValue(next as T);
@@ -63,6 +94,8 @@ export function useLocalStorage<T>(key: string, initial: T) {
   }, [key]);
 
   useEffect(() => {
+    // See `loaded`: writing before the read would erase the preference.
+    if (!loaded.current) return;
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch {

@@ -18,6 +18,7 @@ import { ImageReveal, Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/States";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
  * Status pills.
@@ -119,7 +120,7 @@ export default function AdminStories() {
             <p className="rule-label">Content</p>
             <h1 className="font-display display-2 mt-2 font-semibold">Stories</h1>
           </div>
-          <Button as={Link} href="/admin/stories/new" size="sm">
+          <Button as={Link} href={newsroomPath("/stories/new")} size="sm">
             <PenLine className="icon-lean h-4 w-4" aria-hidden />
             New story
           </Button>
@@ -230,7 +231,7 @@ export default function AdminStories() {
             title="No stories match"
             description="Try a different filter, or start something new."
             action={
-              <Button as={Link} href="/admin/stories/new" variant="outline" size="sm">
+              <Button as={Link} href={newsroomPath("/stories/new")} variant="outline" size="sm">
                 New story
               </Button>
             }
@@ -252,7 +253,7 @@ export default function AdminStories() {
                   transition={transitions.normal}
                   className="surface surface-hover group relative flex flex-col overflow-hidden"
                 >
-                  <Link href={`/admin/stories/${story.id}`} className="focus-ring block">
+                  <Link href={newsroomPath(`/stories/${story.id}`)} className="focus-ring block">
                     <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
                       <ImageReveal
                         src={storyCover(story)}
@@ -269,7 +270,7 @@ export default function AdminStories() {
                   </Link>
 
                   <div className="flex min-h-0 flex-1 flex-col p-4">
-                    <Link href={`/admin/stories/${story.id}`} className="focus-ring min-w-0">
+                    <Link href={newsroomPath(`/stories/${story.id}`)} className="focus-ring min-w-0">
                       <p className="font-display line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight">
                         {story.title}
                       </p>
@@ -327,7 +328,7 @@ export default function AdminStories() {
                         and skipped by the keyboard rather than read out as a
                         second identical link. */}
                     <Link
-                      href={`/admin/stories/${story.id}`}
+                      href={newsroomPath(`/stories/${story.id}`)}
                       tabIndex={-1}
                       aria-hidden
                       className="hidden h-[58px] w-[92px] shrink-0 overflow-hidden rounded-lg bg-secondary sm:block"
@@ -341,7 +342,7 @@ export default function AdminStories() {
                       />
                     </Link>
 
-                    <Link href={`/admin/stories/${story.id}`} className="focus-ring min-w-0 flex-1">
+                    <Link href={newsroomPath(`/stories/${story.id}`)} className="focus-ring min-w-0 flex-1">
                       <p className="font-display truncate text-[15px] font-semibold leading-snug tracking-tight">
                         {story.title}
                       </p>

@@ -25,6 +25,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PageTransition } from "@/components/motion";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
+import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
 
 /**
  * The ten sections, all of them built.
@@ -38,16 +39,16 @@ import { ConnectionState } from "@/components/admin/ConnectionState";
  * that will eventually describe it wrongly.
  */
 const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { href: "/admin/stories", label: "Stories", icon: FileText },
-  { href: "/admin/drafts", label: "Drafts", icon: FilePen },
-  { href: "/admin/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/admin/media", label: "Media", icon: Image },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/readers", label: "Readers", icon: Users },
-  { href: "/admin/genres", label: "Beats", icon: Tags },
-  { href: "/admin/awards", label: "Awards", icon: Trophy },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: newsroomPath(), label: "Dashboard", icon: LayoutDashboard, end: true },
+  { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
+  { href: newsroomPath("/drafts"), label: "Drafts", icon: FilePen },
+  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb },
+  { href: newsroomPath("/media"), label: "Media", icon: Image },
+  { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3 },
+  { href: newsroomPath("/readers"), label: "Readers", icon: Users },
+  { href: newsroomPath("/genres"), label: "Beats", icon: Tags },
+  { href: newsroomPath("/awards"), label: "Awards", icon: Trophy },
+  { href: newsroomPath("/settings"), label: "Settings", icon: Settings },
 ];
 
 /**
@@ -63,7 +64,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [collapsed, setCollapsed] = useLocalStorage("vv:admin-sidebar-collapsed", false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const reduced = useReducedMotion();
-  const pathname = usePathname() ?? "/admin";
+  // Suffixes, for the reason given in MobileAdminBar.
+  const pathname = newsroomSuffix(usePathname() ?? newsroomPath());
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -205,7 +207,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
 
           <p className="font-display min-w-0 flex-1 truncate text-lg font-semibold tracking-tight">
-            {NAV.find((n) => (n.end ? pathname === n.href : pathname.startsWith(n.href)))?.label ??
+            {NAV.find((n) =>
+              n.end ? pathname === newsroomSuffix(n.href) : pathname.startsWith(newsroomSuffix(n.href)),
+            )?.label ??
               "Admin"}
           </p>
 

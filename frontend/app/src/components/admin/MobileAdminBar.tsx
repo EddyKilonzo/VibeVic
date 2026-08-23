@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, FileText, LayoutDashboard, Lightbulb, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
 
 const ITEMS = [
-  { href: "/admin", label: "Home", icon: LayoutDashboard, end: true },
-  { href: "/admin/stories", label: "Stories", icon: FileText },
+  { href: newsroomPath(), label: "Home", icon: LayoutDashboard, end: true },
+  { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
   // The centre slot is the compose action, inserted between these.
-  { href: "/admin/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/admin/analytics", label: "Data", icon: BarChart3 },
+  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb },
+  { href: newsroomPath("/analytics"), label: "Data", icon: BarChart3 },
 ];
 
 /**
@@ -27,10 +28,18 @@ const ITEMS = [
  * is ever in the accessibility tree.
  */
 export function MobileAdminBar() {
-  const pathname = usePathname() ?? "/admin";
+  /*
+   * Compared as suffixes, because the two sides are not guaranteed to be
+   * spelled the same: the browser holds the public mount while the server
+   * rendered the rewritten path, and which one `usePathname` reports during
+   * hydration is a router detail rather than a promise.
+   */
+  const pathname = newsroomSuffix(usePathname() ?? newsroomPath());
 
   const isActive = (href: string, end?: boolean) =>
-    end ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+    end
+      ? pathname === newsroomSuffix(href)
+      : pathname === newsroomSuffix(href) || pathname.startsWith(`${newsroomSuffix(href)}/`);
 
   return (
     <nav
@@ -49,7 +58,7 @@ export function MobileAdminBar() {
             {i === 2 && (
               <li className="flex items-center px-1">
                 <Link
-                  href="/admin/stories/new"
+                  href={newsroomPath("/stories/new")}
                   aria-label="New story"
                   className={cn(
                     "focus-ring press -mt-5 flex h-14 w-14 items-center justify-center rounded-full",

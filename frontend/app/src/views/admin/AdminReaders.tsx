@@ -12,6 +12,7 @@ import { Reveal } from "@/components/motion";
 import { ReadProgress } from "@/components/story/ReadProgress";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
  * Readers.
@@ -137,7 +138,7 @@ export default function AdminReaders() {
             <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <Headphones className="h-4 w-4" aria-hidden />
               {plays} {plays === 1 ? "play" : "plays"} recorded ·{" "}
-              <Link href="/admin/analytics" className="focus-ring underline-grow font-semibold text-primary">
+              <Link href={newsroomPath("/analytics")} className="focus-ring underline-grow font-semibold text-primary">
                 see the detail
               </Link>
             </p>

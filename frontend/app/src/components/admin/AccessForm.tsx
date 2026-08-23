@@ -2,6 +2,7 @@ import { Lock, ShieldAlert } from "lucide-react";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { createHash, timingSafeEqual } from "node:crypto";
+import { NEWSROOM_BASE } from "@/lib/newsroom-path";
 import { SESSION_SECONDS, issueToken } from "@/lib/newsroom-token";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/motion";
@@ -55,7 +56,7 @@ function tooManyAttempts(key: string): boolean {
 async function signIn(formData: FormData) {
   "use server";
 
-  const next = String(formData.get("next") ?? "/admin");
+  const next = String(formData.get("next") ?? NEWSROOM_BASE);
   const passphrase = process.env.NEWSROOM_PASSPHRASE;
   const submitted = String(formData.get("passphrase") ?? "");
 
@@ -103,7 +104,11 @@ async function signIn(formData: FormData) {
 
   // Only ever to a path on this site — an open redirect on a sign-in form is
   // a phishing primitive.
-  redirect(next.startsWith("/admin") ? next : "/admin");
+  // Only ever to a path on this site, and only ever into the workspace: an
+  // open redirect on a sign-in form is a phishing primitive, and one that
+  // accepted any local path would still be a way to bounce someone off the
+  // door they just unlocked.
+  redirect(next.startsWith(NEWSROOM_BASE) ? next : NEWSROOM_BASE);
 }
 
 export function AccessForm({
@@ -156,7 +161,7 @@ export function AccessForm({
         </div>
       ) : (
         <form action={signIn} className="mt-7">
-          <input type="hidden" name="next" value={next ?? "/admin"} />
+          <input type="hidden" name="next" value={next ?? NEWSROOM_BASE} />
 
           <label htmlFor="passphrase" className="rule-label">
             Passphrase

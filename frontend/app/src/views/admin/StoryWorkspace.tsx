@@ -47,6 +47,7 @@ import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
 import { BeatOptions } from "@/components/admin/BeatOptions";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 let idSeq = 0;
 const newId = () => `nb${Date.now()}-${++idSeq}`;
@@ -308,7 +309,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
       <Reveal variant="fade-up">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            href="/admin/stories"
+            href={newsroomPath("/stories")}
             className="focus-ring tap inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />

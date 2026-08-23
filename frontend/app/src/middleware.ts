@@ -34,8 +34,30 @@ import { verifyToken } from "@/lib/newsroom-token";
 
 const COOKIE = "vv_newsroom";
 
+/** Everything this gate is responsible for. Anything else leaves immediately. */
+function isGuarded(pathname: string): boolean {
+  return (
+    pathname === NEWSROOM_BASE ||
+    pathname.startsWith(`${NEWSROOM_BASE}/`) ||
+    pathname === ROUTE_ROOT ||
+    pathname.startsWith(`${ROUTE_ROOT}/`) ||
+    pathname.startsWith("/api/newsroom/")
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  /*
+   * The public site leaves here, on the first comparison.
+   *
+   * The matcher is broad because the mount is configurable and a matcher
+   * cannot read the environment — so the filtering that used to happen in
+   * config happens here instead. Two string comparisons on a path is not a
+   * cost worth optimising; serving a public page through a gate that does not
+   * apply to it would be.
+   */
+  if (!isGuarded(pathname)) return NextResponse.next();
 
   // The sign-in page itself must stay reachable, or there is no way in.
   if (pathname === "/newsroom-access") return NextResponse.next();
@@ -52,7 +74,7 @@ export async function middleware(request: NextRequest) {
    * routes, the links and the `next` parameter all keep working while the
    * folder on disk stays `app/admin`.
    */
-  if (NEWSROOM_MOVED && pathname.startsWith(`${ROUTE_ROOT}/`)) {
+  if (NEWSROOM_MOVED && (pathname === ROUTE_ROOT || pathname.startsWith(`${ROUTE_ROOT}/`))) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -60,12 +82,19 @@ export async function middleware(request: NextRequest) {
   const ok = await verifyToken(request.cookies.get(COOKIE)?.value);
 
   if (ok) {
-    const response =
-      NEWSROOM_MOVED && pathname.startsWith(`${NEWSROOM_BASE}/`)
-        ? NextResponse.rewrite(
-            new URL(`${ROUTE_ROOT}${pathname.slice(NEWSROOM_BASE.length)}${request.nextUrl.search}`, request.url),
-          )
-        : NextResponse.next();
+    // The bare mount is the dashboard, so it is rewritten too — `/desk` maps
+    // to `/admin`, not to `/admin/` or to nothing.
+    const onMount =
+      NEWSROOM_MOVED && (pathname === NEWSROOM_BASE || pathname.startsWith(`${NEWSROOM_BASE}/`));
+
+    const response = onMount
+      ? NextResponse.rewrite(
+          new URL(
+            `${ROUTE_ROOT}${pathname.slice(NEWSROOM_BASE.length)}${request.nextUrl.search}`,
+            request.url,
+          ),
+        )
+      : NextResponse.next();
 
     /*
      * Belt and braces on indexing. Every workspace page already sets
@@ -112,5 +141,11 @@ export const config = {
    * itself; the handlers check anyway, because two locks on a door that
    * costs money is the right number.
    */
-  matcher: ["/admin/:path*", "/desk/:path*", "/newsroom/:path*", "/api/newsroom/:path*"],
+  /*
+   * Everything except the things that are never a page: the build output, the
+   * image optimiser, and files served straight off `public`. The gate itself
+   * decides what it is responsible for — see `isGuarded` — because the mount
+   * comes from the environment and a matcher is read at build time.
+   */
+  matcher: ["/((?!_next/static|_next/image|images/|fonts/|favicon|robots.txt|sitemap.xml|rss.xml).*)"],
 };

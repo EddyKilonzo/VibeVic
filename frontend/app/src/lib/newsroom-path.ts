@@ -17,33 +17,30 @@
  * So: worth doing, worth one variable, and never a reason to relax the lock.
  * The lock is `middleware.ts` and the signed session in `newsroom-token.ts`.
  *
- * Set `NEXT_PUBLIC_NEWSROOM_BASE` to one of `MOUNTS` to move it.
+ * Set `NEXT_PUBLIC_NEWSROOM_BASE=/whatever-you-like` to move it. One path
+ * segment, letters, digits and hyphens — the middleware maps exactly one
+ * level onto the real route tree, so a value with a slash inside it would map
+ * to nothing and a value that is empty would mount the workspace on the site
+ * root. Anything that fails those rules falls back to the default rather than
+ * mounting somewhere half-guarded.
  *
- * ── Why it is a list and not any string you like ─────────────────────────
- * A middleware matcher has to be statically analysable — Next reads it out of
- * the file at build time, so it cannot contain a value from the environment.
- * The matcher therefore names the mounts it will guard, and this list is the
- * same set. A base outside it would not be matched, which would mean the gate
- * never runs on it: the request would miss the rewrite and 404 rather than
- * serve anything, but "silently broken" is a worse failure than "refused", so
- * an unknown value falls back to the default instead.
- *
- * Adding a mount means editing both this array and the matcher in
- * `middleware.ts`. That is the cost of the matcher being static, and it is
- * cheap as long as the two are read together — which is why they say so.
+ * It used to be a fixed list of three names, because a middleware matcher has
+ * to be statically analysable and cannot read the environment. Three
+ * predictable names is barely better than one, which defeats the only thing
+ * this buys — so the matcher is broad now and the mount is decided here, in
+ * code, where an arbitrary value can be honoured. The cost is that the
+ * middleware runs on every request and returns immediately for anything that
+ * is not the workspace; `middleware.ts` says so where it does it.
  */
 const RAW = process.env.NEXT_PUBLIC_NEWSROOM_BASE?.trim();
 
 /** The default, and what the route folder is actually called on disk. */
 export const ROUTE_ROOT = "/admin";
 
-/** Must stay in step with the matcher in `middleware.ts`. */
-export const MOUNTS = [ROUTE_ROOT, "/desk", "/newsroom"] as const;
-
 function sane(base: string | undefined): string {
   if (!base) return ROUTE_ROOT;
   const trimmed = base.replace(/\/+$/, "").toLowerCase();
-  return (MOUNTS as readonly string[]).includes(trimmed) ? trimmed : ROUTE_ROOT;
+  return /^\/[a-z0-9][a-z0-9-]{1,48}$/.test(trimmed) ? trimmed : ROUTE_ROOT;
 }
 
 export const NEWSROOM_BASE = sane(RAW);
@@ -54,4 +51,21 @@ export const NEWSROOM_MOVED = NEWSROOM_BASE !== ROUTE_ROOT;
 /** `newsroomPath("/stories")` → `/desk-7f3a/stories`. */
 export function newsroomPath(path = ""): string {
   return `${NEWSROOM_BASE}${path}`;
+}
+
+/**
+ * The part of a path after the mount, whichever address it arrived on.
+ *
+ * Navigation compares where you are against where a link goes, and those two
+ * are not guaranteed to be spelled the same way: the browser holds the public
+ * path while the server rendered the rewritten one, and which of them
+ * `usePathname` reports during hydration is a detail of the router rather
+ * than a promise. Comparing suffixes is true either way.
+ */
+export function newsroomSuffix(pathname: string): string {
+  for (const prefix of [NEWSROOM_BASE, ROUTE_ROOT]) {
+    if (pathname === prefix) return "";
+    if (pathname.startsWith(`${prefix}/`)) return pathname.slice(prefix.length);
+  }
+  return pathname;
 }

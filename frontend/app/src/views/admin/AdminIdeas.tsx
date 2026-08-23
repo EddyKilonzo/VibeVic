@@ -22,6 +22,7 @@ import { PitchPanel } from "@/components/admin/PitchPanel";
 import type { PitchResult } from "@/components/admin/pitch";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
  * The story list before there are any stories.
@@ -152,7 +153,7 @@ export default function AdminIdeas() {
     // from is worth knowing later, and deleting the idea would throw away the
     // stage history that says how it got here.
     update("ideas", idea.id, { storyId, stage: "commissioned" }, idea.updatedAt);
-    router.push(`/admin/stories/${storyId}`);
+    router.push(newsroomPath(`/stories/${storyId}`));
   };
 
   return (
@@ -300,7 +301,7 @@ export default function AdminIdeas() {
 
                           {idea.storyId ? (
                             <Link
-                              href={`/admin/stories/${idea.storyId}`}
+                              href={newsroomPath(`/stories/${idea.storyId}`)}
                               className="focus-ring underline-grow inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
                             >
                               Open the draft

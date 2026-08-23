@@ -18,6 +18,7 @@ import {
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
+import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
  * Everything saved on this device and not yet sent anywhere.
@@ -68,7 +69,7 @@ export default function AdminDrafts() {
               clears these.
             </p>
           </div>
-          <Button as={Link} href="/admin/stories/new" size="sm">
+          <Button as={Link} href={newsroomPath("/stories/new")} size="sm">
             <PenLine className="icon-lean h-4 w-4" aria-hidden />
             New story
           </Button>
@@ -83,7 +84,7 @@ export default function AdminDrafts() {
             description="Start a story and it appears in this list from the first sentence — no save button to remember."
             className="border-0"
             action={
-              <Button as={Link} href="/admin/stories/new" variant="outline" size="sm">
+              <Button as={Link} href={newsroomPath("/stories/new")} variant="outline" size="sm">
                 Start writing
               </Button>
             }
@@ -114,8 +115,8 @@ export default function AdminDrafts() {
                       <Link
                         href={
                           record.story.id === "new"
-                            ? "/admin/stories/new"
-                            : `/admin/stories/${record.story.id}`
+                            ? newsroomPath("/stories/new")
+                            : newsroomPath(`/stories/${record.story.id}`)
                         }
                         className="focus-ring min-w-0 flex-1"
                       >

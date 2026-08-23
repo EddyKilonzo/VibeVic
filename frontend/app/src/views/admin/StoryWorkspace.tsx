@@ -20,6 +20,7 @@ import {
   Heading2,
   Headphones,
   ImagePlus,
+  Link2 as LinkIcon,
   List as ListIcon,
   Minus,
   Pause,
@@ -40,7 +41,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { addUpload, listMedia, srcFor } from "@/lib/media";
 import { allBeats } from "@/lib/beats";
-import { toggleEmphasis, type EmphasisKind } from "@/lib/inline";
+import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
@@ -1085,9 +1086,14 @@ function ImageBlockPicker({
 function useEmphasis(
   value: string,
   commit: (next: string) => void,
+  /** Ctrl/⌘K. The hook cannot open the link panel itself — the panel is UI. */
+  onLinkShortcut?: () => void,
 ): {
   ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>;
   apply: (kind: EmphasisKind) => void;
+  selectionAt: () => [number, number];
+  applyLink: (url: string, range?: [number, number]) => boolean;
+  removeLink: (range?: [number, number]) => boolean;
   onKeyDown: (event: React.KeyboardEvent) => void;
 } {
   const ref = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
@@ -1115,18 +1121,205 @@ function useEmphasis(
     [value, commit],
   );
 
+  /**
+   * The live selection, read at the moment it is asked for.
+   *
+   * The link panel needs this *before* its own input takes focus, because a
+   * textarea that has lost focus reports a collapsed selection — and a link
+   * wrapping a collapsed selection wraps nothing.
+   */
+  const selectionAt = useCallback((): [number, number] => {
+    const node = ref.current;
+    if (!node) return [value.length, value.length];
+    const start = node.selectionStart ?? value.length;
+    return [start, node.selectionEnd ?? start];
+  }, [value]);
+
+  const applyLink = useCallback(
+    (url: string, range?: [number, number]) => {
+      const [start, end] = range ?? selectionAt();
+      const result = wrapLink(value, start, end, url);
+      // `wrapLink` returns null for a URL the renderer would refuse to render.
+      // Failing here, in front of the writer, is the only place that refusal
+      // is any use to them.
+      if (!result) return false;
+      pending.current = [result.start, result.end];
+      commit(result.text);
+      return true;
+    },
+    [value, commit, selectionAt],
+  );
+
+  const removeLink = useCallback(
+    (range?: [number, number]) => {
+      const [start] = range ?? selectionAt();
+      const result = unlinkAt(value, start);
+      if (!result) return false;
+      pending.current = [result.start, result.end];
+      commit(result.text);
+      return true;
+    },
+    [value, commit, selectionAt],
+  );
+
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
       const key = event.key.toLowerCase();
+      if (key === "k" && onLinkShortcut) {
+        event.preventDefault();
+        onLinkShortcut();
+        return;
+      }
       if (key !== "b" && key !== "i") return;
       event.preventDefault();
       apply(key === "b" ? "bold" : "italic");
     },
-    [apply],
+    [apply, onLinkShortcut],
   );
 
-  return { ref, apply, onKeyDown };
+  return { ref, apply, selectionAt, applyLink, removeLink, onKeyDown };
+}
+
+/**
+ * The link panel.
+ *
+ * ── Why a panel and not a `prompt()` ─────────────────────────────────────
+ * A native prompt blocks the page, cannot be styled, cannot show the URL that
+ * is already there and cannot say what is wrong with the one you typed. This
+ * does all four, and it keeps the writer's selection while it does — which is
+ * the hard part, since focusing its own input is exactly what would normally
+ * throw that selection away.
+ *
+ * So the range is captured on pointer-down, before focus moves anywhere, and
+ * every action applies against that captured range rather than against
+ * whatever the textarea believes is selected by the time you press Add.
+ */
+function LinkTool({
+  open,
+  onOpenChange,
+  value,
+  selectionAt,
+  applyLink,
+  removeLink,
+}: {
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+  value: string;
+  selectionAt: () => [number, number];
+  applyLink: (url: string, range?: [number, number]) => boolean;
+  removeLink: (range?: [number, number]) => boolean;
+}) {
+  const [url, setUrl] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  const range = useRef<[number, number] | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+
+  // Opening from the keyboard skips the button, so the range is taken here
+  // too — and the field is selected rather than merely focused, so typing
+  // replaces an existing URL instead of appending to it.
+  useEffect(() => {
+    if (!open) return;
+    if (!range.current) range.current = selectionAt();
+    setUrl(linkAt(value, range.current[0])?.href ?? "");
+    setProblem(null);
+    const id = window.setTimeout(() => field.current?.select(), 10);
+    return () => window.clearTimeout(id);
+  }, [open, value, selectionAt]);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) onOpenChange(false);
+    };
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onOpenChange(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open, onOpenChange]);
+
+  const existing = range.current ? linkAt(value, range.current[0]) : null;
+
+  const submit = () => {
+    if (applyLink(url, range.current ?? undefined)) {
+      range.current = null;
+      onOpenChange(false);
+    } else {
+      setProblem("Needs to start with https://, mailto: or / — anything else is refused.");
+    }
+  };
+
+  return (
+    <div ref={wrap} className="relative">
+      <button
+        type="button"
+        // Pointer-down and prevented, exactly like B and I: a click lands
+        // after blur, and by then the selection this wraps is gone.
+        onMouseDown={(e) => {
+          e.preventDefault();
+          range.current = selectionAt();
+          onOpenChange(!open);
+        }}
+        aria-label="Link (Ctrl/⌘ K)"
+        aria-expanded={open}
+        title="Link — Ctrl/⌘ K"
+        className={cn(
+          "focus-ring tap inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-secondary hover:text-primary",
+          open ? "bg-secondary text-primary" : "text-muted-foreground",
+        )}
+      >
+        <LinkIcon className="h-3.5 w-3.5" aria-hidden />
+      </button>
+
+      {open && (
+        <div className="surface-compact absolute left-0 top-9 z-30 w-[280px] p-2 shadow-lifted">
+          <p className="rule-label mb-1.5">Link to</p>
+          <input
+            ref={field}
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setProblem(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="https://  ·  mailto:  ·  /stories/…"
+            aria-label="Link address"
+            className="focus-ring w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-accent"
+          />
+          {problem && (
+            <p className="mt-1.5 text-[11px] leading-snug text-destructive">{problem}</p>
+          )}
+          <div className="mt-2 flex items-center gap-1.5">
+            <Button size="sm" onClick={submit} disabled={!url.trim()}>
+              {existing ? "Update" : "Add link"}
+            </Button>
+            {existing && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  removeLink(range.current ?? undefined);
+                  range.current = null;
+                  onOpenChange(false);
+                }}
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** The B / I pair shown on the focused block. */
@@ -1297,7 +1490,12 @@ function EmphasisField({
   placeholder: string;
   className: string;
 }) {
-  const { ref, apply, onKeyDown } = useEmphasis(value, onChange);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const { ref, apply, selectionAt, applyLink, removeLink, onKeyDown } = useEmphasis(
+    value,
+    onChange,
+    () => setLinkOpen(true),
+  );
 
   return (
     <div>
@@ -1313,10 +1511,18 @@ function EmphasisField({
         className={className}
       />
       {active && (
-        <div className="-ml-1.5 flex items-center gap-0.5">
+        <div className="-ml-1.5 mt-1 flex flex-wrap items-center gap-0.5">
           <EmphasisButtons apply={apply} />
-          <span className="ml-1 text-[10px] text-muted-foreground">
-            **bold** · *italic*
+          <LinkTool
+            open={linkOpen}
+            onOpenChange={setLinkOpen}
+            value={value}
+            selectionAt={selectionAt}
+            applyLink={applyLink}
+            removeLink={removeLink}
+          />
+          <span className="ml-1.5 text-[10px] text-muted-foreground">
+            **bold** · *italic* · [text](url)
           </span>
         </div>
       )}

@@ -14,15 +14,59 @@
  * costs one parse at render.
  *
  * ── Deliberately not a Markdown implementation ───────────────────────────
- * No nesting, no links, no code spans. This is emphasis, and every extra
- * construct is another way for a stray asterisk in someone's prose to come
- * out as markup they did not ask for. An unmatched marker stays literal.
+ * No code spans, no images, no reference links, no nesting beyond one level.
+ * Every extra construct is another way for a stray asterisk in someone's
+ * prose to come out as markup they did not ask for. An unmatched marker stays
+ * literal.
+ *
+ * Links are the one construct that earned its place. A journalist citing a
+ * source, a court filing or the piece a story is responding to cannot do it
+ * in prose alone — "see the Gazette notice" with no way to reach the Gazette
+ * notice is the reporting equivalent of a dead end — and `[text](url)` is
+ * both what they already type and what survives a paste into anything else.
+ * Emphasis inside a link label works; a link inside emphasis does not, which
+ * is the one level of nesting this needs.
  */
 
 export interface InlineRun {
   text: string;
   bold?: boolean;
   italic?: boolean;
+  /** Set on every run inside a link label. Already vetted by `safeHref`. */
+  href?: string;
+}
+
+/**
+ * `[label](url)`. The URL may not contain a space or a closing bracket, which
+ * is what stops a missing `)` from swallowing the rest of the paragraph.
+ */
+const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+
+/**
+ * The URLs a link is allowed to point at.
+ *
+ * An allow-list, not a block-list. Article text is authored in a workspace
+ * and rendered into everyone's browser, so the question is not "is this one
+ * of the bad schemes" — it is "is this one of the four things a citation can
+ * legitimately be". `javascript:` and `data:` fail that test without having
+ * to be named, and so does anything invented later.
+ *
+ * Protocol-relative `//host` is refused too: it reads as a path and behaves
+ * as an off-site link, and that gap is exactly where a reader gets sent
+ * somewhere the writer did not intend.
+ */
+export function safeHref(raw: string): string | null {
+  const url = raw.trim();
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (/^mailto:[^\s@]+@[^\s@]+/i.test(url)) return url;
+  if (/^[/#][^/]/.test(url) || url === "/") return url;
+  return null;
+}
+
+/** True for a link that leaves the site, which is the pair that needs `rel`. */
+export function isExternalHref(href: string): boolean {
+  return /^https?:\/\//i.test(href);
 }
 
 /**
@@ -38,6 +82,35 @@ export function parseInline(input: string): InlineRun[] {
   if (!input) return [];
   // Fast path. Most paragraphs contain no markers at all, and allocating a
   // run array for every one of them is work on the reading path.
+  if (!input.includes("*") && !input.includes("_") && !input.includes("[")) {
+    return [{ text: input }];
+  }
+
+  // Links are matched before emphasis and their labels are parsed for it,
+  // rather than the other way round: a URL is full of characters emphasis
+  // cares about, and `*` inside a query string is not italics.
+  const runs: InlineRun[] = [];
+  let cursor = 0;
+
+  LINK.lastIndex = 0;
+  for (let match = LINK.exec(input); match; match = LINK.exec(input)) {
+    const href = safeHref(match[2]);
+    // An unusable URL leaves the source text exactly as written. Silently
+    // rendering `[see here](javascript:…)` as plain prose is right; silently
+    // rendering it as a link is not.
+    if (!href) continue;
+
+    if (match.index > cursor) runs.push(...emphasisRuns(input.slice(cursor, match.index)));
+    for (const run of emphasisRuns(match[1])) runs.push({ ...run, href });
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < input.length) runs.push(...emphasisRuns(input.slice(cursor)));
+  return runs.length > 0 ? runs : [{ text: input }];
+}
+
+function emphasisRuns(input: string): InlineRun[] {
+  if (!input) return [];
   if (!input.includes("*") && !input.includes("_")) return [{ text: input }];
 
   const runs: InlineRun[] = [];
@@ -68,7 +141,9 @@ export function parseInline(input: string): InlineRun[] {
  * aloud is the loudest possible version of this bug.
  */
 export function stripInline(input: string): string {
-  if (!input || (!input.includes("*") && !input.includes("_"))) return input;
+  if (!input || (!input.includes("*") && !input.includes("_") && !input.includes("["))) {
+    return input;
+  }
   return parseInline(input)
     .map((run) => run.text)
     .join("");
@@ -205,5 +280,65 @@ export function toggleEmphasis(
     text: `${text.slice(0, from)}${mark}${core}${mark}${text.slice(to)}`,
     start: from + width,
     end: to + width,
+  };
+}
+
+/**
+ * Wraps a selection in a link, or drops a new one at the caret.
+ *
+ * Returns the same shape as `toggleEmphasis` so the editor's selection
+ * restoration works identically for both — the textarea is re-rendered by
+ * React either way, and the caret has to be put back by hand.
+ *
+ * With no selection there is nothing to label, so the URL becomes its own
+ * label and the whole label is selected: the writer types over it if they
+ * want words instead, which is one keystroke fewer than deleting a
+ * placeholder somebody chose for them.
+ */
+export function wrapLink(
+  text: string,
+  start: number,
+  end: number,
+  url: string,
+): ToggleResult | null {
+  const href = safeHref(url);
+  if (!href) return null;
+
+  const label = start === end ? href : text.slice(start, end);
+  const inserted = `[${label}](${href})`;
+
+  return {
+    text: `${text.slice(0, start)}${inserted}${text.slice(end)}`,
+    // Selection lands on the label, never on the markup: the label is the
+    // part a writer edits after the fact and the URL is the part they do not.
+    start: start + 1,
+    end: start + 1 + label.length,
+  };
+}
+
+/** The link surrounding a caret position, if it is inside one. */
+export function linkAt(text: string, position: number): { start: number; end: number; href: string } | null {
+  LINK.lastIndex = 0;
+  for (let match = LINK.exec(text); match; match = LINK.exec(text)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (position >= start && position <= end) {
+      const href = safeHref(match[2]);
+      if (href) return { start, end, href };
+    }
+  }
+  return null;
+}
+
+/** Removes the link around a position, keeping its label. */
+export function unlinkAt(text: string, position: number): ToggleResult | null {
+  const found = linkAt(text, position);
+  if (!found) return null;
+  const match = text.slice(found.start, found.end).match(/^\[([^\]\n]+)\]/);
+  const label = match ? match[1] : "";
+  return {
+    text: `${text.slice(0, found.start)}${label}${text.slice(found.end)}`,
+    start: found.start,
+    end: found.start + label.length,
   };
 }

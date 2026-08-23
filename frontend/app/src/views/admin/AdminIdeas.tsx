@@ -18,6 +18,8 @@ import type { Idea, IdeaStage } from "@/data/newsroom/types";
 import { Reveal } from "@/components/motion";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { PitchDesk } from "@/components/admin/PitchDesk";
+import { PitchPanel } from "@/components/admin/PitchPanel";
+import type { PitchResult } from "@/components/admin/pitch";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 
@@ -72,6 +74,20 @@ const PRIORITY_RANK: Record<Idea["priority"], number> = { high: 0, medium: 1, lo
 export default function AdminIdeas() {
   const { ideas } = useNewsroom();
   const [stage, setStage] = useState<IdeaStage | "all">("all");
+
+  /**
+   * The worked-up idea, and the two form fields it can write into.
+   *
+   * Held here rather than in the form because the panel renders in the other
+   * column — under the ideas list, where there is width to read three angles
+   * and two lists without them becoming a column of fragments. The note and
+   * the beat live up here for the same reason: they are what "Add to the
+   * note" and "File under" reach for, and a panel in one column cannot set
+   * state that only exists in another.
+   */
+  const [pitch, setPitch] = useState<PitchResult | null>(null);
+  const [note, setNote] = useState("");
+  const [genre, setGenre] = useState(DEFAULT_BEAT);
   const reduced = useReducedMotion();
   const router = useRouter();
 
@@ -308,9 +324,26 @@ export default function AdminIdeas() {
               </ul>
             )}
           </div>
+
+          {pitch && (
+            <PitchPanel
+              result={pitch}
+              onUseAngle={(text) => setNote((current) => (current ? `${current}
+
+${text}` : text))}
+              onUseBeat={setGenre}
+              onDismiss={() => setPitch(null)}
+            />
+          )}
         </div>
 
-        <IdeaForm />
+        <IdeaForm
+          note={note}
+          setNote={setNote}
+          genre={genre}
+          setGenre={setGenre}
+          onResult={setPitch}
+        />
       </div>
     </div>
   );
@@ -323,10 +356,20 @@ export default function AdminIdeas() {
  * is an idea that goes unrecorded — the beat, the priority and the note can
  * all be changed afterwards, and the starting stage is the honest one.
  */
-function IdeaForm() {
+function IdeaForm({
+  note,
+  setNote,
+  genre,
+  setGenre,
+  onResult,
+}: {
+  note: string;
+  setNote: React.Dispatch<React.SetStateAction<string>>;
+  genre: string;
+  setGenre: (slug: string) => void;
+  onResult: (result: PitchResult) => void;
+}) {
   const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
-  const [genre, setGenre] = useState(DEFAULT_BEAT);
   const [priority, setPriority] = useState<Idea["priority"]>("medium");
   const [beats, setBeats] = useState<Genre[]>(GENRES);
   const reduced = useReducedMotion();
@@ -466,12 +509,7 @@ function IdeaForm() {
             form is for, and a machine should not be standing between a
             journalist and writing their own line down. Every suggestion it
             makes takes a deliberate click to enter the note or the beat. */}
-        <PitchDesk
-          idea={title}
-          note={note}
-          onUseAngle={(text) => setNote((current) => (current ? `${current}\n\n${text}` : text))}
-          onUseBeat={setGenre}
-        />
+        <PitchDesk idea={title} note={note} onResult={onResult} />
       </form>
 
       <p className="mt-6 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">

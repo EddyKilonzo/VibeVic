@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
+import { MediaController } from './media/media.controller';
+import { MediaService } from './media/media.service';
 import { SourcesController } from './sources/sources.controller';
 import { SourcesService } from './sources/sources.service';
 
 /**
  * The newsroom surface.
  *
- * Sources is the only collection wired up so far — it is the most sensitive
- * table in the schema and the pattern the rest follow, so it is the right one
- * to get right first. Quotes, interviews, ideas, pitches, evidence, entities,
+ * Sources came first — it is the most sensitive table in the schema and the
+ * pattern the rest follow. Media is the second, and is unusual only in that the
+ * files themselves live in Cloudinary: this API stores the record and the
+ * delivery URL, never the bytes.
+ *
+ * Quotes, interviews, ideas, pitches, evidence, entities,
  * timeline, notes and deadlines all have tables and none have services yet;
  * they belong here as they are written, each with the same shape: a controller
  * that carries `@NewsroomOnly` and `@RequireScopes`, and a service that asks
@@ -19,8 +24,8 @@ import { SourcesService } from './sources/sources.service';
  * quietly answered.
  */
 @Module({
-  controllers: [SourcesController],
-  providers: [SourcesService],
-  exports: [SourcesService],
+  controllers: [SourcesController, MediaController],
+  providers: [SourcesService, MediaService],
+  exports: [SourcesService, MediaService],
 })
 export class NewsroomModule {}

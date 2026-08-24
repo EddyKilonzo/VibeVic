@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
       // originals — some of them well over a megabyte — ship to phones.
       { protocol: "https", hostname: "vicunfiltered.wordpress.com" },
       { protocol: "https", hostname: "*.files.wordpress.com" },
+      // Anything uploaded through the newsroom media library. Cloudinary does
+      // its own resizing and format negotiation in the delivery URL, so these
+      // are passed through unoptimised rather than resized twice — see
+      // lib/cloudinary.ts.
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
     // Sized for the breakpoints the mobile-first brief calls out.
     deviceSizes: [320, 375, 430, 640, 768, 1024, 1280, 1536],

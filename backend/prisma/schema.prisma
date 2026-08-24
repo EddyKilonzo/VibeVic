@@ -78,6 +78,18 @@ enum EntityKind {
   DOCUMENT
 }
 
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+enum MediaSource {
+  /// Bytes we hold, stored in Cloudinary.
+  UPLOAD
+  /// Hosted by someone else; we keep the address and nothing more.
+  LINK
+}
+
 enum PortfolioClass {
   STANDARD
   SIGNATURE
@@ -234,6 +246,49 @@ model Award {
   updatedAt   DateTime @updatedAt
 
   @@map("awards")
+}
+
+/// The media library.
+///
+/// Cloudinary holds the bytes; this table holds the record of them. Splitting it
+/// that way is what makes the library survive a browser — it used to live in
+/// IndexedDB, so a photograph uploaded on a laptop did not exist on a phone, and
+/// clearing site data destroyed the only copy.
+///
+/// A LINK item has no `publicId`: it is hosted somewhere else and we store the
+/// address, deliberately not a copy. Copying someone else's image into our
+/// account would create a second version to drift and a licence question to
+/// answer, and the admin is explicit that a link is a link.
+model MediaAsset {
+  id     String      @id @default(cuid())
+  kind   MediaKind
+  source MediaSource @default(UPLOAD)
+  /// Filename, or the last path segment of a link. What the library shows.
+  name   String
+  /// Alternative text. Empty is allowed and is not the same as absent: the
+  /// editor nags about it, and a decorative image legitimately has none.
+  alt    String      @default("")
+
+  /// Cloudinary public id, e.g. "vibevic/a3f9c1". Unique because it is the
+  /// identity of the asset over there, and two rows pointing at one file would
+  /// let a delete remove an image another row still believes it owns.
+  publicId String? @unique
+  /// Delivery address. Cloudinary's secure_url for an upload, the original
+  /// address for a link.
+  url      String
+  /// Reported by Cloudinary at upload. Null on links, where we have not
+  /// fetched the file and will not guess at it.
+  bytes    Int?
+  width    Int?
+  height   Int?
+  format   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+  @@index([createdAt])
+  @@map("media_assets")
 }
 
 // ── Curation ────────────────────────────────────────────────────────────

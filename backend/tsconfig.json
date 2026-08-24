@@ -1,9 +1,13 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    // node16 rather than commonjs + node10. The old pair still emits exactly
+    // the same CommonJS here — package.json has no "type": "module" — but
+    // node10 resolution is deprecated and becomes a hard error in TypeScript 7,
+    // which is what the editor was flagging.
+    "module": "node16",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "declaration": false,
     "removeComments": false,
     "emitDecoratorMetadata": true,

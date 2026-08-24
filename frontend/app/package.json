@@ -45,6 +45,7 @@
     "@react-three/rapier": "^2.2.0",
     "ai": "^7.0.77",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.10.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",

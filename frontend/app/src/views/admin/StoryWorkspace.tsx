@@ -40,8 +40,9 @@ import { notify } from "@/lib/toast";
 import { useAutosave, type SaveStatus } from "@/hooks/useAutosave";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
-import { addUpload, listMedia, srcFor } from "@/lib/media";
 import { allBeats } from "@/lib/beats";
+import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
+import { MediaPicker } from "@/components/admin/MediaPicker";
 import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
@@ -135,6 +136,7 @@ export default function StoryWorkspace({
     existing ? { ...existing, body: [...existing.body] } : { ...BLANK, id: id ?? "new" },
   );
   const [activeBlock, setActiveBlock] = useState<string | null>(null);
+  const [coverPicking, setCoverPicking] = useState(false);
   const [dragging, setDragging] = useState(false);
 
   // Switching to a different story loads that story's draft. Tracked by id
@@ -404,6 +406,62 @@ export default function StoryWorkspace({
             "lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30",
           )}
         />
+
+        {/* ── Cover ────────────────────────────────────────────────
+            There was no way to set one. Every cover on the site came in with
+            the WordPress import, and a piece written here fell back to the
+            generated art — which is deliberately abstract and says plainly
+            that it is standing in for a photograph. Fine as a fallback, wrong
+            as the only option once there is somewhere to put a real one. */}
+        <div className="mt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="rule-label">Cover</span>
+            {draft.cover && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft((d) => ({ ...d, cover: undefined }));
+                  setCoverPicking(false);
+                }}
+                className="focus-ring text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive"
+              >
+                Remove — fall back to generated art
+              </button>
+            )}
+          </div>
+
+          {draft.cover && !coverPicking ? (
+            <div className="relative mt-3 overflow-hidden rounded-lg border border-border">
+              <img
+                src={
+                  isCloudinary(draft.cover)
+                    ? cloudinaryUrl(draft.cover, { width: 900 })
+                    : draft.cover
+                }
+                alt=""
+                className="max-h-64 w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setCoverPicking(true)}
+                className="focus-ring absolute right-2 top-2 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold shadow-raised backdrop-blur transition-colors hover:text-primary"
+              >
+                Replace
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <MediaPicker
+                kind="image"
+                onPick={(asset) => {
+                  setDraft((d) => ({ ...d, cover: asset.url }));
+                  setCoverPicking(false);
+                }}
+                onCancel={draft.cover ? () => setCoverPicking(false) : undefined}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3 border-y border-border py-3 text-xs text-muted-foreground">
           <label className="flex items-center gap-2">
@@ -959,122 +1017,79 @@ function ImageBlockPicker({
   block: Extract<Block, { type: "image" }>;
   onChange: (patch: Partial<Block>) => void;
 }) {
-  const input = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  // Resolve whatever `src` holds. An absolute URL is itself; anything else is
-  // a library id, and a missing one is reported rather than left as a blank
-  // frame the writer will assume is still loading.
-  useEffect(() => {
-    let revoke: string | null = null;
-    let live = true;
-
-    const resolve = async () => {
-      const value = block.src;
-      if (!value || value === block.id) {
-        setPreview(null);
-        return;
-      }
-      if (/^https?:\/\//.test(value)) {
-        setPreview(value);
-        return;
-      }
-      const found = (await listMedia()).find((m) => m.id === value);
-      if (!live) return;
-      if (!found) {
-        setPreview(null);
-        setProblem("That picture is no longer in the media library.");
-        return;
-      }
-      const url = srcFor(found);
-      if (found.source === "upload") revoke = url;
-      setPreview(url);
-    };
-
-    void resolve();
-    return () => {
-      live = false;
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
-  }, [block.src, block.id]);
-
-  const take = async (file: File | undefined) => {
-    if (!file) return;
-    setBusy(true);
-    setProblem(null);
-    try {
-      const item = await addUpload(file);
-      onChange({ src: item.id } as Partial<Block>);
-    } catch (cause) {
-      setProblem(cause instanceof Error ? cause.message : "That file could not be added.");
-    } finally {
-      setBusy(false);
-    }
-  };
+  /**
+   * `src` holds an address now, not a library id.
+   *
+   * It used to hold an id into an IndexedDB store, resolved here to a blob URL
+   * — which is alive only for the document that created it. A picture inserted
+   * into an article was therefore visible to the writer and to nobody else, and
+   * gone from their own screen on reload. An address needs no resolving and
+   * works for a reader, which is the only audience that matters for a published
+   * piece.
+   *
+   * A block that has never been given a picture carries its own id as `src`,
+   * which is the convention the rest of the editor already used for "empty".
+   */
+  const src = block.src && block.src !== block.id ? block.src : null;
+  const preview = src && isCloudinary(src) ? cloudinaryUrl(src, { width: 800 }) : src;
 
   return (
     <div className="space-y-2">
-      {preview ? (
+      {preview && !picking ? (
         <div className="relative overflow-hidden rounded-lg border border-border">
-          {/* Blob and arbitrary remote URLs — no optimiser route, no
-              `remotePatterns` entry. */}
+          {/* Cloudinary has already sized this; the Next optimiser would size
+              it again. Anything pasted from elsewhere has no optimiser route. */}
           <img src={preview} alt="" className="max-h-72 w-full object-cover" />
           <button
             type="button"
-            onClick={() => onChange({ src: block.id } as Partial<Block>)}
+            onClick={() => setPicking(true)}
             className="focus-ring absolute right-2 top-2 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold shadow-raised backdrop-blur transition-colors hover:text-primary"
           >
             Replace
           </button>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-border p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={input}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => {
-                void take(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => input.current?.click()}
-              disabled={busy}
-              className="focus-ring group inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-semibold transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
-            >
-              <ImagePlus className="icon-pop h-3.5 w-3.5" aria-hidden />
-              {busy ? "Adding…" : "From this device"}
-            </button>
+        <>
+          <MediaPicker
+            kind="image"
+            onPick={(asset) => {
+              // The alt text recorded in the library is a sensible starting
+              // point, but only fills a gap — it never overwrites wording the
+              // writer has already chosen for this particular placement.
+              onChange({
+                src: asset.url,
+                ...(block.alt ? {} : { alt: asset.alt }),
+              } as Partial<Block>);
+              setPicking(false);
+              setProblem(null);
+            }}
+            onCancel={preview ? () => setPicking(false) : undefined}
+          />
 
-            <label className="inline-flex min-w-0 flex-1 items-center gap-2">
-              <span className="sr-only">Image address</span>
-              <input
-                type="url"
-                defaultValue={/^https?:\/\//.test(block.src) ? block.src : ""}
-                onBlur={(e) => {
-                  const value = e.target.value.trim();
-                  if (value && /^https?:\/\//.test(value)) {
-                    onChange({ src: value } as Partial<Block>);
-                    setProblem(null);
-                  } else if (value) {
-                    setProblem("Links must start with http:// or https://");
-                  }
-                }}
-                placeholder="…or paste a link"
-                className="focus-ring h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 text-xs outline-none transition-colors focus:border-accent"
-              />
-            </label>
-          </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            On a phone the picker offers the camera as well as your photos.
-          </p>
-        </div>
+          <label className="flex min-w-0 items-center gap-2">
+            <span className="sr-only">Image address</span>
+            <input
+              type="url"
+              defaultValue={src && /^https?:\/\//.test(src) ? src : ""}
+              onBlur={(event) => {
+                const value = event.target.value.trim();
+                if (!value) return;
+                if (/^https?:\/\//.test(value)) {
+                  onChange({ src: value } as Partial<Block>);
+                  setPicking(false);
+                  setProblem(null);
+                } else {
+                  setProblem("Links must start with http:// or https://");
+                }
+              }}
+              placeholder="…or paste a link to a picture hosted elsewhere"
+              className="focus-ring h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 text-xs outline-none transition-colors focus:border-accent"
+            />
+          </label>
+        </>
       )}
 
       {problem && (

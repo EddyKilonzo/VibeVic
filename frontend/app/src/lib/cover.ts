@@ -1,3 +1,5 @@
+import { cloudinaryUrl, isCloudinary } from "./cloudinary";
+
 /**
  * Deterministic cover art.
  *
@@ -82,8 +84,17 @@ ${shapes.join("")}
  * Callers should use this rather than `coverFor` directly, so a piece that
  * arrives with a real picture never keeps the abstract stand-in.
  */
-export function storyCover(story: { slug: string; cover?: string }): string {
-  return story.cover ?? coverFor(story.slug);
+export function storyCover(
+  story: { slug: string; cover?: string },
+  /** Target width. Only applied to Cloudinary covers, which can be resized. */
+  width?: number,
+): string {
+  if (!story.cover) return coverFor(story.slug);
+  // Cloudinary covers are resized and format-negotiated on delivery; anything
+  // else is served as it was given to us, because it is not ours to transform.
+  return isCloudinary(story.cover) && width
+    ? cloudinaryUrl(story.cover, { width })
+    : story.cover;
 }
 
 /**
@@ -95,7 +106,13 @@ export function storyCover(story: { slug: string; cover?: string }): string {
  * gradient in place of the diagram the sentence above it refers to. Anything
  * that looks like a location is used as one; anything else still generates.
  */
-export function blockImage(src: string): string {
+export function blockImage(src: string, width?: number): string {
+  if (isCloudinary(src)) {
+    // An article image is read at the measure of the column, not at whatever
+    // a phone camera produced. Asking for the width the layout actually uses
+    // is the difference between a 60KB image and a 4MB one.
+    return cloudinaryUrl(src, width ? { width } : {});
+  }
   return /^(https?:)?\/\//.test(src) || src.startsWith("/") ? src : coverFor(src);
 }
 

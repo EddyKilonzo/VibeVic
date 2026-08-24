@@ -149,7 +149,10 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
       return (
         <figure data-block-id={block.id} className="my-10 -mx-5 sm:mx-0">
           <ImageReveal
-            src={blockImage(block.src)}
+            // 1280: the article column tops out well below this, and the
+            // reveal renders at 16/9 — asking for the measure rather than the
+            // original is the difference between tens of KB and megabytes.
+            src={blockImage(block.src, 1280)}
             alt={block.alt}
             ratio="16/9"
             className="rounded-lg shadow-card"

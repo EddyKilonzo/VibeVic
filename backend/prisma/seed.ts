@@ -226,7 +226,7 @@ async function seed(data: Snapshot): Promise<void> {
       publication: story.publication ?? null,
       sourceUrl: story.sourceUrl ?? null,
       cover: story.cover ?? null,
-      body: story.body as unknown as Prisma.InputJsonValue,
+      body: story.body,
     };
     // The original id is kept rather than letting cuid() mint a new one: it is
     // what the imported archive calls the piece, and anything already pointing

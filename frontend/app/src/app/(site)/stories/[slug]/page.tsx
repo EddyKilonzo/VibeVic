@@ -2,33 +2,41 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Story from "@/views/Story";
 import { PROFILE } from "@/data/content";
-import { getGenres, getStories, getStory } from "@/data/server";
+import { getGenres, getStories, getStoriesForParams, getStory } from "@/data/server";
 import { genreBySlug, parentBeat, relatedStories } from "@/lib/taxonomy";
 import { stripInline } from "@/lib/inline";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 
 export async function generateStaticParams() {
-  const stories = await getStories();
+  // The throwing reader: this list *is* the set of pages that exist, so an
+  // empty one caused by an unreachable API would 404 the whole archive.
+  const stories = await getStoriesForParams();
   return stories.map((story) => ({ slug: story.slug }));
 }
 
 /**
- * `dynamicParams` is no longer off, and the soft-404 it was guarding against is
- * still handled.
+ * The published set is the whole set.
  *
- * It was correct while the archive was compiled in: the built list was the
- * whole archive by construction, so anything outside it genuinely did not
- * exist. Now the list is a fetch, and two things follow. A piece published
- * after the last build must still be reachable, which `false` would refuse.
- * And a build that could not reach the API would have an empty list — with
- * `false` that is not "render on demand", it is *every article 404ing at once*.
+ * This was briefly `true`, on the reasoning that a story published after the
+ * last build should still be reachable. It was the wrong trade, and testing the
+ * built site is what showed it: with `true`, an unknown slug renders the 404
+ * page inside a **200** response. `notFound()` does not change that — the page
+ * has already begun — so every mistyped link became a soft 404, which is worse
+ * than a missing page: it invites a crawler to index an apology and never tells
+ * a reader the URL was wrong.
  *
- * The soft-404 problem is unaffected, because it was never this flag that
- * fixed it: `getStory` returns null for an unknown slug and the route calls
- * `notFound()`, so a mistyped URL still answers 404 with a 404.
+ * With `false`, Next refuses an unrouted param before the page runs, and the
+ * 404 carries a 404. The cost is that a newly published story needs a build to
+ * become reachable. That costs nothing today — publishing is still a 501 stub —
+ * and when it is implemented it should call `revalidatePath` rather than this
+ * flag being flipped back.
+ *
+ * The build-time risk that prompted the change is handled where it belongs:
+ * `generateStaticParams` now throws if the API is unreachable, so a bad build
+ * fails instead of quietly shipping a site where nothing can be read.
  */
-export const dynamicParams = true;
+export const dynamicParams = false;
 
 /**
  * The snippet Google prints under the headline.
@@ -54,9 +62,19 @@ export async function generateMetadata({
   const { slug } = await params;
   const story = await getStory(slug);
 
-  // A page that does not exist gets no metadata worth indexing; the route
-  // below returns a real 404 for it.
-  if (!story) return { title: "Story not found", robots: { index: false, follow: false } };
+  /**
+   * Not "return some metadata and let the page 404" — `notFound()` here.
+   *
+   * Metadata resolves before the page streams, so returning successfully from
+   * this function commits a 200 status line. The `notFound()` in the component
+   * below then had nothing left to set: it rendered the 404 page inside a 200
+   * response, which is the soft 404 `dynamicParams = false` used to prevent and
+   * which this route reintroduced when that flag was turned on.
+   *
+   * Throwing here aborts before the response is committed, so a mistyped URL
+   * answers 404 with a 404 — while a genuinely new story is still reachable.
+   */
+  if (!story) notFound();
 
   const path = `/stories/${story.slug}`;
   const image = storyCover(story);

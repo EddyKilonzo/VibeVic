@@ -148,7 +148,12 @@ export class StoriesService {
         publication: dto.publication ?? null,
         sourceUrl: dto.sourceUrl ?? null,
         cover: dto.cover ?? null,
-        body: body as unknown as Prisma.InputJsonValue,
+        // No cast. `StoryBlock[]` is zod-inferred, so it is a type alias rather
+        // than an interface and picks up an implicit index signature — which is
+        // exactly what Prisma's InputJsonValue asks for. The `as unknown as`
+        // that used to sit here was never needed, and it was hiding the fact
+        // that the block union really is valid JSON by construction.
+        body,
       },
     });
   }
@@ -165,7 +170,7 @@ export class StoriesService {
     const { expectedUpdatedAt, body, publishedAt, ...rest } = dto;
     const data: Prisma.StoryUncheckedUpdateManyInput = { ...rest };
     if (body !== undefined) {
-      data.body = parseBlocks(body) as unknown as Prisma.InputJsonValue;
+      data.body = parseBlocks(body);
     }
     if (publishedAt !== undefined) data.publishedAt = new Date(publishedAt);
 

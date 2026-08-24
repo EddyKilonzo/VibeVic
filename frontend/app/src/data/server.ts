@@ -77,6 +77,39 @@ export function getStories(): Promise<StorySummary[]> {
 }
 
 /**
+ * The same two reads, but throwing instead of degrading.
+ *
+ * For `generateStaticParams` only, and the distinction is the whole point.
+ * Those routes set `dynamicParams = false`, so the list they return *is* the
+ * set of pages that exist — anything outside it is a genuine 404. That makes an
+ * empty list from a failed fetch catastrophic in a way it is nowhere else: the
+ * build would succeed and every single article would 404.
+ *
+ * An empty archive is a legitimate state and still returns empty. An
+ * unreachable API is not, and failing the build is much better than shipping a
+ * site where nothing can be read.
+ */
+async function readOrThrow<T>(path: string): Promise<T> {
+  const response = await fetch(`${BASE}${path}`, {
+    headers: { Accept: "application/json" },
+    next: { revalidate: REVALIDATE_SECONDS },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    throw new Error(`GET ${path} returned ${response.status} while building the page list.`);
+  }
+  return (await response.json()) as T;
+}
+
+export function getStoriesForParams(): Promise<StorySummary[]> {
+  return readOrThrow<StorySummary[]>("/stories");
+}
+
+export function getGenresForParams(): Promise<Genre[]> {
+  return readOrThrow<Genre[]>("/genres");
+}
+
+/**
  * One article, with its body.
  *
  * Null for both "no such slug" and "the API could not be reached", which the

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Beat from "@/views/Beat";
 import { PROFILE } from "@/data/content";
-import { getGenres, getStories } from "@/data/server";
+import { getGenres, getGenresForParams, getStories } from "@/data/server";
 import {
   childBeats,
   genreBySlug,
@@ -34,9 +34,18 @@ import { absoluteUrl } from "@/lib/site";
  * sent to — which is exactly what the admin tells you when you open one.
  */
 export async function generateStaticParams() {
-  const genres = await getGenres();
+  // Throws rather than degrading: with `dynamicParams` off this list is the set
+  // of beat pages that exist, so an empty one would 404 the whole taxonomy.
+  const genres = await getGenresForParams();
   return genres.map((beat) => ({ slug: beat.slug }));
 }
+
+/**
+ * Off, for the same reason as the story route: with it on, an unknown beat
+ * renders the 404 page inside a 200 response, and `notFound()` cannot undo
+ * that. See that file for the full reasoning and the revalidatePath note.
+ */
+export const dynamicParams = false;
 
 export async function generateMetadata({
   params,
@@ -47,7 +56,9 @@ export async function generateMetadata({
   const [genres, allStories] = await Promise.all([getGenres(), getStories()]);
 
   const beat = genreBySlug(genres, slug);
-  if (!beat) return { title: "Beat not found", robots: { index: false, follow: false } };
+  // notFound(), not a metadata object: returning normally here commits a 200
+  // before the page can 404. See the story route for the full reasoning.
+  if (!beat) notFound();
 
   const parent = parentBeat(genres, beat.slug);
   const stories = storiesByGenre(genres, allStories, beat.slug).length;

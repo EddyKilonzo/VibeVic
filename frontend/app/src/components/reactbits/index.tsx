@@ -10,19 +10,24 @@ import { ImageReveal } from "@/components/motion";
 // The React Bits sources are untyped JSX. Everything above this file imports
 // from here instead, so the product only ever sees typed props — and so the
 // reduced-motion and touch guards below cannot be forgotten at a call site.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+//
+// The shapes come from ./props.ts rather than `any`, so the calls in this file
+// are checked too: a prop renamed upstream now fails the build instead of
+// silently rendering a marquee with no text. See that file for why the types
+// TypeScript infers from the .jsx sources cannot be used directly.
 import RbCurvedLoop from "./CurvedLoop.jsx";
 import RbScrollExpand from "./ScrollExpand.jsx";
 import RbSpecularButton from "./SpecularButton.jsx";
 import RbCountUp from "./RbCountUp.jsx";
 import RbTiltedCard from "./TiltedCard.jsx";
 import { LOCALE } from "@/lib/format";
+import type * as Rb from "./props";
 
-const CurvedLoopBase = RbCurvedLoop as any;
-const ScrollExpandBase = RbScrollExpand as any;
-const SpecularButtonBase = RbSpecularButton as any;
-const CountUpBase = RbCountUp as any;
-const TiltedCardBase = RbTiltedCard as any;
+const CurvedLoopBase = RbCurvedLoop as unknown as Rb.CurvedLoop;
+const ScrollExpandBase = RbScrollExpand as unknown as Rb.ScrollExpand;
+const SpecularButtonBase = RbSpecularButton as unknown as Rb.SpecularButton;
+const CountUpBase = RbCountUp as unknown as Rb.CountUp;
+const TiltedCardBase = RbTiltedCard as unknown as Rb.TiltedCard;
 
 /**
  * The lanyard is three.js, drei and a Rapier physics build — comfortably the
@@ -33,7 +38,7 @@ const TiltedCardBase = RbTiltedCard as any;
 const LanyardBase = dynamic(() => import("./Lanyard.jsx"), {
   ssr: false,
   loading: () => null,
-}) as any;
+}) as unknown as Rb.Lanyard;
 
 /* ── Curved marquee ──────────────────────────────────────────── */
 

@@ -6,16 +6,16 @@ import { Film, ImagePlus, Link2, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
+import { formatBytes, kindOf, type MediaKind } from "@/lib/media";
 import {
-  addLink,
-  addUpload,
-  formatBytes,
-  listMedia,
-  removeMedia,
-  srcFor,
-  type MediaItem,
-  type MediaKind,
-} from "@/lib/media";
+  linkMedia,
+  listMediaAssets,
+  removeMediaAsset,
+  uploadMedia,
+  UploadError,
+  type MediaAsset,
+} from "@/lib/media-upload";
+import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
@@ -34,7 +34,7 @@ import { EmptyState } from "@/components/ui/States";
  * a second path with its own bugs.
  */
 export default function AdminMedia() {
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const [items, setItems] = useState<MediaAsset[]>([]);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -44,14 +44,25 @@ export default function AdminMedia() {
   const fileInput = useRef<HTMLInputElement>(null);
   const reduced = useReducedMotion();
 
+  /** Per-file upload progress, keyed by name. Cleared as each one lands. */
+  const [progress, setProgress] = useState<Record<string, number>>({});
+
   const refresh = useCallback(async () => {
-    setItems(await listMedia());
-    setReady(true);
+    try {
+      setItems(await listMediaAssets());
+      setError(null);
+    } catch (cause) {
+      // An empty grid and a failed load look identical otherwise, and the
+      // first tells a journalist their pictures are gone.
+      setError(cause instanceof Error ? cause.message : "The library could not be loaded.");
+    } finally {
+      setReady(true);
+    }
   }, []);
 
-  // IndexedDB is async, so unlike the other local stores this one genuinely is
-  // an external system being subscribed to — an effect is the right shape here
-  // and the setState lands in a callback, not in the effect body.
+  // A network read now rather than IndexedDB, but the shape is unchanged: an
+  // external system being subscribed to, with the setState landing in a
+  // callback rather than in the effect body.
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -63,12 +74,36 @@ export default function AdminMedia() {
 
     let added = 0;
     const rejected: string[] = [];
+    const stranded: string[] = [];
+
     for (const file of Array.from(files)) {
+      const kind = kindOf(file.type);
+      if (!kind) {
+        rejected.push(`“${file.name}” is not an image or a video.`);
+        continue;
+      }
+
       try {
-        await addUpload(file);
+        await uploadMedia(file, kind, (fraction) =>
+          setProgress((current) => ({ ...current, [file.name]: fraction })),
+        );
         added += 1;
       } catch (cause) {
-        rejected.push(cause instanceof Error ? cause.message : file.name);
+        const message = cause instanceof Error ? cause.message : `“${file.name}” failed.`;
+        // A `record` failure is not the same as the others: the file did reach
+        // Cloudinary and is simply not in the library yet. Saying so is the
+        // difference between a journalist retrying and assuming it is lost.
+        if (cause instanceof UploadError && cause.step === "record") {
+          stranded.push(message);
+        } else {
+          rejected.push(message);
+        }
+      } finally {
+        setProgress((current) => {
+          const next = { ...current };
+          delete next[file.name];
+          return next;
+        });
       }
     }
 
@@ -78,14 +113,20 @@ export default function AdminMedia() {
     if (added > 0) notify.success(`${added} ${added === 1 ? "file" : "files"} added`);
     // Reported, not swallowed. A picker that accepts five files and silently
     // keeps three is worse than one that refuses all five.
-    if (rejected.length > 0) setError(rejected.join(" "));
+    if (rejected.length > 0 || stranded.length > 0) {
+      setError([...rejected, ...stranded].join(" "));
+    }
   };
 
   const submitLink = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
     try {
-      const item = await addLink(linkUrl, linkKind);
+      // The name is the last path segment, same rule the old store used —
+      // a link with no name is a row nobody can find again.
+      const trimmed = linkUrl.trim();
+      const name = trimmed.split("/").filter(Boolean).pop() ?? trimmed;
+      const item = await linkMedia(trimmed, linkKind, name);
       await refresh();
       setLinkUrl("");
       setError(null);
@@ -97,10 +138,17 @@ export default function AdminMedia() {
     }
   };
 
-  const drop = async (item: MediaItem) => {
-    await removeMedia(item.id);
-    setItems((list) => list.filter((i) => i.id !== item.id));
-    notify.success(`“${item.name}” removed`);
+  const drop = async (item: MediaAsset) => {
+    try {
+      await removeMediaAsset(item.id);
+      setItems((list) => list.filter((i) => i.id !== item.id));
+      notify.success(`“${item.name}” removed`);
+    } catch (cause) {
+      // The row is still there, so the grid must not pretend otherwise.
+      const message = cause instanceof Error ? cause.message : "That item could not be removed.";
+      setError(message);
+      notify.error("Not removed", message);
+    }
   };
 
   return (
@@ -109,9 +157,10 @@ export default function AdminMedia() {
         <p className="rule-label">Content</p>
         <h1 className="font-display display-2 mt-2 font-semibold">Media</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-          Pictures and clips for your stories. Uploads are held in this browser and never
-          leave it; links point at wherever the file already lives. Both can be dropped
-          into an article.
+          Pictures and clips for your stories. Uploads go to Cloudinary and the library
+          is stored with the rest of the newsroom, so what you add here is on every
+          device you sign in from. Links point at wherever the file already lives — we
+          keep the address, not a copy. Both can be dropped into an article.
         </p>
       </Reveal>
 
@@ -160,8 +209,8 @@ export default function AdminMedia() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold">{item.name}</p>
                         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                          {item.source === "link" ? "Linked" : "On this device"}
-                          {item.size ? ` · ${formatBytes(item.size)}` : ""}
+                          {item.source === "LINK" ? "Linked" : "Uploaded"}
+                          {item.bytes ? ` · ${formatBytes(item.bytes)}` : ""}
                         </p>
                       </div>
                       <button
@@ -306,7 +355,31 @@ export default function AdminMedia() {
             </Button>
           </form>
 
-          {error && (
+          {/* One row per file in flight. Uploads from a phone on mobile data are
+          slow enough that a spinner alone reads as a hang, and a picker that
+          takes five files needs to say which of them is still going. */}
+      {Object.keys(progress).length > 0 && (
+        <div className="surface mt-6 space-y-3 p-4" aria-live="polite">
+          {Object.entries(progress).map(([name, fraction]) => (
+            <div key={name}>
+              <div className="flex items-baseline justify-between gap-4">
+                <p className="truncate text-xs font-semibold">{name}</p>
+                <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {Math.round(fraction * 100)}%
+                </p>
+              </div>
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-accent transition-[width] duration-normal"
+                  style={{ width: `${Math.max(2, Math.round(fraction * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && (
             <p role="alert" className="text-sm leading-snug text-destructive">
               {error}
             </p>
@@ -320,32 +393,29 @@ export default function AdminMedia() {
 /**
  * One thumbnail.
  *
- * The object URL is minted here and revoked on unmount. An un-revoked object
- * URL pins its blob for the life of the document, which on a page of forty
- * photographs is a leak you can watch in the memory graph.
+ * No object URLs any more, and so nothing to revoke: every item now has a real
+ * address. What replaces that bookkeeping is a width request — Cloudinary
+ * resizes on delivery, so a grid of forty photographs pulls forty 400px images
+ * rather than forty originals straight off a phone camera.
+ *
+ * A linked item is served at whatever size its host gives us. It is not ours to
+ * transform, and fetching someone else's image through our account to resize it
+ * would be making a copy the link exists to avoid.
  */
-function MediaThumb({ item }: { item: MediaItem }) {
-  // Derived, not stored. This component only ever renders after `listMedia`
-  // has resolved, so it is always on the client and `createObjectURL` exists.
-  const src = useMemo(() => srcFor(item), [item]);
-
-  useEffect(() => {
-    if (!src || item.source !== "upload") return;
-    return () => URL.revokeObjectURL(src);
-  }, [src, item.source]);
-
-  if (!src) {
-    return <div className="aspect-[4/3] w-full bg-muted" />;
-  }
+function MediaThumb({ item }: { item: MediaAsset }) {
+  const src = useMemo(
+    () => (isCloudinary(item.url) ? cloudinaryUrl(item.url, { width: 400 }) : item.url),
+    [item.url],
+  );
 
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary">
-      {item.kind === "video" ? (
+      {item.kind === "VIDEO" ? (
         <>
           {/* `preload="metadata"` so the poster frame appears without pulling
               the whole clip down, and no autoplay — these have sound. */}
           <video
-            src={src}
+            src={item.url}
             preload="metadata"
             muted
             playsInline
@@ -358,8 +428,8 @@ function MediaThumb({ item }: { item: MediaItem }) {
           </span>
         </>
       ) : (
-        // A plain <img>: these are blob and arbitrary remote URLs, which the
-        // Next optimiser has no route for and no `remotePatterns` entry for.
+        // A plain <img>: Cloudinary has already sized and re-encoded this, and
+        // passing it through the Next optimiser as well would do both twice.
         <img src={src} alt={item.alt} loading="lazy" className="h-full w-full object-cover" />
       )}
     </div>

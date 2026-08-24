@@ -21,10 +21,17 @@ import type { MediaKind } from "./media";
  * by public id and will reconcile rather than duplicate.
  */
 
-/** What the media library stores, as the API returns it. */
+/**
+ * What the media library stores, as the API returns it.
+ *
+ * `kind` and `source` are the Prisma enum values, which are upper case on the
+ * wire. Typing them as the UI's lower-case `MediaKind` would have compiled and
+ * then compared "VIDEO" against "video" at runtime, so every clip would have
+ * rendered as a still.
+ */
 export interface MediaAsset {
   id: string;
-  kind: MediaKind;
+  kind: "IMAGE" | "VIDEO";
   source: "UPLOAD" | "LINK";
   name: string;
   alt: string;

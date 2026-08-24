@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import About from "@/views/About";
 import { PROFILE } from "@/data/content";
+import { getPublications } from "@/data/server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -9,6 +10,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/about",
 });
 
-export default function AboutRoute() {
-  return <About />;
+export default async function AboutRoute() {
+  const publications = await getPublications();
+  return <About publications={publications} />;
 }

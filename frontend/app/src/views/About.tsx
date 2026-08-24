@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, GraduationCap, MapPin } from "lucide-react";
 import { ABOUT_INTRO, PROFILE, QUOTE_OF_THE_WEEK, SOCIAL_ACCOUNTS } from "@/data/content";
+import type { Publication } from "@/data/types";
 import {
   AGAINST_WALL,
   FIELD_CLIP,
@@ -39,7 +40,19 @@ import { Button } from "@/components/ui/Button";
  * page is deliberately short: it is better to say four true things than to
  * pad it with a career narrative nobody confirmed.
  */
-export default function About() {
+export default function About({
+  publications,
+}: {
+  /**
+   * Where the work has run, from the database.
+   *
+   * The `publications` table has been seeded and served since the API landed
+   * and nothing rendered it — a masthead the journalist had recorded that no
+   * reader could see. This is where it belongs: the biography is the page
+   * somebody reads to find out where else to find him.
+   */
+  publications: Publication[];
+}) {
   const stats = [
     { value: CHANNEL.videoCount, label: "Reports published" },
     { value: totalViews(), label: "Total views" },
@@ -360,6 +373,56 @@ export default function About() {
             </div>
           </div>
         </section>
+
+        {/* ── Where it runs ──────────────────────────────────────
+            Read from the database rather than written here, so adding a
+            masthead is a row and not a deploy. Rendered as a definition-style
+            list: each entry is a place, a role and a period, and the period is
+            the part a reader scans for — it is what says whether this is
+            current work or a line on a CV. */}
+        {publications.length > 0 && (
+          <section className="mt-24 sm:mt-28">
+            <p className="rule-label">Where the work runs</p>
+            <h2 className="font-display display-3 mt-3 font-semibold text-balance">
+              The mastheads, and what he does at each.
+            </h2>
+
+            <Stagger className="mt-8 grid gap-4 sm:gap-5" step="tight">
+              {publications.map((publication, i) => (
+                <StaggerItem key={`${publication.name}-${publication.period}`} index={i}>
+                  <Reveal variant="fade-up" distance="sm">
+                    <div className="surface p-6 sm:p-7">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+                        <h3 className="font-display text-xl font-semibold tracking-tight">
+                          {/* Linked only where there is somewhere to go. An
+                              entry with no URL is still a real credit; giving
+                              it a dead link would be worse than plain text. */}
+                          {publication.url ? (
+                            <a
+                              href={publication.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="focus-ring underline-grow"
+                            >
+                              {publication.name}
+                            </a>
+                          ) : (
+                            publication.name
+                          )}
+                        </h3>
+                        <p className="rule-label shrink-0">{publication.period}</p>
+                      </div>
+                      <p className="mt-1.5 text-sm font-semibold text-accent">{publication.role}</p>
+                      <p className="mt-3 max-w-[62ch] leading-relaxed text-muted-foreground">
+                        {publication.description}
+                      </p>
+                    </div>
+                  </Reveal>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </section>
+        )}
 
         {/* ── Quote ──────────────────────────────────────────────
             The line he runs on his own site, carried across with its

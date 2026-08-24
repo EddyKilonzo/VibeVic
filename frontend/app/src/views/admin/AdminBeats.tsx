@@ -3,7 +3,9 @@
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Plus, Tags, Trash2 } from "lucide-react";
-import { GENRES, inGenre, parentBeat, storiesByGenre } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { useAllStories } from "@/hooks/useStories";
+import { storiesByGenre } from "@/lib/taxonomy";
 import { VIDEOS, videoBeat } from "@/data/videos";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
@@ -30,6 +32,12 @@ export default function AdminBeats() {
   const [error, setError] = useState<string | null>(null);
   const reduced = useReducedMotion();
 
+  const { genres, inGenre, parentBeat } = useTaxonomy();
+  // Drafts included: a beat with only unpublished work filed under it still
+  // has work filed under it, and removing it would still strand that work.
+  const { data: stories } = useAllStories();
+  const filedUnder = (slug: string) => storiesByGenre(genres, stories ?? [], slug).length;
+
   // Ref callback, not an effect: the route is prerendered, so reading storage
   // during the first client pass disagrees with the HTML being hydrated.
   const load = useCallback((node: HTMLDivElement | null) => {
@@ -38,7 +46,7 @@ export default function AdminBeats() {
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    const result = addBeat(name, description);
+    const result = addBeat(genres, name, description);
     if (!result.ok) {
       setError(result.reason);
       return;
@@ -51,7 +59,7 @@ export default function AdminBeats() {
   };
 
   const drop = (beat: CustomBeat) => {
-    const filed = storiesByGenre(beat.slug).length;
+    const filed = filedUnder(beat.slug);
     removeBeat(beat.slug);
     setCustom((list) => list.filter((b) => b.slug !== beat.slug));
     notify.undo(
@@ -59,7 +67,7 @@ export default function AdminBeats() {
         ? `“${beat.name}” removed — ${filed} ${filed === 1 ? "story is" : "stories are"} still filed under it`
         : `“${beat.name}” removed`,
       () => {
-        addBeat(beat.name, beat.description);
+        addBeat(genres, beat.name, beat.description);
         setCustom(listCustomBeats());
       },
     );
@@ -88,9 +96,9 @@ export default function AdminBeats() {
             </p>
 
             <ul className="mt-5 divide-y divide-border">
-              {GENRES.map((beat) => {
+              {genres.map((beat) => {
                 const reports = VIDEOS.filter((v) => inGenre(videoBeat(v), beat.slug)).length;
-                const written = storiesByGenre(beat.slug).length;
+                const written = filedUnder(beat.slug);
                 const child = !!parentBeat(beat.slug);
                 return (
                   <li

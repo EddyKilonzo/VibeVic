@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CornerDownLeft, Search as SearchIcon } from "lucide-react";
-import { genreLabel, searchStories } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { usePublishedStories } from "@/hooks/useStories";
 import { formatShortDate } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -30,8 +31,31 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const { genreLabel } = useTaxonomy();
 
-  const results = useMemo(() => searchStories(query).slice(0, MAX_RESULTS), [query]);
+  /**
+   * The archive is fetched once and filtered here, rather than hitting the
+   * search endpoint on every keystroke.
+   *
+   * This overlay answers as you type — that is the whole point of it — and a
+   * request per character would be both slow and rude to the API. The archive
+   * is small enough to hold, and the full-page /search view is the one that
+   * asks the server.
+   */
+  const { data: archive } = usePublishedStories();
+
+  const results = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+    return (archive ?? [])
+      .filter(
+        (story) =>
+          story.title.toLowerCase().includes(needle) ||
+          story.dek.toLowerCase().includes(needle) ||
+          story.tags.some((tag) => tag.toLowerCase().includes(needle)),
+      )
+      .slice(0, MAX_RESULTS);
+  }, [query, archive]);
 
   // Two pieces of state that follow other state, adjusted during render rather
   // than in an effect: the overlay must never paint for a frame showing the

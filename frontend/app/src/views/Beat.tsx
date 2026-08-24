@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import type { Genre } from "@/data/types";
+import type { Genre, StorySummary } from "@/data/types";
 import { VIDEOS, videoBeat } from "@/data/videos";
-import { childBeats, inGenre, parentBeat, storiesByGenre } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { StoryCard } from "@/components/story/StoryCard";
@@ -30,12 +30,25 @@ import { PageHero } from "@/components/hero/PageHero";
  * its children — because "News" means the reporting, not just the reporting
  * nobody filed more precisely. A child shows only itself.
  */
-export default function Beat({ beat }: { beat: Genre }) {
+export default function Beat({
+  beat,
+  stories,
+}: {
+  beat: Genre;
+  /**
+   * The work filed under this beat, resolved on the server.
+   *
+   * A prop rather than a fetch: this page is prerendered and its structured
+   * data lists these same stories, so the markup a crawler reads and the cards
+   * a reader sees have to come from one query, not two.
+   */
+  stories: StorySummary[];
+}) {
+  const { childBeats, inGenre, parentBeat } = useTaxonomy();
   const parent = parentBeat(beat.slug);
   const children = childBeats(beat.slug);
 
   const videos = VIDEOS.filter((video) => inGenre(videoBeat(video), beat.slug));
-  const stories = storiesByGenre(beat.slug);
 
   return (
     <>
@@ -60,7 +73,10 @@ export default function Beat({ beat }: { beat: Genre }) {
               </Link>
             )}
             {children.map((child) => {
-              const count = storiesByGenre(child.slug).length;
+              // Counted out of the family list already in hand rather than by a
+              // second lookup: a parent's `stories` is its whole family, so the
+              // child's share is a filter, not another pass over the archive.
+              const count = stories.filter((story) => inGenre(story.genre, child.slug)).length;
               return (
                 <Link
                   key={child.slug}

@@ -14,7 +14,8 @@ import {
   YAxis,
 } from "recharts";
 import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
-import { TOP_BEATS, STORIES, storyBySlug } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { useAllStories } from "@/hooks/useStories";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
 import { summariseAll } from "@/lib/voice/analytics";
 import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
@@ -34,10 +35,14 @@ import { newsroomPath } from "@/lib/newsroom-path";
  * there is no data, it says so rather than drawing a zeroed chart.
  */
 export default function Dashboard() {
+  const { topBeats } = useTaxonomy();
+  const { data: allStories } = useAllStories();
+  const stories = allStories ?? [];
+  const storyBySlug = (slug: string) => stories.find((story) => story.slug === slug);
   const reduced = useReducedMotion();
 
-  const drafts = STORIES.filter((s) => s.status !== "published").length;
-  const published = STORIES.length - drafts;
+  const drafts = stories.filter((s) => s.status !== "published").length;
+  const published = stories.length - drafts;
 
   const chartData = useMemo(
     () =>
@@ -148,7 +153,7 @@ export default function Dashboard() {
               after there were seven, which is the failure mode of writing a
               count into a sentence. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            Reports and writing together, across all {TOP_BEATS.length} beats.
+            Reports and writing together, across all {topBeats.length} beats.
           </p>
           <div className="mt-6">
             <BeatShare />

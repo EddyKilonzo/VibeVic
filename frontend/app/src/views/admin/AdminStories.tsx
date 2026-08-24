@@ -4,9 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clock, Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
-import type { Story, StoryStatus } from "@/data/types";
-import { api } from "@/data/api";
-import { genreLabel } from "@/data/content";
+import type { StorySummary, StoryStatus } from "@/data/types";
+import { ApiError, api } from "@/data/api";
 import { LOCALE, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
@@ -17,7 +16,8 @@ import { storyCover } from "@/lib/cover";
 import { ImageReveal, Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/States";
+import { EmptyState, ErrorState } from "@/components/ui/States";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
@@ -78,7 +78,16 @@ function StatusPill({ status, className }: { status: StoryStatus; className?: st
 }
 
 export default function AdminStories() {
-  const { data, loading } = useAsync(() => api.allStories(), []);
+  const { genreLabel } = useTaxonomy();
+  /**
+   * `error` is read, not dropped.
+   *
+   * This list now comes from the API rather than a bundled array, and the
+   * empty state below says "No stories match" — which, on a failed fetch,
+   * tells a journalist their drafts are gone. They are not; the request
+   * failed. The two have to look different.
+   */
+  const { data, loading, error, reload } = useAsync(() => api.allStories(), []);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StoryStatus | "all">("all");
   /**
@@ -105,7 +114,7 @@ export default function AdminStories() {
     return list;
   }, [data, removed, status, query]);
 
-  const remove = (story: Story) => {
+  const remove = (story: StorySummary) => {
     setRemoved((prev) => [...prev, story.id]);
     notify.undo(`“${story.title}” deleted`, () =>
       setRemoved((prev) => prev.filter((id) => id !== story.id)),
@@ -226,6 +235,16 @@ export default function AdminStories() {
               ),
             )}
           </div>
+        ) : error ? (
+          <ErrorState
+            title="The story list could not be loaded."
+            description={
+              error instanceof ApiError && error.status === 401
+                ? error.message
+                : "Your drafts are safe — this request did not reach the API."
+            }
+            onRetry={reload}
+          />
         ) : stories.length === 0 ? (
           <EmptyState
             title="No stories match"

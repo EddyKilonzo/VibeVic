@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bookmark } from "lucide-react";
-import { TOP_BEATS, childBeats, genreBySlug, inGenre } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { api } from "@/data/api";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
@@ -22,6 +22,7 @@ export default function Stories() {
   const genre = get("genre", "all");
   const savedOnly = get("saved") === "1";
   const { slugs } = useBookmarks();
+  const { topBeats, childBeats, genreBySlug, inGenre } = useTaxonomy();
   const reduced = useReducedMotion();
 
   const { data, loading, error, reload } = useAsync(() => api.stories(), []);
@@ -34,7 +35,11 @@ export default function Stories() {
     if (genre !== "all") list = list.filter((s) => inGenre(s.genre, genre));
     if (savedOnly) list = list.filter((s) => slugs.includes(s.slug));
     return list;
-  }, [data, genre, savedOnly, slugs]);
+    // `inGenre` is in the deps because it is no longer a module-level import:
+    // it closes over the fetched taxonomy, so a filter computed before the
+    // beats arrived would keep showing an unfiltered archive. The provider
+    // memoises it, so its identity only changes when the beat list does.
+  }, [data, genre, savedOnly, slugs, inGenre]);
 
   /**
    * The top-level beat currently in play.
@@ -68,7 +73,7 @@ export default function Stories() {
           <FilterChip active={genre === "all"} onClick={() => setFilter({ genre: null })}>
             All
           </FilterChip>
-          {TOP_BEATS.map((g) => (
+          {topBeats.map((g) => (
             <FilterChip
               key={g.slug}
               active={genre === g.slug || activeParent === g.slug}

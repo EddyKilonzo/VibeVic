@@ -31,7 +31,8 @@ import {
   Type,
 } from "lucide-react";
 import type { Block, BlockType, Genre, Story, StoryStatus } from "@/data/types";
-import { DEFAULT_BEAT, GENRES, storyById } from "@/data/content";
+import { DEFAULT_BEAT } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { formatRelative } from "@/lib/format";
@@ -104,8 +105,20 @@ const BLANK: Story = {
  * Controls stay hidden until a block is hovered or focused. An editor covered
  * in affordances is an editor you cannot read your own writing in.
  */
-export default function StoryWorkspace({ id }: { id?: string }) {
-  const existing = id ? storyById(id) : undefined;
+export default function StoryWorkspace({
+  id,
+  existing,
+}: {
+  id?: string;
+  /**
+   * The story being edited, read from the API by the route on the server.
+   *
+   * A prop rather than a lookup: editor state is seeded from it on the first
+   * render, so it must hold the same value on the server and on the client.
+   */
+  existing?: Story;
+}) {
+  const { genres } = useTaxonomy();
   const reduced = useReducedMotion();
 
   /**
@@ -170,7 +183,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
    * the ref callback fires at exactly the moment we need and re-fires when
    * `targetId` changes it, which is also when the offer should come back.
    */
-  const [beats, setBeats] = useState<Genre[]>(GENRES);
+  const [beats, setBeats] = useState<Genre[]>(genres);
 
   /**
    * Which face the draft is composed in.
@@ -212,9 +225,12 @@ export default function StoryWorkspace({ id }: { id?: string }) {
       // Same pass, same reason: both stores are read once the sheet is up
       // rather than during render, which this prerendered route would hydrate
       // against a different answer.
-      setBeats(allBeats());
+      setBeats(allBeats(genres));
     },
-    [targetId, id, existing],
+    // `genres` included for the same reason as the beat picker elsewhere: the
+    // published list arrives from the API, and a callback closed over the
+    // first-render value would offer a story nowhere to be filed.
+    [targetId, id, existing, genres],
   );
 
   const restore = () => {
@@ -399,7 +415,7 @@ export default function StoryWorkspace({ id }: { id?: string }) {
             >
               {/* Beats opened in the workspace are listed here too — a beat
                   you cannot file anything under is a beat you did not open. */}
-              <BeatOptions beats={beats} />
+              <BeatOptions beats={beats} published={genres} />
             </select>
           </label>
           <span aria-hidden className="h-3 w-px bg-border" />

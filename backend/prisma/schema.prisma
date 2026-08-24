@@ -26,10 +26,16 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Pooled, for the running server: Neon's PgBouncer hands out a connection
+  // per transaction rather than holding one open per process.
+  url       = env("DATABASE_URL")
+  // Unpooled, for migrations only. DDL runs inside advisory locks and
+  // session-scoped statements that a transaction-mode pooler cannot carry, so
+  // a migration aimed at the pooler fails in ways that read as network trouble.
+  directUrl = env("DIRECT_URL")
 }
 
-/* ── Enums ─────────────────────────────────────────────────────────────── */
+// ── Enums ───────────────────────────────────────────────────────────────
 
 enum Visibility {
   CONFIDENTIAL
@@ -79,7 +85,7 @@ enum PortfolioClass {
   AWARD_SUBMISSION
 }
 
-/* ── Accounts ──────────────────────────────────────────────────────────── */
+// ── Accounts ────────────────────────────────────────────────────────────
 
 /// The journalist's account. Deliberately minimal: no credential column yet,
 /// because the auth module does not issue credentials yet and an unused
@@ -98,7 +104,7 @@ model User {
   @@map("users")
 }
 
-/* ── Public content ────────────────────────────────────────────────────── */
+// ── Public content ──────────────────────────────────────────────────────
 
 model Story {
   id             String      @id @default(cuid())
@@ -117,6 +123,16 @@ model Story {
   placeholder    Boolean     @default(false)
   /// Where it originally ran, if syndicated.
   publication    String?
+
+  /// The piece at its original home, for imported work. A syndicated article
+  /// should always be able to point at the version its author maintains: if the
+  /// two diverge, a reader can see which is which instead of trusting this copy.
+  sourceUrl      String?
+
+  /// A real cover photograph. Null means the site falls back to generated art
+  /// keyed off the slug — deliberately abstract, so decoration standing in for a
+  /// picture is never mistaken for one.
+  cover          String?
 
   /// Ordered list of typed blocks, stored as JSON rather than HTML so the
   /// editor can reorder blocks and the voice engine can pick which ones to
@@ -167,15 +183,29 @@ model StoryStats {
   @@map("story_stats")
 }
 
+/// The archive is two levels deep and no more: six beats a reader can hold in
+/// their head, with the specific subjects filed underneath them. A story is
+/// filed against exactly one slug — parent or child — and everything that counts
+/// work under a parent walks the family rather than assuming stories sit on the
+/// parent itself.
 model Genre {
   slug        String   @id
   name        String
   description String
+  /// Null for a top-level beat. A real foreign key rather than a loose string,
+  /// so a child cannot be filed under a beat that does not exist.
+  parentSlug  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Restrict: deleting a beat that still has subjects under it should fail
+  // loudly, not orphan them or cascade away half the taxonomy.
+  parent   Genre?  @relation("GenreTree", fields: [parentSlug], references: [slug], onDelete: Restrict, onUpdate: Cascade)
+  children Genre[] @relation("GenreTree")
+
   stories Story[]
 
+  @@index([parentSlug])
   @@map("genres")
 }
 
@@ -206,7 +236,7 @@ model Award {
   @@map("awards")
 }
 
-/* ── Curation ──────────────────────────────────────────────────────────── */
+// ── Curation ────────────────────────────────────────────────────────────
 
 /// Collections and portfolio classes are the two pieces of newsroom state the
 /// journalist chose to make visible, which is why they are the only ones the
@@ -267,7 +297,7 @@ model StyleGuideEntry {
   @@map("style_guide_entries")
 }
 
-/* ── Newsroom: ideas and pitches ───────────────────────────────────────── */
+// ── Newsroom: ideas and pitches ─────────────────────────────────────────
 
 /// Ideas and pitches carry no visibility column: the whole collection is
 /// private, so there is no per-row decision to make and no column that could be
@@ -330,7 +360,7 @@ model PitchSource {
   @@map("pitch_sources")
 }
 
-/* ── Newsroom: sources, quotes, interviews ─────────────────────────────── */
+// ── Newsroom: sources, quotes, interviews ───────────────────────────────
 
 model Source {
   id           String       @id @default(cuid())
@@ -410,7 +440,7 @@ model Interview {
   @@map("interviews")
 }
 
-/* ── Newsroom: evidence, entities, timeline ────────────────────────────── */
+// ── Newsroom: evidence, entities, timeline ──────────────────────────────
 
 model Entity {
   id         String     @id @default(cuid())
@@ -469,7 +499,7 @@ model TimelineEvent {
   @@map("timeline_events")
 }
 
-/* ── Newsroom: working notes and deadlines ─────────────────────────────── */
+// ── Newsroom: working notes and deadlines ───────────────────────────────
 
 model Note {
   id         String     @id @default(cuid())
@@ -501,7 +531,7 @@ model Deadline {
   @@map("deadlines")
 }
 
-/* ── Story ↔ record joins ──────────────────────────────────────────────── */
+// ── Story ↔ record joins ────────────────────────────────────────────────
 //
 // Explicit join tables rather than implicit many-to-many. Two reasons that
 // matter here: the link between a story and a confidential source is itself

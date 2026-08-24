@@ -21,6 +21,15 @@ const schema = z
     PORT: z.coerce.number().int().positive().default(4000),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
+    /**
+     * The unpooled endpoint, read only by `prisma migrate` via the datasource
+     * block. Optional here on purpose: the running server never opens it, so a
+     * runtime-only container that was handed no migration credential should
+     * still boot. A deploy that runs migrations does need it, and will fail
+     * loudly at the CLI rather than silently at runtime.
+     */
+    DIRECT_URL: z.string().optional(),
+
     /** Comma-separated. Absent means: allow no browser origin at all. */
     CORS_ORIGINS: z.string().optional().default(''),
 
@@ -73,7 +82,12 @@ export function validateEnv(raw: Record<string, unknown>): Env {
   return parsed.data;
 }
 
-export function corsOrigins(env: Env): string[] {
+/**
+ * Takes only the field it reads, so a caller holding a ConfigService can pass
+ * that one value instead of reassembling a whole Env to ask a question about
+ * one string.
+ */
+export function corsOrigins(env: Pick<Env, 'CORS_ORIGINS'>): string[] {
   return env.CORS_ORIGINS.split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);

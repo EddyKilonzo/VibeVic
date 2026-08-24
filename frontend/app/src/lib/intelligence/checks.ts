@@ -1,7 +1,6 @@
 import type { Block, Story } from "@/data/types";
 import type { Entity } from "@/data/newsroom/types";
 import type { ChecklistItem, Finding } from "./types";
-import { genreLabel } from "@/data/content";
 import { STOP_WORDS, sentences, textUnits, words } from "./text";
 
 /**
@@ -295,7 +294,18 @@ export function reviewStory(story: Story, entities: Entity[] = []): Finding[] {
  */
 export function prePublicationChecklist(
   story: Story,
-  context: { sourceCount: number; quoteCount: number },
+  context: {
+    sourceCount: number;
+    quoteCount: number;
+    /**
+     * The beat's display name, resolved by the caller.
+     *
+     * Passed in rather than looked up here because the taxonomy now comes from
+     * the database, and this file is a set of pure functions over a draft —
+     * giving it a data dependency would make every check await a fetch.
+     */
+    beatLabel: string;
+  },
 ): ChecklistItem[] {
   const units = textUnits(story.body);
   const wordCount = units.reduce((n, u) => n + words(u.text).length, 0);
@@ -320,7 +330,7 @@ export function prePublicationChecklist(
       id: "genre",
       label: "Beat assigned",
       state: story.genre ? "met" : "unmet",
-      because: story.genre ? `Filed under ${genreLabel(story.genre)}.` : "No beat chosen, so this will not appear under any topic.",
+      because: story.genre ? `Filed under ${context.beatLabel}.` : "No beat chosen, so this will not appear under any topic.",
     },
     {
       id: "length",

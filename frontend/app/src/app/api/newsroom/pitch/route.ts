@@ -1,6 +1,7 @@
+import { anthropic } from "@ai-sdk/anthropic";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { GENRES } from "@/data/content";
+import { getGenres } from "@/data/server";
 import { isUnlocked } from "@/lib/newsroom-auth";
 
 /**
@@ -30,10 +31,17 @@ import { isUnlocked } from "@/lib/newsroom-auth";
  */
 export const maxDuration = 60;
 
-/** The beats a suggestion is allowed to name — the real taxonomy, nothing invented. */
-const BEAT_SLUGS = GENRES.map((g) => g.slug) as [string, ...string[]];
-
-const Pitch = z.object({
+/**
+ * The pitch schema, built per request around the beats that actually exist.
+ *
+ * It used to be a module-level constant over the compiled `GENRES`. The
+ * taxonomy is a database read now, so the enum has to be built once the beats
+ * are known — which is the right shape anyway: the model is constrained to
+ * beats the archive really has, so a suggestion can never file a story under a
+ * subject nobody created.
+ */
+function buildPitchSchema(slugs: [string, ...string[]]) {
+  return z.object({
   angles: z
     .array(
       z.object({
@@ -52,11 +60,12 @@ const Pitch = z.object({
     .array(z.string().describe("A question the finished piece must be able to answer."))
     .min(3)
     .max(6),
-  beat: z.enum(BEAT_SLUGS).describe("The slug of the beat this would file under."),
+  beat: z.enum(slugs).describe("The slug of the beat this would file under."),
   caution: z
     .string()
     .describe("One sentence on what would make this story wrong, unfair, or not a story."),
-});
+  });
+}
 
 const SYSTEM = `You are helping a working journalist in Kenya think through an idea they have just written down.
 
@@ -74,11 +83,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not signed in to the newsroom." }, { status: 401 });
   }
 
-  if (!process.env.AI_GATEWAY_API_KEY) {
+  // Checked here rather than left to the SDK, which fails at call time with a
+  // provider error a journalist cannot act on. This says which name to set.
+  if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       {
         error:
-          "No AI Gateway key is configured. Set AI_GATEWAY_API_KEY and restart, and this comes alive.",
+          "No Anthropic key is configured. Set ANTHROPIC_API_KEY and restart, and this comes alive.",
       },
       { status: 503 },
     );
@@ -98,13 +109,33 @@ export async function POST(request: Request) {
     return Response.json({ error: "Write the idea down first." }, { status: 400 });
   }
 
-  const beatList = GENRES.map((g) => `${g.slug} — ${g.name}`).join("\n");
+  const genres = await getGenres();
+  if (genres.length === 0) {
+    // Without the taxonomy there is nothing to constrain the model to, and an
+    // unconstrained beat is a filing suggestion for a subject that may not
+    // exist. Refusing beats guessing.
+    return Response.json(
+      { error: "The beat list could not be read, so a pitch cannot be filed. Try again." },
+      { status: 503 },
+    );
+  }
+
+  const slugs = genres.map((g) => g.slug) as [string, ...string[]];
+  const Pitch = buildPitchSchema(slugs);
+  const beatList = genres.map((g) => `${g.slug} — ${g.name}`).join("\n");
 
   try {
     const { output } = await generateText({
-      // A plain provider string through the Gateway: the model is config, not
-      // code, and swapping it is a one-word change with no new dependency.
-      model: "anthropic/claude-sonnet-5",
+      /**
+       * The Anthropic provider directly, not a bare "anthropic/…" string.
+       *
+       * A plain provider string resolves through the Vercel AI Gateway, which
+       * authenticates with AI_GATEWAY_API_KEY or a Vercel OIDC token — so it
+       * never reads ANTHROPIC_API_KEY, and this route answered 503 for anyone
+       * holding only an Anthropic key. Naming the provider spends the key that
+       * is actually configured.
+       */
+      model: anthropic("claude-sonnet-5"),
       system: SYSTEM,
       output: Output.object({ schema: Pitch }),
       prompt: [

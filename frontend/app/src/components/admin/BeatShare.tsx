@@ -1,6 +1,8 @@
 "use client";
 
-import { TOP_BEATS, inGenre, storiesByGenre } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { useAllStories } from "@/hooks/useStories";
+import { storiesByGenre } from "@/lib/taxonomy";
 import { VIDEOS, videoBeat } from "@/data/videos";
 
 /**
@@ -25,12 +27,14 @@ import { VIDEOS, videoBeat } from "@/data/videos";
  * total; the label breaks it down.
  */
 export function BeatShare() {
+  const { genres, topBeats, inGenre } = useTaxonomy();
+  const { data: stories } = useAllStories();
   // The six, each counting its own children: a chart with twenty-one rows,
   // most of them empty, would say less about where the work goes than one
   // with six.
-  const rows = TOP_BEATS.map((genre) => {
+  const rows = topBeats.map((genre) => {
     const reports = VIDEOS.filter((video) => inGenre(videoBeat(video), genre.slug)).length;
-    const written = storiesByGenre(genre.slug).length;
+    const written = storiesByGenre(genres, stories ?? [], genre.slug).length;
     return { slug: genre.slug, name: genre.name, reports, written, total: reports + written };
   })
     .filter((row) => row.total > 0)

@@ -1,7 +1,6 @@
 "use client";
 
 import type { Award } from "@/data/types";
-import { AWARDS } from "@/data/content";
 
 /**
  * Awards recorded in the workspace.
@@ -23,8 +22,9 @@ import { AWARDS } from "@/data/content";
  *
  * ── Where the records live ───────────────────────────────────────────────
  * This browser, like every other workspace store, and the screen says so.
- * They reach the public page when the API lands and a build follows — a
- * record here is a note the journalist made, not a claim the site is making.
+ * The published awards now come from the database and arrive as an argument;
+ * a record here is still only a note the journalist made, not a claim the site
+ * is making, until it is written through to the API.
  */
 
 const KEY = "vv:awards";
@@ -149,7 +149,7 @@ export function restoreAward(award: RecordedAward): void {
   }
 }
 
-/** Everything the site would list: the compiled entries plus the recorded ones. */
-export function allAwards(): Award[] {
-  return [...AWARDS, ...listAwards()].sort((a, b) => b.year.localeCompare(a.year));
+/** Everything the site would list: the published entries plus the recorded ones. */
+export function allAwards(published: Award[] = []): Award[] {
+  return [...published, ...listAwards()].sort((a, b) => b.year.localeCompare(a.year));
 }

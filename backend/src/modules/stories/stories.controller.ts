@@ -104,6 +104,14 @@ export class StoriesAdminController {
     return this.stories.listAll(principal);
   }
 
+  @Get(':id')
+  byId(
+    @CurrentPrincipal() principal: Principal | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.stories.byId(principal, id);
+  }
+
   @Post()
   create(
     @CurrentPrincipal() principal: Principal | undefined,

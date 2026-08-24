@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { FileText, PenLine, Trash2 } from "lucide-react";
-import { genreLabel } from "@/data/content";
 import { formatRelative } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -18,6 +17,7 @@ import {
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { newsroomPath } from "@/lib/newsroom-path";
 
 /**
@@ -34,6 +34,7 @@ import { newsroomPath } from "@/lib/newsroom-path";
  * the same false promise the save indicator used to make.
  */
 export default function AdminDrafts() {
+  const { genreLabel } = useTaxonomy();
   const [drafts, setDrafts] = useState<StoredDraft[]>([]);
   const reduced = useReducedMotion();
 

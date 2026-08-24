@@ -1,5 +1,6 @@
 import { stripInline } from "@/lib/inline";
-import { PROFILE, publishedStories } from "@/data/content";
+import { PROFILE } from "@/data/content";
+import { getStories } from "@/data/server";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 
@@ -31,10 +32,15 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-export const dynamic = "force-static";
+/**
+ * Revalidated rather than force-static: the feed is generated from the archive
+ * now, and a feed frozen at build time stops being a feed the first time
+ * something is published without a deploy.
+ */
+export const revalidate = 300;
 
-export function GET() {
-  const stories = publishedStories();
+export async function GET() {
+  const stories = await getStories();
   const updated = stories[0]?.publishedAt;
 
   const items = stories

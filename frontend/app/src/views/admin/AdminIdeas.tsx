@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Lightbulb, Plus, Trash2 } from "lucide-react";
 import type { Genre, Story } from "@/data/types";
-import { DEFAULT_BEAT, GENRES, genreLabel } from "@/data/content";
+import { DEFAULT_BEAT } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { allBeats } from "@/lib/beats";
 import { writeDraft } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
@@ -73,6 +74,7 @@ const PRIORITY_STYLE: Record<Idea["priority"], string> = {
 const PRIORITY_RANK: Record<Idea["priority"], number> = { high: 0, medium: 1, low: 2 };
 
 export default function AdminIdeas() {
+  const { genreLabel } = useTaxonomy();
   const { ideas } = useNewsroom();
   const [stage, setStage] = useState<IdeaStage | "all">("all");
 
@@ -370,9 +372,10 @@ function IdeaForm({
   setGenre: (slug: string) => void;
   onResult: (result: PitchResult) => void;
 }) {
+  const { genres } = useTaxonomy();
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Idea["priority"]>("medium");
-  const [beats, setBeats] = useState<Genre[]>(GENRES);
+  const [beats, setBeats] = useState<Genre[]>(genres);
   const reduced = useReducedMotion();
 
   /**
@@ -397,12 +400,16 @@ function IdeaForm({
   const load = useCallback((node: HTMLFormElement | null) => {
     if (!node) return;
     setBeats((current) => {
-      const next = allBeats();
+      const next = allBeats(genres);
       const same =
         current.length === next.length && current.every((beat, i) => beat.slug === next[i].slug);
       return same ? current : next;
     });
-  }, []);
+    // `genres` is a dependency now that the published beats are fetched: a
+    // callback pinned to the empty first-render list would leave the picker
+    // showing only locally-added beats. The comparison above still stops the
+    // re-render when the list has not actually changed.
+  }, [genres]);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -467,7 +474,7 @@ function IdeaForm({
           onChange={(e) => setGenre(e.target.value)}
           className="focus-ring mt-2 h-11 w-full rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-accent"
         >
-          <BeatOptions beats={beats} />
+          <BeatOptions beats={beats} published={genres} />
         </select>
 
         <p className="rule-label mt-5">Priority</p>

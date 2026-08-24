@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Beat from "@/views/Beat";
+import { PROFILE } from "@/data/content";
+import { getGenres, getStories } from "@/data/server";
 import {
-  GENRES,
-  PROFILE,
   childBeats,
   genreBySlug,
   inGenre,
   parentBeat,
   storiesByGenre,
-} from "@/data/content";
+} from "@/lib/taxonomy";
 import { VIDEOS, videoBeat } from "@/data/videos";
 import { pageMetadata } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
@@ -17,20 +17,26 @@ import { absoluteUrl } from "@/lib/site";
 /**
  * A page per beat — parents and children alike, twenty-one of them.
  *
- * The taxonomy is a fixed list compiled into the site, so every one of these
- * is built ahead of time and `dynamicParams` is off: a slug outside the list
- * is a genuine 404 rather than an empty page returning 200, which is what
- * invites a crawler to index subjects that do not exist.
+ * The taxonomy now comes from the database, which changes two things.
  *
- * Beats opened in the workspace are deliberately not here. They live in one
- * browser's storage, so there is nothing to build and nothing a reader could
- * be sent to — which is exactly what the admin tells you when you open one.
+ * The list is fetched at build time and degrades to empty if the API cannot be
+ * reached — so an outage produces pages rendered on demand rather than a failed
+ * build.
+ *
+ * And `dynamicParams` can no longer be `false`. It was correct when the beats
+ * were compiled in and the built list was exhaustive by construction; now a
+ * beat added after the last build would 404 despite existing. Unknown slugs are
+ * still a real 404 — the page below calls `notFound()` when the beat is not in
+ * the taxonomy — so nothing returns 200 for a subject that does not exist.
+ *
+ * Beats opened in the workspace are deliberately still absent. They live in one
+ * browser's storage, so there is nothing to build and nothing a reader could be
+ * sent to — which is exactly what the admin tells you when you open one.
  */
-export function generateStaticParams() {
-  return GENRES.map((beat) => ({ slug: beat.slug }));
+export async function generateStaticParams() {
+  const genres = await getGenres();
+  return genres.map((beat) => ({ slug: beat.slug }));
 }
-
-export const dynamicParams = false;
 
 export async function generateMetadata({
   params,
@@ -38,12 +44,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const beat = genreBySlug(slug);
+  const [genres, allStories] = await Promise.all([getGenres(), getStories()]);
+
+  const beat = genreBySlug(genres, slug);
   if (!beat) return { title: "Beat not found", robots: { index: false, follow: false } };
 
-  const parent = parentBeat(beat.slug);
-  const stories = storiesByGenre(beat.slug).length;
-  const videos = VIDEOS.filter((v) => inGenre(videoBeat(v), beat.slug)).length;
+  const parent = parentBeat(genres, beat.slug);
+  const stories = storiesByGenre(genres, allStories, beat.slug).length;
+  const videos = VIDEOS.filter((v) => inGenre(genres, videoBeat(v), beat.slug)).length;
 
   /*
    * The description is the beat's own standfirst plus what is actually filed
@@ -73,11 +81,13 @@ export async function generateMetadata({
 
 export default async function BeatRoute({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const beat = genreBySlug(slug);
+  const [genres, allStories] = await Promise.all([getGenres(), getStories()]);
+
+  const beat = genreBySlug(genres, slug);
   if (!beat) notFound();
 
-  const parent = parentBeat(beat.slug);
-  const stories = storiesByGenre(beat.slug);
+  const parent = parentBeat(genres, beat.slug);
+  const stories = storiesByGenre(genres, allStories, beat.slug);
 
   /**
    * Structured data: what this page is, and what is on it.
@@ -105,8 +115,12 @@ export default async function BeatRoute({ params }: { params: Promise<{ slug: st
         inLanguage: "en",
         isPartOf: { "@id": `${absoluteUrl("")}/#website` },
         about: { "@type": "Thing", name: beat.name },
-        ...(childBeats(beat.slug).length > 0
-          ? { hasPart: childBeats(beat.slug).map((c) => ({ "@id": absoluteUrl(`/beats/${c.slug}`) })) }
+        ...(childBeats(genres, beat.slug).length > 0
+          ? {
+              hasPart: childBeats(genres, beat.slug).map((c) => ({
+                "@id": absoluteUrl(`/beats/${c.slug}`),
+              })),
+            }
           : {}),
         mainEntity: {
           "@type": "ItemList",
@@ -138,7 +152,7 @@ export default async function BeatRoute({ params }: { params: Promise<{ slug: st
         // Built from our own typed data, not from anything a reader supplies.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Beat beat={beat} />
+      <Beat beat={beat} stories={stories} />
     </>
   );
 }

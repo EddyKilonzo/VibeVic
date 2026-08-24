@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { Search as SearchIcon } from "lucide-react";
-import { api } from "@/data/api";
+import { ApiError, api } from "@/data/api";
 import { useAsync } from "@/hooks/useAsync";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { StoryCard } from "@/components/story/StoryCard";
 import { StoryGridSkeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/States";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 import { PageHero } from "@/components/hero/PageHero";
 
 export default function Search() {
@@ -31,13 +31,23 @@ export default function Search() {
     inputRef.current?.focus();
   }, []);
 
-  const { data, loading } = useAsync(
+  const { data, loading, error, reload } = useAsync(
     () => (debounced.trim() ? api.search(debounced) : Promise.resolve([])),
     [debounced],
   );
 
   const results = data ?? [];
   const searching = debounced.trim().length > 0;
+
+  /**
+   * A failed search is not an empty search.
+   *
+   * While this read was a local array it could not fail, so dropping `error`
+   * cost nothing. Now that it crosses a network, "nothing matched" and "the
+   * search never happened" look identical to a reader — and the first tells
+   * them their subject is not covered here, which may be untrue.
+   */
+  const failed = Boolean(error) && searching;
 
   return (
     <>
@@ -63,13 +73,25 @@ export default function Search() {
             ? "Search titles, subjects and the full text of every published story."
             : loading
               ? "Searching…"
-              : `${results.length} ${results.length === 1 ? "story" : "stories"} for “${debounced}”`}
+              : failed
+                ? "The search could not be run."
+                : `${results.length} ${results.length === 1 ? "story" : "stories"} for “${debounced}”`}
         </p>
       </Reveal>
 
       <div className="mt-14 min-h-[35vh]">
         {searching && loading ? (
           <StoryGridSkeleton count={3} />
+        ) : failed ? (
+          <ErrorState
+            title="The search could not be run."
+            description={
+              error instanceof ApiError && error.status === null
+                ? "The server could not be reached. Your connection may be down."
+                : "This is usually temporary."
+            }
+            onRetry={reload}
+          />
         ) : searching && results.length === 0 ? (
           <EmptyState
             icon={<SearchIcon className="h-5 w-5" aria-hidden />}

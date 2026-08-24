@@ -1,5 +1,5 @@
 import type { Award, Genre, Publication, Story } from "./types";
-import { CHANNEL, VIDEOS } from "./videos";
+import { CHANNEL } from "./videos";
 import { WORDPRESS_STORIES } from "./writing.generated";
 
 /**
@@ -411,142 +411,31 @@ export const PUBLICATIONS: Publication[] = [
  */
 export const AWARDS: Award[] = [];
 
-/* ── Accessors ─────────────────────────────────────────────────── */
-
-export const publishedStories = (): Story[] =>
-  STORIES.filter((s) => s.status === "published").sort(
-    (a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt),
-  );
-
-export const featuredStories = (): Story[] => publishedStories().filter((s) => s.featured);
-
-export const storyBySlug = (slug: string): Story | undefined =>
-  STORIES.find((s) => s.slug === slug);
-
-export const storyById = (id: string): Story | undefined => STORIES.find((s) => s.id === id);
-
-export const genreBySlug = (slug: string): Genre | undefined => GENRES.find((g) => g.slug === slug);
-
-/** The beats filed directly under this one. Empty for a child, and for a leaf parent. */
-export const childBeats = (slug: string): Genre[] => GENRES.filter((g) => g.parent === slug);
+/* ── Accessors: removed ─────────────────────────────────────────── */
 
 /**
- * A slug and everything under it.
+ * There used to be twenty accessors below this line — `publishedStories`,
+ * `genreLabel`, `storiesByGenre`, `searchStories` and the rest — each closing
+ * over the arrays above.
  *
- * The reason every count and filter goes through this: a story about Kenyan
- * politics is filed `news-kenya`, so a `News` section that matched on the
- * slug alone would report zero pieces while sitting directly above them.
- * Called with a child, it is just that child — nothing inherits upwards.
+ * They are gone because they were the thing keeping the site static. A helper
+ * that answers "which stories are filed under News" out of a compiled array
+ * cannot also answer it out of the database, and as long as one existed it was
+ * the easy thing to import — so any new screen would quietly go back to the
+ * bundle.
+ *
+ * The same logic now lives in `lib/taxonomy.ts` as pure functions that take
+ * their data as an argument. Server code passes what it fetched from the API;
+ * client components get the same functions pre-bound through `useTaxonomy()`.
+ *
+ * What stays in this file is the two things the database cannot supply: the
+ * journalist's own details (`PROFILE`, `CONTACT`, `SOCIAL_ACCOUNTS`,
+ * `ABOUT_INTRO`) which are site chrome rather than content rows, and the
+ * `GENRES` / `STORIES` / `PUBLICATIONS` / `AWARDS` arrays — which are no longer
+ * read by the app at all. Those four are now purely the *seed source*: the
+ * backend's `prisma/export-content.js` compiles this file to snapshot them into
+ * `seed-data/content.json`, which is what populates Postgres.
+ *
+ * So editing the arrays above changes what a fresh database gets seeded with.
+ * It no longer changes what the running site shows — that comes from the API.
  */
-export const genreFamily = (slug: string): string[] => [
-  slug,
-  ...childBeats(slug).map((g) => g.slug),
-];
-
-/** The parent beat of a child slug, or undefined for a top-level one. */
-export const parentBeat = (slug: string): Genre | undefined => {
-  const parent = genreBySlug(slug)?.parent;
-  return parent ? genreBySlug(parent) : undefined;
-};
-
-/** True when `storySlug` belongs to `filterSlug` — itself or one of its children. */
-export const inGenre = (storySlug: string, filterSlug: string): boolean =>
-  storySlug === filterSlug || genreBySlug(storySlug)?.parent === filterSlug;
-
-export const storiesByGenre = (slug: string): Story[] =>
-  publishedStories().filter((s) => inGenre(s.genre, slug));
-
-export const genreName = (slug: string): string => genreBySlug(slug)?.name ?? slug;
-
-/**
- * "News · Kenya" — the child under the beat it belongs to.
- *
- * For anywhere a beat is named out of context (a story card, an admin row),
- * where "Kenya" alone does not say which half of the archive it is from.
- */
-export const genreLabel = (slug: string): string => {
-  const parent = parentBeat(slug);
-  return parent ? `${parent.name} · ${genreName(slug)}` : genreName(slug);
-};
-
-/**
- * What to read next.
- *
- * ── Why this stopped being "same beat first" ─────────────────────────────
- * It partitioned the archive into same-genre and everything-else, then took
- * the first three in publication order. With five pieces across seven beats
- * that is close to a random three: four of the seven beats hold exactly one
- * story, so the same-genre bucket is usually empty and the result is just
- * "the three most recent", which the site already shows on every other page.
- *
- * Tags are the finer signal. Two pieces sharing "mental health" belong
- * together whether one is filed under Science & health and the other under
- * Student life — and that cross-beat pairing is the one a reader could not
- * have found on their own, which is the only thing a related rail is for.
- *
- * Scoring, not bucketing: a shared tag is worth more than a shared beat,
- * because a beat is one of seven and a tag is specific. Recency breaks ties
- * so an unrelated filler slot is at least the newest thing available, and
- * stories with nothing in common are still returned rather than leaving a
- * short rail — three cards is the layout, and two is a gap.
- */
-export const relatedStories = (story: Story, limit = 3): Story[] => {
-  const tags = new Set(story.tags.map((t) => t.toLowerCase()));
-
-  return publishedStories()
-    .filter((s) => s.id !== story.id)
-    .map((candidate) => {
-      const shared = candidate.tags.filter((t) => tags.has(t.toLowerCase())).length;
-      return {
-        story: candidate,
-        // 3 a tag, 1 a beat: two shared tags should outrank a beat match, and
-        // one shared tag plus the same beat should outrank one tag alone.
-        score: shared * 3 + (candidate.genre === story.genre ? 1 : 0),
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.score - a.score || b.story.publishedAt.localeCompare(a.story.publishedAt),
-    )
-    .slice(0, limit)
-    .map((entry) => entry.story);
-};
-
-/** Plain-text search across written work and video titles alike. */
-export function searchStories(query: string): Story[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-
-  return publishedStories()
-    .map((story) => {
-      const fields = [
-        { text: story.title.toLowerCase(), weight: 6 },
-        { text: story.dek.toLowerCase(), weight: 3 },
-        { text: story.tags.join(" ").toLowerCase(), weight: 3 },
-        // The full path, so a search for "news" reaches the pieces filed
-        // under Kenya and a search for "kenya" still reaches them directly.
-        { text: genreLabel(story.genre).toLowerCase(), weight: 2 },
-        {
-          text: story.body
-            .map((b) => ("text" in b ? b.text : "items" in b ? b.items.join(" ") : ""))
-            .join(" ")
-            .toLowerCase(),
-          weight: 1,
-        },
-      ];
-      const score = fields.reduce((total, f) => total + (f.text.includes(q) ? f.weight : 0), 0);
-      return { story, score };
-    })
-    .filter((r) => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((r) => r.story);
-}
-
-/** Video search, kept alongside so one query can cover the whole archive. */
-export function searchVideos(query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return VIDEOS.filter(
-    (v) => v.title.toLowerCase().includes(q) || v.topic.toLowerCase().includes(q),
-  );
-}

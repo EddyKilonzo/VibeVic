@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { VIDEOS, videoBeat } from "@/data/videos";
-import { TOP_BEATS, childBeats, inGenre, storiesByGenre } from "@/data/content";
+import type { Genre, StorySummary } from "@/data/types";
+import { childBeats, inGenre, storiesByGenre, topBeats } from "@/lib/taxonomy";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { StoryCard } from "@/components/story/StoryCard";
@@ -40,24 +41,35 @@ import { PageHero } from "@/components/hero/PageHero";
  * own work when they have some. A child with nothing filed under it is a chip
  * and nothing more: it is a subject he covers, not a promise of an article.
  */
-export default function Genres() {
+export default function Genres({
+  genres,
+  stories,
+}: {
+  genres: Genre[];
+  stories: StorySummary[];
+}) {
+  // Server-fetched props rather than the taxonomy context: this page is the
+  // archive's index, so the beats it lists and the pieces it counts have to be
+  // the same read — a context that loaded a moment later would show counts
+  // against a list that had already rendered.
+  const beats = topBeats(genres);
   return (
     <>
       <PageHero
         label="Beats"
         title="What I cover"
         lead="Everything filed under each subject is below — reports and writing together. The filmed work centres on his college; the writing ranges wider."
-        rail={<PillNav items={TOP_BEATS.map((g) => ({ label: g.name, href: `#${g.slug}` }))} />}
+        rail={<PillNav items={beats.map((g) => ({ label: g.name, href: `#${g.slug}` }))} />}
       />
 
-      {TOP_BEATS.map((topic, index) => {
+      {beats.map((topic, index) => {
         // Videos file against the channel's own four topics, so they reach a
         // beat through `videoBeat` rather than by matching the slug.
-        const videos = VIDEOS.filter((video) => inGenre(videoBeat(video), topic.slug));
+        const videos = VIDEOS.filter((video) => inGenre(genres, videoBeat(video), topic.slug));
         // The whole family: pieces filed on the beat itself and on anything
         // under it. Split below so each child can carry its own heading.
-        const written = storiesByGenre(topic.slug);
-        const children = childBeats(topic.slug);
+        const written = storiesByGenre(genres, stories, topic.slug);
+        const children = childBeats(genres, topic.slug);
         const onParent = written.filter((story) => story.genre === topic.slug);
 
         return (
@@ -70,7 +82,7 @@ export default function Genres() {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <p className="rule-label">
-                    Beat {index + 1} of {TOP_BEATS.length}
+                    Beat {index + 1} of {beats.length}
                   </p>
                   <h2 className="font-display display-2 mt-3 font-semibold text-balance">
                     {/* The heading is the link to the beat's own page. This
@@ -117,7 +129,7 @@ export default function Genres() {
               {children.length > 0 && (
                 <ul className="mt-7 flex flex-wrap items-center gap-2">
                   {children.map((child) => {
-                    const count = storiesByGenre(child.slug).length;
+                    const count = storiesByGenre(genres, stories, child.slug).length;
                     return (
                       <li key={child.slug}>
                         {count > 0 ? (
@@ -186,8 +198,8 @@ export default function Genres() {
                 — `/genres#science-conservation` is the page for that subject,
                 the same way the beat above it is. */}
             {children.map((child) => {
-              const stories = storiesByGenre(child.slug);
-              if (stories.length === 0) return null;
+              const filed = storiesByGenre(genres, stories, child.slug);
+              if (filed.length === 0) return null;
 
               return (
                 <div key={child.slug} id={child.slug} className="mt-14 scroll-mt-28">
@@ -206,15 +218,15 @@ export default function Genres() {
                       </div>
                       <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         <span className="font-display text-base text-primary">
-                          {stories.length}
+                          {filed.length}
                         </span>{" "}
-                        {stories.length === 1 ? "piece" : "pieces"}
+                        {filed.length === 1 ? "piece" : "pieces"}
                       </p>
                     </div>
                   </Reveal>
 
                   <Stagger className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-                    {stories.map((story, i) => (
+                    {filed.map((story, i) => (
                       <StaggerItem key={story.id} index={i}>
                         <StoryCard story={story} />
                       </StaggerItem>

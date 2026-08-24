@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Awards from "@/views/Awards";
+import { getAwards } from "@/data/server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -8,6 +9,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/awards",
 });
 
-export default function AwardsRoute() {
-  return <Awards />;
+export default async function AwardsRoute() {
+  const awards = await getAwards();
+  return <Awards awards={awards} />;
 }

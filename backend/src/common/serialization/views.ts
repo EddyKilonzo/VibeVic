@@ -35,6 +35,10 @@ export interface PublicStory {
   featured: boolean;
   placeholder: boolean;
   publication?: string;
+  /** The piece at its original home, for syndicated work. */
+  sourceUrl?: string;
+  /** Real cover photograph. Absent means the reader gets generated art. */
+  cover?: string;
   body: StoryBlock[];
   stats?: {
     views: number;
@@ -72,6 +76,8 @@ export const StoryPublicView = definePublicView<StoryWithStats, PublicStory>(
       featured: story.featured,
       placeholder: story.placeholder,
       publication: story.publication ?? undefined,
+      sourceUrl: story.sourceUrl ?? undefined,
+      cover: story.cover ?? undefined,
       body: parseStoredBlocks(story.body),
       stats: story.stats
         ? {
@@ -106,6 +112,8 @@ export interface PublicGenre {
   slug: string;
   name: string;
   description: string;
+  /** The beat this subject sits under. Absent on the six top-level beats. */
+  parent?: string;
 }
 
 export const GenrePublicView = definePublicView<Genre, PublicGenre>(
@@ -114,6 +122,7 @@ export const GenrePublicView = definePublicView<Genre, PublicGenre>(
     slug: genre.slug,
     name: genre.name,
     description: genre.description,
+    parent: genre.parentSlug ?? undefined,
   }),
 );
 

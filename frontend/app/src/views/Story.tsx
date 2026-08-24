@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import type { Story as StoryRecord } from "@/data/types";
-import { PROFILE, genreLabel, relatedStories } from "@/data/content";
+import type { Story as StoryRecord, StorySummary } from "@/data/types";
+import { PROFILE } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { storyCover } from "@/lib/cover";
@@ -48,7 +49,23 @@ import { SectionHeading } from "@/components/SectionHeading";
  * prose is interactive — narration, the reading HUD, the section spy, the
  * quote tool. Those hydrate as before; the words no longer wait for them.
  */
-export default function Story({ slug, story }: { slug: string; story: StoryRecord }) {
+export default function Story({
+  slug,
+  story,
+  related,
+}: {
+  slug: string;
+  story: StoryRecord;
+  /**
+   * What to read next, scored on the server against the whole archive.
+   *
+   * Passed in rather than computed here: the ranking needs every published
+   * piece, and shipping the archive to the browser to pick three of them would
+   * be a download the reader never sees the benefit of.
+   */
+  related: StorySummary[];
+}) {
+  const { genreLabel } = useTaxonomy();
   const articleRef = useRef<HTMLElement>(null);
   /**
    * The prose, and only the prose.
@@ -95,7 +112,6 @@ export default function Story({ slug, story }: { slug: string; story: StoryRecor
   // before this renders, and a slug that matches nothing is a 404 from the
   // route rather than a 200 carrying an apology — which is what a crawler
   // needs, and what a reader deserves too.
-  const related = relatedStories(story);
 
   return (
     <>

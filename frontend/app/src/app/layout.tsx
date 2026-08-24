@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import { PROFILE } from "@/data/content";
 import { CHANNEL } from "@/data/videos";
 import { AppProviders } from "@/components/AppProviders";
+import { getGenres } from "@/data/server";
 import "@/index.css";
 import { SITE_URL } from "@/lib/site";
 
@@ -75,7 +76,15 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Async, because the beat tree is now read from the API rather than compiled
+ * in. One fetch at the root serves every component below that has to name a
+ * beat, and it is cached and revalidated by `data/server` — so this is a
+ * cache read on all but one render a minute, not a round trip per page.
+ */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const genres = await getGenres();
+
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
@@ -85,7 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders genres={genres}>{children}</AppProviders>
       </body>
     </html>
   );

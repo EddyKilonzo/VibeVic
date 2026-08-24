@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { GENRES, inGenre, publishedStories, storiesByGenre } from "@/data/content";
+import { getGenres, getStories } from "@/data/server";
+import { inGenre, storiesByGenre } from "@/lib/taxonomy";
 import { VIDEOS, videoBeat } from "@/data/videos";
 import { SITE_URL } from "@/lib/site";
 
@@ -23,9 +24,14 @@ import { SITE_URL } from "@/lib/site";
  * build time would tell a crawler the entire site changed every deploy, which
  * is both false and self-defeating: a feed that cries change constantly stops
  * being a signal about anything.
+ *
+ * ── When the API cannot be reached ───────────────────────────────────────
+ * The fetches degrade to empty and this emits the six static pages alone. A
+ * short sitemap is recoverable — the next revalidation fills it back in. A
+ * build that died here would take the whole deploy with it.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
-  const stories = publishedStories();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [genres, stories] = await Promise.all([getGenres(), getStories()]);
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "weekly", priority: 1 },
@@ -57,16 +63,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * the fragment, so twenty-one entries collapsed into one page and no
    * subject had a URL that could rank for it. Each beat has a real page now.
    */
-  const beatPages: MetadataRoute.Sitemap = GENRES.filter(
-    (genre) =>
-      storiesByGenre(genre.slug).length > 0 ||
-      VIDEOS.some((video) => inGenre(videoBeat(video), genre.slug)),
-  ).map((genre) => ({
-    url: `${SITE_URL}/beats/${genre.slug}`,
-    changeFrequency: "monthly",
-    // Parents gather a whole family and are the pages worth surfacing first.
-    priority: genre.parent ? 0.5 : 0.6,
-  }));
+  const beatPages: MetadataRoute.Sitemap = genres
+    .filter(
+      (genre) =>
+        storiesByGenre(genres, stories, genre.slug).length > 0 ||
+        VIDEOS.some((video) => inGenre(genres, videoBeat(video), genre.slug)),
+    )
+    .map((genre) => ({
+      url: `${SITE_URL}/beats/${genre.slug}`,
+      changeFrequency: "monthly",
+      // Parents gather a whole family and are the pages worth surfacing first.
+      priority: genre.parent ? 0.5 : 0.6,
+    }));
 
   return [...staticPages, ...storyPages, ...videoPages, ...beatPages];
 }

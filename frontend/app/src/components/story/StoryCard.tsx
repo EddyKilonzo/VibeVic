@@ -2,18 +2,23 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Headphones } from "lucide-react";
-import type { Story } from "@/data/types";
-import { genreLabel, genreName } from "@/data/content";
+import type { StorySummary } from "@/data/types";
 import { storyCover } from "@/lib/cover";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { stripInline } from "@/lib/inline";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { ImageReveal, Reveal } from "@/components/motion";
 import { BookmarkButton } from "./BookmarkButton";
 import { ReadProgress } from "./ReadProgress";
 
 export interface StoryCardProps {
-  story: Story;
+  /**
+   * A summary, not a full Story — the card renders no article text, and the
+   * listing endpoints do not send any. A full Story is assignable to this, so
+   * callers that happen to hold one need no cast.
+   */
+  story: StorySummary;
   /** `feature` is the lead slot; `compact` is a text-only list row. */
   variant?: "default" | "feature" | "compact";
   /** Extra delay (ms); normally supplied by <StaggerItem> instead. */
@@ -34,6 +39,7 @@ export interface StoryCardProps {
  * where a press state is the honest affordance.
  */
 export function StoryCard({ story, variant = "default", delay = 0, className }: StoryCardProps) {
+  const { genreLabel, genreName } = useTaxonomy();
   const isFeature = variant === "feature";
   const isCompact = variant === "compact";
 

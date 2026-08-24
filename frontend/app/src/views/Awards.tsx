@@ -1,7 +1,7 @@
 "use client";
 
 import { Trophy } from "lucide-react";
-import { AWARDS } from "@/data/content";
+import type { Award } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { EmptyState } from "@/components/ui/States";
@@ -16,7 +16,7 @@ import { RECOGNITION_ATMOSPHERE } from "@/data/imagery";
  * fabricated credential, so the page shows an honest empty state and the
  * timeline below renders as soon as real entries are added in the admin.
  */
-export default function Awards() {
+export default function Awards({ awards }: { awards: Award[] }) {
   return (
     <>
       <PageHero
@@ -34,7 +34,7 @@ export default function Awards() {
         </AtmosphereBand>
 
 
-      {AWARDS.length === 0 ? (
+      {awards.length === 0 ? (
         <div className="mt-16">
           <EmptyState
             icon={<Trophy className="h-5 w-5" aria-hidden />}
@@ -50,7 +50,7 @@ export default function Awards() {
             className="absolute left-[3px] top-2 h-full w-px bg-border sm:left-[7px]"
           />
 
-          {AWARDS.map((award, i) => (
+          {awards.map((award, i) => (
             <StaggerItem key={`${award.year}-${award.title}`} index={i}>
               <Reveal variant="fade-left" as="article" className="relative pb-12 last:pb-0">
                 <span

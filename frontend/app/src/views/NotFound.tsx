@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { publishedStories } from "@/data/content";
+import { usePublishedStories } from "@/hooks/useStories";
 import { Reveal, Stagger, StaggerItem, TextReveal } from "@/components/motion";
 import { StoryCard } from "@/components/story/StoryCard";
 import { Button } from "@/components/ui/Button";
 
 export default function NotFound() {
-  const suggestions = publishedStories().slice(0, 3);
+  /**
+   * Fetched here rather than passed in: `not-found` has no route of its own to
+   * fetch for it, and three suggestions arriving a moment after the apology is
+   * fine — nobody is reading this page for the list.
+   */
+  const { data } = usePublishedStories();
+  const suggestions = (data ?? []).slice(0, 3);
 
   return (
     <div className="container-site pt-32 sm:pt-40">

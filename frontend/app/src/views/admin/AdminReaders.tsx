@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Bookmark, BookOpen, Headphones, ShieldCheck, Trash2, Users } from "lucide-react";
-import { publishedStories, storyBySlug } from "@/data/content";
+import { usePublishedStories } from "@/hooks/useStories";
 import { useBookmarks } from "@/context/BookmarksProvider";
 import { useReadState } from "@/hooks/useReadingPosition";
 import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
@@ -38,7 +38,9 @@ import { newsroomPath } from "@/lib/newsroom-path";
  * it — which is the thing a journalist gets asked about their own site.
  */
 export default function AdminReaders() {
-  const stories = publishedStories();
+  const { data } = usePublishedStories();
+  const stories = data ?? [];
+  const storyBySlug = (slug: string) => stories.find((story) => story.slug === slug);
   const { slugs, remove } = useBookmarks();
 
   /**

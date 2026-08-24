@@ -11,6 +11,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  IsUrl,
 } from 'class-validator';
 import { StoryStatus } from '@prisma/client';
 import { VersionedUpdateDto } from '../../../common/dto/versioned-update.dto';
@@ -78,6 +79,25 @@ export class CreateStoryDto {
   @IsOptional()
   publication?: string;
 
+  /**
+   * Canonical home of a syndicated piece. @IsUrl because this is by definition
+   * an address somewhere else — a relative path here would be a copy claiming
+   * to be its own original.
+   */
+  @IsUrl()
+  @IsOptional()
+  sourceUrl?: string;
+
+  /**
+   * Cover photograph. A plain string rather than @IsUrl: today every cover is
+   * an absolute URL from the import, but an uploaded file will be a site-
+   * relative path, and a validator that rejects it would be found the hard way.
+   */
+  @IsString()
+  @MaxLength(2048)
+  @IsOptional()
+  cover?: string;
+
   @IsArray()
   @IsOptional()
   body?: unknown[];
@@ -129,6 +149,25 @@ export class UpdateStoryDto extends VersionedUpdateDto {
   @IsString()
   @IsOptional()
   publication?: string;
+
+  /**
+   * Canonical home of a syndicated piece. @IsUrl because this is by definition
+   * an address somewhere else — a relative path here would be a copy claiming
+   * to be its own original.
+   */
+  @IsUrl()
+  @IsOptional()
+  sourceUrl?: string;
+
+  /**
+   * Cover photograph. A plain string rather than @IsUrl: today every cover is
+   * an absolute URL from the import, but an uploaded file will be a site-
+   * relative path, and a validator that rejects it would be found the hard way.
+   */
+  @IsString()
+  @MaxLength(2048)
+  @IsOptional()
+  cover?: string;
 
   @IsArray()
   @IsOptional()

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { PROFILE, SOCIAL_ACCOUNTS, TOP_BEATS, childBeats } from "@/data/content";
+import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { NEWSROOM_BASE } from "@/lib/newsroom-path";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
@@ -30,6 +31,7 @@ const COLUMNS = [
 ];
 
 export function PublicFooter() {
+  const { topBeats, childBeats } = useTaxonomy();
   const year = new Date().getFullYear();
 
   return (
@@ -135,7 +137,7 @@ export function PublicFooter() {
                   page renders, which is what makes a footer worth reading
                   rather than a second copy of the nav. The children are set
                   smaller and quieter so the six stay scannable. */}
-              {TOP_BEATS.map((topic, i) => (
+              {topBeats.map((topic, i) => (
                 <StaggerItem key={topic.slug} index={i}>
                   <Reveal variant="fade" as="li">
                     <Link

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Plus, ShieldAlert, Trash2, Trophy } from "lucide-react";
 import type { Award } from "@/data/types";
-import { AWARDS } from "@/data/content";
+import { api } from "@/data/api";
+import { useAsync } from "@/hooks/useAsync";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -47,6 +48,11 @@ import { EmptyState } from "@/components/ui/States";
  * implying the site has changed.
  */
 export default function AdminAwards() {
+  // The published entries, from the database. Recorded-here entries live in
+  // this browser and are listed separately below — the screen has always been
+  // explicit that the two are different, and now they have different sources.
+  const { data: published } = useAsync(() => api.awards(), []);
+  const publishedAwards = published ?? [];
   const [recorded, setRecorded] = useState<RecordedAward[]>([]);
   const reduced = useReducedMotion();
 
@@ -96,7 +102,7 @@ export default function AdminAwards() {
               </Link>
             </div>
 
-            {AWARDS.length === 0 ? (
+            {publishedAwards.length === 0 ? (
               <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm leading-relaxed text-muted-foreground">
                 <span className="font-semibold text-foreground">Nothing is listed.</span> The
                 awards page renders an honest empty state, and it will keep doing so until real
@@ -104,7 +110,7 @@ export default function AdminAwards() {
               </p>
             ) : (
               <ul className="mt-5 divide-y divide-border">
-                {AWARDS.map((award) => (
+                {publishedAwards.map((award) => (
                   <li key={`${award.year}-${award.title}`} className="py-3 first:pt-0">
                     <AwardLine award={award} />
                   </li>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Home from "@/views/Home";
 import { PROFILE } from "@/data/content";
+import { getStories } from "@/data/server";
 import { CHANNEL } from "@/data/videos";
 import { pageMetadata } from "@/lib/seo";
 
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   title: { absolute: `${PROFILE.name} — ${PROFILE.role}` },
 };
 
-export default function HomeRoute() {
-  return <Home />;
+export default async function HomeRoute() {
+  const stories = await getStories();
+  return <Home stories={stories} />;
 }

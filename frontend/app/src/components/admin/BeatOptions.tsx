@@ -1,5 +1,5 @@
 import type { Genre } from "@/data/types";
-import { TOP_BEATS } from "@/data/content";
+import { topBeats } from "@/lib/taxonomy";
 
 /**
  * The beat tree, as `<select>` options.
@@ -15,17 +15,31 @@ import { TOP_BEATS } from "@/data/content";
  * has to be filable somewhere, and forcing a wrong child is worse filing than
  * an honest general one.
  *
- * `beats` is the full list the workspace offers — the built-ins plus anything
- * opened locally (see `lib/beats`). Locally-opened beats have no parent, so
- * they gather in a group of their own rather than being dropped.
+ * `beats` is the full list the workspace offers — the published beats plus
+ * anything opened locally (see `lib/beats`). The parent groups are derived from
+ * that same list rather than from a separate constant: two sources for "which
+ * beats are top-level" is two answers that can disagree, and the one that
+ * disagrees silently drops a beat from the picker.
+ *
+ * Locally-opened beats have no parent, so they gather in a group of their own
+ * rather than being dropped — `published` names the ones that came from the
+ * API so the two can still be told apart.
  */
-export function BeatOptions({ beats }: { beats: Genre[] }) {
-  const known = new Set(TOP_BEATS.map((b) => b.slug));
+export function BeatOptions({
+  beats,
+  published,
+}: {
+  beats: Genre[];
+  /** The beats that came from the API, to separate them from local ones. */
+  published: Genre[];
+}) {
+  const parents = topBeats(published);
+  const known = new Set(parents.map((b) => b.slug));
   const custom = beats.filter((b) => !b.parent && !known.has(b.slug));
 
   return (
     <>
-      {TOP_BEATS.map((parent) => {
+      {parents.map((parent) => {
         const children = beats.filter((b) => b.parent === parent.slug);
         if (children.length === 0) {
           return (

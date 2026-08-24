@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { AlertCircle, ArrowRight, Bot, PhoneCall, Tag, X } from "lucide-react";
-import { genreLabel } from "@/data/content";
 import { cn } from "@/lib/utils";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { stagger, transitions } from "@/lib/motion";
 import type { PitchAngle, PitchResult } from "./pitch";
 
@@ -45,6 +45,7 @@ export function PitchPanel({
   onDismiss: () => void;
 }) {
   const { pitch, subject } = result;
+  const { genreLabel } = useTaxonomy();
   const [used, setUsed] = useState<string[]>([]);
   const reduced = useReducedMotion();
   const step = reduced ? 0 : stagger.tight;

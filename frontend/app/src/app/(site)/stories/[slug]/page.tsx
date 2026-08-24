@@ -1,26 +1,34 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Story from "@/views/Story";
-import { PROFILE, genreBySlug, parentBeat, publishedStories, storyBySlug } from "@/data/content";
+import { PROFILE } from "@/data/content";
+import { getGenres, getStories, getStory } from "@/data/server";
+import { genreBySlug, parentBeat, relatedStories } from "@/lib/taxonomy";
 import { stripInline } from "@/lib/inline";
 import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 
-export function generateStaticParams() {
-  return publishedStories().map((story) => ({ slug: story.slug }));
+export async function generateStaticParams() {
+  const stories = await getStories();
+  return stories.map((story) => ({ slug: story.slug }));
 }
 
 /**
- * The published set is the whole set.
+ * `dynamicParams` is no longer off, and the soft-404 it was guarding against is
+ * still handled.
  *
- * Without this, Next treats any slug outside `generateStaticParams` as a page
- * it might render on demand, and the response for a nonexistent article came
- * back HTTP 200 — a soft 404. That is worse than a missing page: it invites a
- * crawler to index an apology, and it means a mistyped link never tells anyone
- * it was mistyped. The archive is static, so anything not in it does not
- * exist, and saying so lets the 404 carry a 404.
+ * It was correct while the archive was compiled in: the built list was the
+ * whole archive by construction, so anything outside it genuinely did not
+ * exist. Now the list is a fetch, and two things follow. A piece published
+ * after the last build must still be reachable, which `false` would refuse.
+ * And a build that could not reach the API would have an empty list — with
+ * `false` that is not "render on demand", it is *every article 404ing at once*.
+ *
+ * The soft-404 problem is unaffected, because it was never this flag that
+ * fixed it: `getStory` returns null for an unknown slug and the route calls
+ * `notFound()`, so a mistyped URL still answers 404 with a 404.
  */
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 /**
  * The snippet Google prints under the headline.
@@ -44,7 +52,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const story = storyBySlug(slug);
+  const story = await getStory(slug);
 
   // A page that does not exist gets no metadata worth indexing; the route
   // below returns a real 404 for it.
@@ -85,7 +93,11 @@ export async function generateMetadata({
 
 export default async function StoryRoute({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const story = storyBySlug(slug);
+  const [story, genres, allStories] = await Promise.all([
+    getStory(slug),
+    getGenres(),
+    getStories(),
+  ]);
 
   // Was returning HTTP 200 with an empty shell for any slug at all — a soft
   // 404, which invites a crawler to index nonexistent pages and dilutes the
@@ -145,8 +157,8 @@ export default async function StoryRoute({ params }: { params: Promise<{ slug: s
    * taxonomy — the beat the story is actually filed under and its parent, if
    * it has one — so it can never claim a path the site does not have.
    */
-  const beat = genreBySlug(story.genre);
-  const beatParent = parentBeat(story.genre);
+  const beat = genreBySlug(genres, story.genre);
+  const beatParent = parentBeat(genres, story.genre);
   const breadcrumbs = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -174,7 +186,7 @@ export default async function StoryRoute({ params }: { params: Promise<{ slug: s
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
-      <Story slug={slug} story={story} />
+      <Story slug={slug} story={story} related={relatedStories(allStories, story)} />
     </>
   );
 }

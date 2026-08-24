@@ -106,6 +106,19 @@ export interface Story {
   };
 }
 
+/**
+ * A story without its article body.
+ *
+ * What every listing actually has. The API projects listings through a summary
+ * view and keeps bodies on the single-article route, because a page showing
+ * twenty cards has no business downloading twenty articles — so the type the
+ * cards are written against should be the one the network really delivers.
+ *
+ * `Story` is assignable to this, so anything already holding a full story can
+ * still be passed to a card without a cast.
+ */
+export type StorySummary = Omit<Story, "body">;
+
 export interface Genre {
   slug: string;
   name: string;

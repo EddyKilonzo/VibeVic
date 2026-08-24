@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { AlertTriangle, Check, ChevronDown, CircleDashed, Eye, Minus } from "lucide-react";
 import type { Story } from "@/data/types";
 import { prePublicationChecklist, reviewStory } from "@/lib/intelligence/checks";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import type { ChecklistItem, Finding } from "@/lib/intelligence/types";
 import { useNewsroom } from "@/data/newsroom/useNewsroom";
 import { cn } from "@/lib/utils";
@@ -67,9 +68,15 @@ export function StoryChecks({ draft }: { draft: Story }) {
   );
 
   const findings = useMemo(() => reviewStory(settled, entities), [settled, entities]);
+  const { genreLabel } = useTaxonomy();
   const checklist = useMemo(
-    () => prePublicationChecklist(settled, { sourceCount, quoteCount }),
-    [settled, sourceCount, quoteCount],
+    () =>
+      prePublicationChecklist(settled, {
+        sourceCount,
+        quoteCount,
+        beatLabel: genreLabel(settled.genre),
+      }),
+    [settled, sourceCount, quoteCount, genreLabel],
   );
 
   const attention = findings.filter((f) => f.severity === "attention").length;

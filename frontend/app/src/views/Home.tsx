@@ -3,15 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, GraduationCap, Headphones, MapPin, Youtube } from "lucide-react";
-import {
-  PROFILE,
-  SOCIAL_ACCOUNTS,
-  TOP_BEATS,
-  childBeats,
-  inGenre,
-  publishedStories,
-  storiesByGenre,
-} from "@/data/content";
+import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import type { StorySummary } from "@/data/types";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { publishedStories, storiesByGenre } from "@/lib/taxonomy";
 import { AGAINST_WALL, PORTRAIT, SHOOTING, WITH_CAMERA } from "@/data/portraits";
 import { SocialIcon } from "@/components/social/SocialIcon";
 import { CHANNEL, VIDEOS, longFormVideos, totalViews, videoBeat } from "@/data/videos";
@@ -75,11 +70,23 @@ function reportSpan(index: number): string {
   return "lg:col-span-4";
 }
 
-export default function Home() {
+export default function Home({
+  stories,
+}: {
+  /**
+   * Published work, fetched by the route on the server.
+   *
+   * A prop rather than a client fetch: the home page is prerendered, and the
+   * lead story belongs in the first HTML a reader receives rather than arriving
+   * after a round trip that would leave the hero empty on landing.
+   */
+  stories: StorySummary[];
+}) {
+  const { genres, topBeats, childBeats, inGenre } = useTaxonomy();
   const router = useRouter();
   const videos = longFormVideos();
   const [lead, ...rest] = videos;
-  const written = publishedStories();
+  const written = publishedStories(stories);
 
   return (
     <>
@@ -157,7 +164,7 @@ export default function Home() {
             {/* The beats, on hairlines — real links, not decoration. */}
             <div data-seq="decor" className="rail mt-8 w-full sm:mt-10">
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {TOP_BEATS.map((topic) => (
+                {topBeats.map((topic) => (
                   <Link
                     key={topic.slug}
                     href={`/beats/${topic.slug}`}
@@ -405,11 +412,11 @@ export default function Home() {
               a summary of what the site covers rather than a directory of it.
               Video counts come through `videoBeat`, since the channel files
               against its own four topics. */}
-          {TOP_BEATS.map((topic, i) => {
-            const span = beatSpan(i, TOP_BEATS.length);
+          {topBeats.map((topic, i) => {
+            const span = beatSpan(i, topBeats.length);
             const wide = isWideBeat(span);
             const count = VIDEOS.filter((video) => inGenre(videoBeat(video), topic.slug)).length;
-            const written = storiesByGenre(topic.slug).length;
+            const written = storiesByGenre(genres, stories, topic.slug).length;
             const children = childBeats(topic.slug);
 
             return (

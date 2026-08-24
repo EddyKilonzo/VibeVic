@@ -1,20 +1,20 @@
 "use client";
 
 import type { Genre } from "@/data/types";
-import { GENRES } from "@/data/content";
 
 /**
  * Beats added from the workspace.
  *
- * The seven in `data/content` are compiled into the site: the public routes
- * call `generateStaticParams` over them, so a beat that exists only in this
- * browser cannot have a public page and the admin says so rather than
- * implying otherwise. What it *can* do is give a draft somewhere to be filed
- * — which is the thing a journalist needs the moment a story arrives that
- * belongs to none of the existing seven.
+ * The published beats now come from the database, and the functions here take
+ * them as an argument rather than importing a compiled list. A beat that
+ * exists only in this browser still cannot have a public page — it has no row
+ * — and the admin says so rather than implying otherwise. What it *can* do is
+ * give a draft somewhere to be filed, which is the thing a journalist needs
+ * the moment a story arrives belonging to none of the published beats.
  *
- * When the API lands, `listCustom` becomes a fetch and the merge below stops
- * being local. Nothing else in the admin needs to know the difference.
+ * Callers get the published list from `useTaxonomy()`. Writing these beats
+ * through to the API is the next step; until then the merge stays local and
+ * the screen is honest about it.
  */
 
 const KEY = "vv:beats";
@@ -65,14 +65,19 @@ export type AddBeatResult =
  * two beats sharing one would make every story filed under it ambiguous —
  * including the ones already published against the built-in beat.
  */
-export function addBeat(name: string, description: string): AddBeatResult {
+export function addBeat(
+  /** The published beats, from `useTaxonomy().genres`. */
+  published: Genre[],
+  name: string,
+  description: string,
+): AddBeatResult {
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, reason: "Give the beat a name." };
 
   const slug = slugify(trimmed);
   if (!slug) return { ok: false, reason: "That name has no letters or numbers in it." };
 
-  if (GENRES.some((g) => g.slug === slug)) {
+  if (published.some((g) => g.slug === slug)) {
     return { ok: false, reason: `“${trimmed}” is already one of the published beats.` };
   }
 
@@ -102,7 +107,7 @@ export function removeBeat(slug: string): void {
   }
 }
 
-/** The built-in beats plus anything added here — what a story can be filed under. */
-export function allBeats(): Genre[] {
-  return [...GENRES, ...listCustomBeats()];
+/** The published beats plus anything added here — what a story can be filed under. */
+export function allBeats(published: Genre[]): Genre[] {
+  return [...published, ...listCustomBeats()];
 }

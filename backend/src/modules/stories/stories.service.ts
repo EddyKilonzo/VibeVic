@@ -112,6 +112,23 @@ export class StoriesService {
     });
   }
 
+  /**
+   * One story by id, drafts included — what the editor opens.
+   *
+   * By id rather than slug: a draft may not have a settled slug yet, and the
+   * workspace URL is the id. The scope check is here as well as on the route
+   * for the same reason as `listAll`.
+   */
+  async byId(principal: Principal | undefined, id: string): Promise<StoryWithStats> {
+    this.policy.requireScope(principal, 'stories:write');
+    const story = await this.prisma.story.findUnique({
+      where: { id },
+      include: { stats: true },
+    });
+    if (!story) throw new NotFoundException('Story not found.');
+    return story;
+  }
+
   async create(principal: Principal | undefined, dto: CreateStoryDto) {
     this.policy.requireScope(principal, 'stories:write');
     const body = dto.body ? parseBlocks(dto.body) : [];
@@ -129,6 +146,8 @@ export class StoriesService {
         featured: dto.featured ?? false,
         placeholder: dto.placeholder ?? false,
         publication: dto.publication ?? null,
+        sourceUrl: dto.sourceUrl ?? null,
+        cover: dto.cover ?? null,
         body: body as unknown as Prisma.InputJsonValue,
       },
     });

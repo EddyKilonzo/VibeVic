@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Eye, Headphones, Info, Youtube } from "lucide-react";
 import { CHANNEL, VIDEOS, longFormVideos, shorts, topicName, totalViews, watchUrl } from "@/data/videos";
-import { STORIES, storyBySlug } from "@/data/content";
+import { useAllStories } from "@/hooks/useStories";
 import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
 import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,9 @@ import { EmptyState } from "@/components/ui/States";
 type Sort = "views" | "newest";
 
 export default function AdminAnalytics() {
+  const { data: allStories } = useAllStories();
+  const stories = allStories ?? [];
+  const storyBySlug = (slug: string) => stories.find((story) => story.slug === slug);
   const [sort, setSort] = useState<Sort>("views");
 
   // Real recorded playback. Read once the screen is on the page rather than
@@ -324,7 +327,7 @@ export default function AdminAnalytics() {
             />
             <Limit
               title="No readers for the written archive"
-              detail={`All ${STORIES.length} written pieces are served as static pages with no analytics endpoint behind them. Their reader counts are unknown, and unknown is what this screen reports.`}
+              detail={`All ${stories.length} written pieces are served as static pages with no analytics endpoint behind them. Their reader counts are unknown, and unknown is what this screen reports.`}
             />
             <Limit
               title="Listening is one browser"

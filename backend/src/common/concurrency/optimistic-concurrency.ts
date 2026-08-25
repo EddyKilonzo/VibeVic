@@ -38,7 +38,8 @@ export interface OptimisticDelegate<TRecord, TData> {
   findUnique(args: { where: { id: string } }): PromiseLike<TRecord | null>;
   updateMany(args: {
     where: { id: string; updatedAt: Date };
-    data: TData;
+    // The stamp below is always added, so the payload is never the bare TData.
+    data: TData & { updatedAt: Date };
   }): PromiseLike<{ count: number }>;
 }
 
@@ -63,6 +64,24 @@ export function parseExpectedUpdatedAt(value: string): Date {
  * Returns the fresh row on success. On failure the caller gets a 404 if the
  * record is gone, or a 409 carrying the *current* `updatedAt` so a client can
  * refetch and present a real conflict instead of a generic error.
+ *
+ * ── Why `updatedAt` is stamped here rather than left to `@updatedAt` ──────
+ * Prisma issues no statement at all for `updateMany` with an empty `data`, and
+ * returns `count: 0`. Read through this function that is indistinguishable
+ * from a lost race, so the caller was told its write had conflicted — with a
+ * 409 whose `expectedUpdatedAt` and `currentUpdatedAt` were the same value,
+ * which is a contradiction on its face.
+ *
+ * An empty payload is not a strange thing to send, either. Every record that
+ * owns join tables can be edited by changing only its links: the scalar half of
+ * that PATCH is `{}` and the real work happens in the reconcile that follows.
+ * Those edits were rejected outright.
+ *
+ * Stamping the column explicitly fixes both halves. The SET clause is never
+ * empty, so the conditional UPDATE always runs and `count` means what this
+ * function reads it as meaning. And the version token advances for a link-only
+ * change, which it should: the record did change, and a client holding the old
+ * timestamp is now genuinely stale.
  */
 export async function updateWithOptimisticLock<TRecord extends Versioned, TData>(
   delegate: OptimisticDelegate<TRecord, TData>,
@@ -75,7 +94,9 @@ export async function updateWithOptimisticLock<TRecord extends Versioned, TData>
 
   const { count } = await delegate.updateMany({
     where: { id, updatedAt: expected },
-    data,
+    // Explicit, and after the spread so a caller cannot accidentally pin the
+    // column to a stale value it carried in its own payload.
+    data: { ...data, updatedAt: new Date() },
   });
 
   if (count === 1) {

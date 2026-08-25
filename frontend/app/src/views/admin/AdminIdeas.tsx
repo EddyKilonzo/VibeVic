@@ -75,7 +75,11 @@ const PRIORITY_RANK: Record<Idea["priority"], number> = { high: 0, medium: 1, lo
 
 export default function AdminIdeas() {
   const { genreLabel } = useTaxonomy();
-  const { ideas } = useNewsroom();
+  const {
+    newsroom: { ideas },
+    loading,
+    error,
+  } = useNewsroom("ideas");
   const [stage, setStage] = useState<IdeaStage | "all">("all");
 
   /**
@@ -111,12 +115,40 @@ export default function AdminIdeas() {
     return map;
   }, [ideas]);
 
-  const drop = (idea: Idea) => {
-    remove("ideas", idea.id);
-    // Restored verbatim, id and creation date included — the list is ordered
-    // by those, so undo puts the row back where it was rather than at the top
-    // wearing a fresh timestamp.
-    notify.undo(`Idea deleted: ${idea.title}`, () => insert("ideas", { ...idea }));
+  /**
+   * Delete, with an undo that re-notes rather than resurrects.
+   *
+   * The local store could put the row back verbatim, id and creation date
+   * included, because it was the only thing that knew them. Against a server
+   * the id and the timestamps belong to the database and a create cannot claim
+   * them, so undo writes the idea again as a new record — same title, note,
+   * tags, beat, priority and stage, new id, new creation date.
+   *
+   * The difference is visible in exactly one place: the list is ordered by
+   * priority and then by creation date, so an undone idea comes back at the top
+   * of its priority band rather than where it was. That is a smaller lie than
+   * a button labelled undo that quietly fails, which is the alternative.
+   */
+  const drop = async (idea: Idea) => {
+    const result = await remove("ideas", idea.id);
+    if (!result.ok) {
+      notify.error("The idea was not deleted", result.message);
+      return;
+    }
+
+    notify.undo(`Idea deleted: ${idea.title}`, () => {
+      void insert("ideas", {
+        title: idea.title,
+        note: idea.note,
+        tags: idea.tags,
+        genre: idea.genre,
+        priority: idea.priority,
+        stage: idea.stage,
+        storyId: idea.storyId,
+      }).then((restored) => {
+        if (!restored.ok) notify.error("The idea could not be restored", restored.message);
+      });
+    });
   };
 
   /**
@@ -127,7 +159,7 @@ export default function AdminIdeas() {
    * than generating any. Nothing else is filled in: no rewritten headline, no
    * standfirst, no invented angle.
    */
-  const startDraft = (idea: Idea) => {
+  const startDraft = async (idea: Idea) => {
     const storyId = `idea_${idea.id}`;
     const today = new Date().toISOString().slice(0, 10);
     const draft: Story = {
@@ -154,7 +186,26 @@ export default function AdminIdeas() {
     // The idea is kept and linked rather than consumed. Where a story came
     // from is worth knowing later, and deleting the idea would throw away the
     // stage history that says how it got here.
-    update("ideas", idea.id, { storyId, stage: "commissioned" }, idea.updatedAt);
+    //
+    // The link is written before navigating, not alongside it. The draft is
+    // already saved by this point, so a failure here costs the connection
+    // between the two rather than the work — but leaving without knowing would
+    // strand an idea that says "spark" next to a draft that exists.
+    const linked = await update(
+      "ideas",
+      idea.id,
+      { storyId, stage: "commissioned" },
+      idea.updatedAt,
+    );
+    if (!linked.ok) {
+      notify.error(
+        "The draft was saved, but the idea was not updated",
+        linked.reason === "conflict"
+          ? "The idea changed in another tab. Open it again and link the draft by hand."
+          : linked.message,
+      );
+    }
+
     router.push(newsroomPath(`/stories/${storyId}`));
   };
 
@@ -166,7 +217,7 @@ export default function AdminIdeas() {
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           Everything that might become a story, and the stage it has reached. Private by
           design — ideas never appear in a public payload, and like the rest of the
-          workspace they are held in this browser until the API lands.
+          workspace they are kept in the newsroom, not in this browser.
         </p>
       </Reveal>
 
@@ -211,7 +262,27 @@ export default function AdminIdeas() {
           </Reveal>
 
           <div className="surface mt-5 overflow-hidden">
-            {visible.length === 0 ? (
+            {/* Three empty-looking states that mean different things, and are
+                said differently. "No ideas yet" is an invitation; a list that
+                has not arrived is not empty, it is unknown; and a list that
+                failed to arrive is a fact about the newsroom, not about how
+                many ideas the journalist has had. Rounding the last two to the
+                first would tell someone their ideas are gone. */}
+            {error ? (
+              <EmptyState
+                icon={<Lightbulb className="h-5 w-5" aria-hidden />}
+                title="The ideas could not be loaded"
+                description={error}
+                className="border-0"
+              />
+            ) : loading && ideas.length === 0 ? (
+              <EmptyState
+                icon={<Lightbulb className="h-5 w-5" aria-hidden />}
+                title="Loading your ideas"
+                description="Reading them from the newsroom."
+                className="border-0"
+              />
+            ) : visible.length === 0 ? (
               <EmptyState
                 icon={<Lightbulb className="h-5 w-5" aria-hidden />}
                 title={ideas.length === 0 ? "No ideas yet" : "Nothing at this stage"}
@@ -280,16 +351,28 @@ export default function AdminIdeas() {
                         <div className="mt-3 flex flex-wrap items-center gap-3">
                           {/* The stage is the field that changes most, so it
                               is editable in place rather than behind a detail
-                              view. The concurrency check is opted out of here
-                              deliberately: replacing one enum with another
-                              cannot lose anything a second tab typed. */}
+                              view. No `expectedUpdatedAt` is passed, which now
+                              means "use the copy we hold" rather than "skip the
+                              check" — the API has no opt out. That is stricter
+                              than before and right: if another tab moved this
+                              idea on, saying so beats overwriting it. */}
                           <label className="flex items-center gap-2 text-xs">
                             <span className="rule-label">Stage</span>
                             <select
                               value={idea.stage}
-                              onChange={(e) =>
-                                update("ideas", idea.id, { stage: e.target.value as IdeaStage })
-                              }
+                              onChange={(e) => {
+                                const next = e.target.value as IdeaStage;
+                                void update("ideas", idea.id, { stage: next }).then((result) => {
+                                  if (!result.ok) {
+                                    notify.error(
+                                      "The stage was not changed",
+                                      result.reason === "conflict"
+                                        ? "This idea changed in another tab. The list has been refreshed."
+                                        : result.message,
+                                    );
+                                  }
+                                });
+                              }}
                               aria-label={`Stage of ${idea.title}`}
                               className="focus-ring tap rounded-md border border-border bg-background px-2 py-1 text-xs"
                             >
@@ -411,12 +494,23 @@ function IdeaForm({
     // re-render when the list has not actually changed.
   }, [genres]);
 
-  const submit = (event: React.FormEvent) => {
+  /**
+   * The fields are cleared only once the idea is actually saved.
+   *
+   * Clearing them optimistically reads better and is wrong: a failed write
+   * would leave the journalist looking at an empty form and a toast, with the
+   * sentence they typed gone. Keeping the text until the server has it means a
+   * failure costs a second press rather than the idea.
+   */
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || saving) return;
 
-    insert("ideas", {
+    setSaving(true);
+    const result = await insert("ideas", {
       title: trimmed,
       note: note.trim(),
       tags: [],
@@ -424,10 +518,16 @@ function IdeaForm({
       priority,
       stage: "spark",
     });
+    setSaving(false);
+
+    if (!result.ok) {
+      notify.error("The idea was not saved", result.message);
+      return;
+    }
 
     setTitle("");
     setNote("");
-    notify.success("Idea noted", "Private to this workspace.");
+    notify.success("Idea noted", "Private to the newsroom.");
   };
 
   return (

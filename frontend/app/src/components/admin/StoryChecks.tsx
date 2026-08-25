@@ -38,7 +38,23 @@ import { transitions } from "@/lib/motion";
 export function StoryChecks({ draft }: { draft: Story }) {
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotion();
-  const { entities, sources, quotes } = useNewsroom();
+  /**
+   * Three collections, named so only three are fetched.
+   *
+   * The checks read entities to spot inconsistent terminology, and count the
+   * sources and quotes linked to this piece. Nothing here needs ideas,
+   * deadlines or the timeline, and asking for the whole workspace to run a
+   * spell-check on terminology would fetch every interview note in the
+   * newsroom to render a panel that is collapsed by default.
+   *
+   * The loading state is deliberately not surfaced. These are observations
+   * about a draft, not the draft itself: a checklist that flashed "0 sources"
+   * into a spinner and back would be reporting on its own network state, and
+   * the counts settle a moment later without anyone waiting on them.
+   */
+  const {
+    newsroom: { entities, sources, quotes },
+  } = useNewsroom("entities", "sources", "quotes");
 
   /**
    * The checks run on a settled draft, not on every keystroke.

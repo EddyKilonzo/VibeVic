@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { PROFILE } from "@/data/content";
 import { CHANNEL } from "@/data/videos";
-import { exportAll, useNewsroom } from "@/data/newsroom/useNewsroom";
-import { PRIVATE_COLLECTIONS } from "@/data/newsroom/types";
+import { exportAll, forget, useNewsroom, useNewsroomCounts } from "@/data/newsroom/useNewsroom";
 import { listDrafts } from "@/lib/drafts";
 import { listCustomBeats } from "@/lib/beats";
 import { listAwards } from "@/lib/awards";
@@ -39,11 +38,16 @@ import { signOut } from "@/app/admin/settings/actions";
  * switch that flips nothing is a lie with a nice animation on it.
  *
  * ── The part that actually matters ───────────────────────────────────────
- * This workspace keeps a journalist's drafts, ideas and sources in one
- * browser. Two things follow, and this is the screen where both are handled
- * honestly: they can be exported, so the only copy is not hostage to a
- * cleared cache; and the session can be ended, which twelve hours of
- * passphrase cookie previously made impossible.
+ * The newsroom's records — ideas, sources, quotes, the lot — are in Postgres
+ * now, so clearing this browser no longer destroys them and a phone sees what
+ * a laptop saved. Drafts, custom beats, awards and uploads-in-progress are
+ * still this device's, which is why the two are counted separately below
+ * rather than added into one reassuring figure.
+ *
+ * Two things follow, and this is the screen where both are handled honestly:
+ * everything can be exported, so no copy is hostage to one machine; and the
+ * session can be ended, which twelve hours of passphrase cookie previously
+ * made impossible.
  */
 export default function AdminSettings() {
   return (
@@ -147,7 +151,38 @@ interface Usage {
  * the browser's own quota API and that API says so itself.
  */
 function StoredData() {
-  const newsroom = useNewsroom();
+  /**
+   * The record total comes from the API as a number, not from counting rows.
+   *
+   * This screen wants one figure. Loading every collection to reach it would
+   * pull every source, quote and interview note across the network so that
+   * their lengths could be added up and the material discarded — which is both
+   * wasteful and a worse privacy position than asking Postgres to count. The
+   * API's total also respects the confidential tier, so it never announces the
+   * existence of rows this session is not allowed to see.
+   */
+  const { total: records, error: countsError } = useNewsroomCounts();
+
+  /**
+   * The export still needs the records themselves, so it names them.
+   *
+   * This is the one place that genuinely wants the material rather than a
+   * count, and it is honest about the cost: eleven requests, made because
+   * somebody asked for a backup.
+   */
+  const { newsroom } = useNewsroom(
+    "ideas",
+    "pitches",
+    "sources",
+    "quotes",
+    "interviews",
+    "entities",
+    "evidence",
+    "timeline",
+    "notes",
+    "deadlines",
+    "collections",
+  );
   const { count: bookmarks, clear: clearBookmarks } = useBookmarks();
   const [usage, setUsage] = useState<Usage | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -190,11 +225,6 @@ function StoredData() {
     [measure],
   );
 
-  const records = PRIVATE_COLLECTIONS.reduce(
-    (n, key) => n + (newsroom[key] as unknown[]).length,
-    0,
-  );
-
   /**
    * One file, everything textual in it.
    *
@@ -207,7 +237,7 @@ function StoredData() {
   const download = () => {
     const payload = {
       exportedAt: new Date().toISOString(),
-      newsroom: JSON.parse(exportAll()) as unknown,
+      newsroom: JSON.parse(exportAll(newsroom)) as unknown,
       drafts: listDrafts(),
       beats: listCustomBeats(),
       awards: listAwards(),
@@ -244,7 +274,7 @@ function StoredData() {
         <Head
           icon={<Database className="h-[18px] w-[18px]" aria-hidden />}
           title="On this device"
-          detail="There is no server yet, so this browser is the newsroom. Everything below is counted from the stores themselves."
+          detail="Newsroom records live in Postgres and are counted there. Everything else on this list is held by this browser, and is counted from the stores themselves."
         />
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -255,8 +285,8 @@ function StoredData() {
           />
           <Figure
             label="Newsroom records"
-            value={String(records)}
-            detail="Ideas, notes and everything private"
+            value={countsError ? "—" : (records !== null ? String(records) : "…")}
+            detail={countsError ? "The newsroom could not be reached" : "Ideas, notes and everything private"}
           />
           <Figure
             label="Beats opened here"
@@ -372,7 +402,17 @@ function Access() {
         />
       </ul>
 
-      <form action={signOut} className="mt-6 border-t border-border pt-5">
+      {/* `forget()` before the action, because signing out is a client
+          navigation and module state survives one. The cookie would be gone
+          and the records would still be in memory, so the next person at the
+          machine would find the workspace on screen — which is the failure
+          this button was added to prevent. The server action still does the
+          part that matters and still works without JavaScript. */}
+      <form
+        action={signOut}
+        onSubmit={() => forget()}
+        className="mt-6 border-t border-border pt-5"
+      >
         <Button type="submit" variant="outline" size="sm">
           <LogOut className="h-4 w-4" aria-hidden />
           Sign out of the newsroom

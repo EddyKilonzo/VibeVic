@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
+  curationErrorOf,
+  curationStatusOf,
+  ensureCuration,
   ensureLoaded,
   errorOf,
   fetchCounts,
+  reloadCuration,
   getServerSnapshot,
   getSnapshot,
   reload,
@@ -74,6 +78,47 @@ export function useNewsroom(...keys: ListKey[]): NewsroomView {
   }, [wanted]);
 
   return { newsroom, loading, error, refresh };
+}
+
+/**
+ * Read the curation the journalist has applied to their own work.
+ *
+ * Separate from `useNewsroom` for the reason the store keeps them separate:
+ * neither the portfolio map nor the style guide is a list of records, so
+ * neither has a `ListKey` and neither can be named in that hook. The shape of
+ * this one is otherwise identical, so a screen that uses both reads the same.
+ */
+export function useCuration(): {
+  portfolio: Newsroom["portfolio"];
+  styleGuide: Newsroom["styleGuide"];
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+} {
+  const newsroom = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    void ensureCuration();
+  }, []);
+
+  const load = useSyncExternalStore(
+    subscribe,
+    () => `${curationStatusOf()}:${curationErrorOf() ?? ""}`,
+    () => "idle:",
+  );
+
+  const [state, message] = load.split(/:(.*)/s);
+  const refresh = useCallback(() => {
+    void reloadCuration();
+  }, []);
+
+  return {
+    portfolio: newsroom.portfolio,
+    styleGuide: newsroom.styleGuide,
+    loading: state === "loading" || state === "idle",
+    error: message || null,
+    refresh,
+  };
 }
 
 /**

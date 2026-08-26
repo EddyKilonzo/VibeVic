@@ -4,6 +4,7 @@ import {
   EMPTY_NEWSROOM,
   PRIVATE_COLLECTIONS,
   type Newsroom,
+  type PortfolioClass,
   type Record_,
 } from "./types";
 
@@ -410,6 +411,136 @@ export async function remove<K extends ListKey>(
   }
 }
 
+/* ── Curation ────────────────────────────────────────────────── */
+
+/**
+ * Portfolio classes and the style guide.
+ *
+ * Held in the same cache as the eleven collections, and loaded separately from
+ * them, because they are a different kind of thing. Neither is a list of rows
+ * with ids and timestamps: the portfolio is a map from story id to a class, and
+ * the style guide is one document replaced whole. `ListKey` describes the array
+ * fields of `Newsroom` and correctly excludes both, so `ensureLoaded` cannot
+ * reach them and this is the way in.
+ *
+ * They share one load status, because they share one screen and one editorial
+ * idea — how the journalist wants their own work described. Splitting the
+ * status would mean two spinners for one section.
+ */
+
+export type CurationKey = "portfolio" | "styleGuide";
+
+let curationStatus: LoadStatus = "idle";
+let curationFailure: string | null = null;
+let curationInFlight: Promise<void> | null = null;
+
+export function curationStatusOf(): LoadStatus {
+  return curationStatus;
+}
+
+export function curationErrorOf(): string | null {
+  return curationFailure;
+}
+
+function putCuration(patch: Partial<Pick<Newsroom, CurationKey>>): void {
+  cache = { ...cache, ...patch };
+  emit();
+}
+
+/** Loads both, once. `reloadCuration` is the way to ask for fresh data. */
+export function ensureCuration(): Promise<void> {
+  if (curationStatus === "ready" || curationStatus === "error") return Promise.resolve();
+  return curationInFlight ?? reloadCuration();
+}
+
+export function reloadCuration(): Promise<void> {
+  const run = (async () => {
+    curationStatus = "loading";
+    curationFailure = null;
+    emit();
+
+    try {
+      /**
+       * Both at once, and both required.
+       *
+       * `Promise.all` rather than `allSettled`: a half-loaded curation state
+       * would render as "this story has no class" for every story, which is a
+       * statement rather than an absence — and the journalist would have no way
+       * to tell it apart from the truth.
+       */
+      const [portfolio, styleGuide] = await Promise.all([
+        request<Newsroom["portfolio"]>("/api/newsroom/curation/portfolio"),
+        request<Newsroom["styleGuide"]>("/api/newsroom/curation/style-guide"),
+      ]);
+      curationStatus = "ready";
+      putCuration({ portfolio, styleGuide });
+    } catch (cause) {
+      curationStatus = "error";
+      curationFailure =
+        cause instanceof NewsroomError ? cause.message : "Something went wrong.";
+      if (cause instanceof NewsroomError && cause.status === 401) cache = EMPTY_NEWSROOM;
+      emit();
+    } finally {
+      curationInFlight = null;
+    }
+  })();
+
+  curationInFlight = run;
+  return run;
+}
+
+/**
+ * Classes one story, or clears it with `null`.
+ *
+ * Idempotent all the way down — the API keys the row by story id and answers to
+ * a PUT — so a retry after a dropped connection costs nothing and duplicates
+ * nothing. The cache is updated from the answer rather than optimistically:
+ * a class that appears instantly and silently reverts on the next load is worse
+ * than one that takes a moment to appear.
+ */
+export async function setPortfolioClass(
+  storyId: string,
+  value: PortfolioClass | null,
+): Promise<WriteResult<Newsroom["portfolio"]>> {
+  try {
+    await request<unknown>("/api/newsroom/curation/portfolio", {
+      method: "PUT",
+      body: JSON.stringify({ storyId, class: value }),
+    });
+
+    const next = { ...cache.portfolio };
+    if (value === null) delete next[storyId];
+    else next[storyId] = value;
+
+    putCuration({ portfolio: next });
+    return { ok: true, value: next };
+  } catch (cause) {
+    return failureFrom(cause);
+  }
+}
+
+/**
+ * Replaces the style guide.
+ *
+ * The whole document, because that is the only shape the API offers and the
+ * reason it gives is a good one: a guide is edited in one sitting, and five
+ * requests that can half-fail model that worse than one that cannot.
+ */
+export async function saveStyleGuide(
+  entries: Newsroom["styleGuide"],
+): Promise<WriteResult<Newsroom["styleGuide"]>> {
+  try {
+    const saved = await request<Newsroom["styleGuide"]>(
+      "/api/newsroom/curation/style-guide",
+      { method: "PUT", body: JSON.stringify(entries) },
+    );
+    putCuration({ styleGuide: saved });
+    return { ok: true, value: saved };
+  } catch (cause) {
+    return failureFrom(cause);
+  }
+}
+
 /* ── Counts ──────────────────────────────────────────────────── */
 
 export type NewsroomCounts = Partial<Record<ListKey, number>>;
@@ -477,5 +608,11 @@ export function forget(): void {
   status.clear();
   failures.clear();
   inFlight.clear();
+  // Curation keeps its status outside the map, so clearing the map alone would
+  // leave it "ready" over an emptied cache — and `ensureCuration` would decline
+  // to refetch after the next unlock, showing every story as unclassed.
+  curationStatus = "idle";
+  curationFailure = null;
+  curationInFlight = null;
   emit();
 }

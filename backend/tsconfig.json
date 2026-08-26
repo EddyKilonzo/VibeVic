@@ -16,7 +16,14 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+
+    // No "baseUrl", and no "paths" to go with it. Both were here for an
+    // "@app/*" alias that nothing ever imported — `grep -rn "@app/"` across
+    // src, prisma and the Nest config finds nothing. `baseUrl` is deprecated
+    // and becomes a hard error in TypeScript 7, and the migration for dead
+    // config is to delete it rather than to silence the warning with
+    // "ignoreDeprecations". Relative imports are what this codebase actually
+    // uses throughout.
     "incremental": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -30,11 +37,7 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-
-    "paths": {
-      "@app/*": ["src/*"]
-    }
+    "noUncheckedIndexedAccess": true
   },
   "include": ["src/**/*", "prisma/**/*"],
   "exclude": ["node_modules", "dist"]

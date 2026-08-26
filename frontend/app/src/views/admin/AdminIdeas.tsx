@@ -1,17 +1,15 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Lightbulb, Plus, Trash2 } from "lucide-react";
+import { Lightbulb, Plus, Search, X } from "lucide-react";
 import type { Genre } from "@/data/types";
 import { DEFAULT_BEAT } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { allBeats } from "@/lib/beats";
 import { createStory } from "@/lib/story-save";
 import { cn } from "@/lib/utils";
-import { formatRelative } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
 import { insert, remove, update, useNewsroom } from "@/data/newsroom/useNewsroom";
@@ -22,6 +20,8 @@ import { PitchDesk } from "@/components/admin/PitchDesk";
 import { PitchPanel } from "@/components/admin/PitchPanel";
 import type { PitchResult } from "@/components/admin/pitch";
 import { Button } from "@/components/ui/Button";
+import { IdeaCard, TagField } from "@/components/admin/IdeaCard";
+import { PRIORITIES, PRIORITY_RANK, STAGES } from "@/components/admin/idea";
 import { EmptyState } from "@/components/ui/States";
 import { newsroomPath } from "@/lib/newsroom-path";
 
@@ -47,34 +47,19 @@ import { newsroomPath } from "@/lib/newsroom-path";
  * rather than filtering it field by field.
  */
 
-const STAGES: { id: IdeaStage; label: string; hint: string }[] = [
-  { id: "spark", label: "Spark", hint: "Noted, nothing done yet" },
-  { id: "researching", label: "Researching", hint: "Being looked into" },
-  { id: "pitched", label: "Pitched", hint: "Sent to an editor" },
-  { id: "commissioned", label: "Commissioned", hint: "Going ahead" },
-  { id: "dropped", label: "Dropped", hint: "Kept, so it is not raised twice" },
-];
-
-const PRIORITIES: Idea["priority"][] = ["high", "medium", "low"];
 
 /**
- * Priority styling.
+ * An id for the one block a new draft starts with.
  *
- * Separated by fill weight rather than by hue alone, matching the status
- * pills on the story list: solid, tinted-and-outlined, flat grey. That
- * ordering survives greyscale and every colour-vision type, which three
- * coloured dots would not.
+ * Module level, matching `newId` in `StoryWorkspace`, and not only to satisfy
+ * the purity rule: a component body is the wrong place to reach for the clock
+ * even when the call sits inside an event handler, because the next person to
+ * move that line does not get told.
  */
-const PRIORITY_STYLE: Record<Idea["priority"], string> = {
-  high: "bg-primary text-primary-foreground",
-  medium: "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35",
-  low: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
-};
-
-const PRIORITY_RANK: Record<Idea["priority"], number> = { high: 0, medium: 1, low: 2 };
+let blockSeq = 0;
+const blockId = () => `ib${Date.now()}-${(blockSeq += 1)}`;
 
 export default function AdminIdeas() {
-  const { genreLabel } = useTaxonomy();
   const {
     newsroom: { ideas },
     loading,
@@ -98,8 +83,44 @@ export default function AdminIdeas() {
   const reduced = useReducedMotion();
   const router = useRouter();
 
+  /**
+   * Narrowing, in three independent ways.
+   *
+   * The stage tabs were the only filter, and they are the wrong shape for the
+   * question a journalist actually arrives with — which is rarely "show me
+   * everything I have pitched" and often "what was that thing about the
+   * boreholes". Fifty ideas is a normal number to be holding and a stage tab
+   * still leaves a dozen on screen.
+   *
+   * None of this reorders anything. The sort stays priority-then-recency, and
+   * searching hides rows rather than promoting them: a match that floated to
+   * the top would be the screen ranking ideas by relevance, which is the one
+   * thing the file's opening comment says it will not do.
+   */
+  const [query, setQuery] = useState("");
+  const [priority, setPriority] = useState<Idea["priority"] | "all">("all");
+  const [tag, setTag] = useState<string | null>(null);
+
+  /** Which idea is open for editing. One at a time — see `IdeaCard`. */
+  const [editing, setEditing] = useState<string | null>(null);
+
   const visible = useMemo(() => {
-    const list = stage === "all" ? ideas : ideas.filter((i) => i.stage === stage);
+    const needle = query.trim().toLowerCase();
+
+    const list = ideas.filter((idea) => {
+      if (stage !== "all" && idea.stage !== stage) return false;
+      if (priority !== "all" && idea.priority !== priority) return false;
+      if (tag && !idea.tags.includes(tag)) return false;
+      if (!needle) return true;
+      // Title, note and tags. Not the beat: filing is what the beat filter is
+      // for, and matching it here would make "news" return most of the list.
+      return (
+        idea.title.toLowerCase().includes(needle) ||
+        idea.note.toLowerCase().includes(needle) ||
+        idea.tags.some((t) => t.toLowerCase().includes(needle))
+      );
+    });
+
     // The journalist's own ranking first, then recency. Nothing else is
     // weighed in — see the note at the top of the file.
     return [...list].sort(
@@ -107,7 +128,26 @@ export default function AdminIdeas() {
         PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
         b.createdAt.localeCompare(a.createdAt),
     );
-  }, [ideas, stage]);
+  }, [ideas, stage, query, priority, tag]);
+
+  /** Every tag in use, most-used first, for the filter strip. */
+  const tags = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const idea of ideas) {
+      for (const t of idea.tags) seen.set(t, (seen.get(t) ?? 0) + 1);
+    }
+    return [...seen.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [ideas]);
+
+  const narrowed = Boolean(query.trim()) || priority !== "all" || tag !== null;
+
+  const clearFilters = () => {
+    setQuery("");
+    setPriority("all");
+    setTag(null);
+  };
 
   const counts = useMemo(() => {
     const map = new Map<IdeaStage, number>();
@@ -191,7 +231,7 @@ export default function AdminIdeas() {
       publishedAt: today,
       updatedAt: today,
       readingMinutes: 1,
-      body: [{ id: `b${Date.now()}`, type: "paragraph", text: idea.note }],
+      body: [{ id: blockId(), type: "paragraph", text: idea.note }],
     });
 
     if (!created.ok) {
@@ -286,6 +326,92 @@ export default function AdminIdeas() {
             })}
           </Reveal>
 
+          {/* Search, priority and tags. Below the stage tabs rather than beside
+              them: stage is the spine of this screen and stays a single row of
+              its own, while these three narrow whatever the spine has already
+              chosen. */}
+          <Reveal variant="fade-up" delay={60} className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-0 flex-1 basis-[220px]">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search ideas, notes and tags"
+                aria-label="Search ideas"
+                className="focus-ring h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none transition-colors focus:border-accent"
+              />
+            </div>
+
+            <div
+              role="group"
+              aria-label="Filter by priority"
+              className="surface-compact flex items-center gap-1 p-1"
+            >
+              {(["all", ...PRIORITIES] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPriority(value)}
+                  aria-pressed={priority === value}
+                  className={cn(
+                    "focus-ring tap relative inline-flex h-7 items-center rounded px-2.5 text-xs font-semibold capitalize transition-colors duration-normal",
+                    priority === value
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-primary",
+                  )}
+                >
+                  {priority === value && (
+                    <motion.span
+                      layoutId={reduced ? undefined : "admin-idea-priority-filter"}
+                      className="absolute inset-0 rounded bg-primary"
+                      transition={transitions.normal}
+                    />
+                  )}
+                  <span className="relative">{value}</span>
+                </button>
+              ))}
+            </div>
+
+            {narrowed && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="focus-ring tap inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden />
+                Clear
+              </button>
+            )}
+          </Reveal>
+
+          {/* Only shown once tags exist. An empty strip explaining that you
+              could be tagging things is a lecture, not a filter. */}
+          {tags.length > 0 && (
+            <Reveal variant="fade-up" delay={80} className="mt-3 flex flex-wrap items-center gap-1.5">
+              {tags.map(({ name, count }) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setTag((current) => (current === name ? null : name))}
+                  aria-pressed={tag === name}
+                  className={cn(
+                    "focus-ring tap inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors duration-normal",
+                    tag === name
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-primary",
+                  )}
+                >
+                  {name}
+                  <span className="tabular-nums opacity-60">{count}</span>
+                </button>
+              ))}
+            </Reveal>
+          )}
+
           <div className="surface mt-5 overflow-hidden">
             {/* Three empty-looking states that mean different things, and are
                 said differently. "No ideas yet" is an invitation; a list that
@@ -310,11 +436,19 @@ export default function AdminIdeas() {
             ) : visible.length === 0 ? (
               <EmptyState
                 icon={<Lightbulb className="h-5 w-5" aria-hidden />}
-                title={ideas.length === 0 ? "No ideas yet" : "Nothing at this stage"}
+                title={
+                  ideas.length === 0
+                    ? "No ideas yet"
+                    : narrowed
+                      ? "Nothing matches"
+                      : "Nothing at this stage"
+                }
                 description={
                   ideas.length === 0
                     ? "Write the next one down before it goes. A line is enough — the beat, the note and the priority can follow."
-                    : "Every idea you have is at another stage. Switch the filter to see them."
+                    : narrowed
+                      ? "Your ideas are all here — none of them match what you are narrowing by. Clear the filters to see them again."
+                      : "Every idea you have is at another stage. Switch the filter to see them."
                 }
                 className="border-0"
               />
@@ -338,97 +472,17 @@ export default function AdminIdeas() {
                       transition={transitions.normal}
                       className="group relative overflow-hidden"
                     >
-                      <div className="p-4 transition-colors duration-normal hover:bg-secondary/50">
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold leading-snug tracking-tight">
-                              {idea.title}
-                            </p>
-                            {idea.note && (
-                              <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                                {idea.note}
-                              </p>
-                            )}
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              {genreLabel(idea.genre)} · added {formatRelative(idea.createdAt)}
-                            </p>
-                          </div>
-
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-                              PRIORITY_STYLE[idea.priority],
-                            )}
-                          >
-                            {idea.priority}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() => drop(idea)}
-                            aria-label={`Delete ${idea.title}`}
-                            className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </button>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-3">
-                          {/* The stage is the field that changes most, so it
-                              is editable in place rather than behind a detail
-                              view. No `expectedUpdatedAt` is passed, which now
-                              means "use the copy we hold" rather than "skip the
-                              check" — the API has no opt out. That is stricter
-                              than before and right: if another tab moved this
-                              idea on, saying so beats overwriting it. */}
-                          <label className="flex items-center gap-2 text-xs">
-                            <span className="rule-label">Stage</span>
-                            <select
-                              value={idea.stage}
-                              onChange={(e) => {
-                                const next = e.target.value as IdeaStage;
-                                void update("ideas", idea.id, { stage: next }).then((result) => {
-                                  if (!result.ok) {
-                                    notify.error(
-                                      "The stage was not changed",
-                                      result.reason === "conflict"
-                                        ? "This idea changed in another tab. The list has been refreshed."
-                                        : result.message,
-                                    );
-                                  }
-                                });
-                              }}
-                              aria-label={`Stage of ${idea.title}`}
-                              className="focus-ring tap rounded-md border border-border bg-background px-2 py-1 text-xs"
-                            >
-                              {STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          {idea.storyId ? (
-                            <Link
-                              href={newsroomPath(`/stories/${idea.storyId}`)}
-                              className="focus-ring underline-grow inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
-                            >
-                              Open the draft
-                              <ArrowRight className="nudge-x h-3.5 w-3.5" aria-hidden />
-                            </Link>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => startDraft(idea)}
-                              className="focus-ring tap inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
-                            >
-                              Start a draft
-                              <ArrowRight className="nudge-x h-3.5 w-3.5" aria-hidden />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <IdeaCard
+                        idea={idea}
+                        editing={editing === idea.id}
+                        onEdit={() => setEditing(idea.id)}
+                        onDone={() => setEditing(null)}
+                        onDelete={() => drop(idea)}
+                        onStartDraft={() => startDraft(idea)}
+                        starting={starting === idea.id}
+                        onPickTag={(name) => setTag((current) => (current === name ? null : name))}
+                        activeTag={tag}
+                      />
                     </motion.li>
                   ))}
                 </AnimatePresence>
@@ -483,6 +537,7 @@ function IdeaForm({
   const { genres } = useTaxonomy();
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Idea["priority"]>("medium");
+  const [tags, setTags] = useState<string[]>([]);
   const [beats, setBeats] = useState<Genre[]>(genres);
   const reduced = useReducedMotion();
 
@@ -538,7 +593,7 @@ function IdeaForm({
     const result = await insert("ideas", {
       title: trimmed,
       note: note.trim(),
-      tags: [],
+      tags,
       genre,
       priority,
       stage: "spark",
@@ -552,6 +607,7 @@ function IdeaForm({
 
     setTitle("");
     setNote("");
+    setTags([]);
     notify.success("Idea noted", "Private to the newsroom.");
   };
 
@@ -633,9 +689,18 @@ function IdeaForm({
           ))}
         </div>
 
-        <Button type="submit" className="mt-5 w-full" disabled={!title.trim()}>
+        <label htmlFor="idea-tags" className="rule-label mt-5 block">
+          Tags <span className="font-normal normal-case opacity-60">optional</span>
+        </label>
+        {/* Optional, and said so. The whole argument for this form is that one
+            line is enough to file an idea; a tag field that looked required
+            would put a second decision in front of the only one that matters.
+            Everything here can be added from the row afterwards. */}
+        <TagField id="idea-tags" tags={tags} onChange={setTags} />
+
+        <Button type="submit" className="mt-5 w-full" disabled={!title.trim() || saving}>
           <Plus className="icon-pop h-4 w-4" aria-hidden />
-          Note it
+          {saving ? "Noting…" : "Note it"}
         </Button>
 
         {/* Below the submit, not above it: noting the idea is the thing this

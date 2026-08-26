@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { recordRead } from "@/lib/reader-events";
 
 const KEY = "vv:reading-position";
 
@@ -200,6 +201,25 @@ export function useReadingPosition(slug: string) {
         // `Mark`. Progress is pinned to 1 so a listing can say "finished"
         // without having to decide whether 0.96 counts.
         positions[slug] = { progress: 1, at: Date.now(), finished: true };
+
+        /**
+         * The only thing on this screen that leaves the device, and it is not
+         * the mark.
+         *
+         * The mark is the reader's own — where they got to, so the site can
+         * offer to resume — and it stays here, as `ReadProgress` says. What
+         * goes to the API is a different fact with no reader attached to it:
+         * that this story was finished once, by somebody. It carries a random
+         * per-tab string and nothing else; `lib/reader-events` sets out what
+         * that can and cannot be used for.
+         *
+         * Fired from here because this is the one place that knows. And fired
+         * on `pagehide`, which is why it goes out as a beacon: a reader who
+         * reaches the end usually closes the tab in the same motion, and a
+         * plain fetch started then is cancelled — losing the count for exactly
+         * the readers who finished.
+         */
+        if (!previous?.finished) recordRead(slug);
       } else if (progress < FLOOR) {
         // Barely opened. Anything already known about this piece is better
         // than overwriting it with "they glanced at it once" — a reader who

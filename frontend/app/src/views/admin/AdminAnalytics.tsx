@@ -5,6 +5,8 @@ import Link from "next/link";
 import { BarChart3, Eye, Headphones, Info, Youtube } from "lucide-react";
 import { CHANNEL, VIDEOS, longFormVideos, shorts, topicName, totalViews, watchUrl } from "@/data/videos";
 import { useAllStories } from "@/hooks/useStories";
+import { useStoryFigures } from "@/hooks/useStoryFigures";
+import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
 import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -17,14 +19,18 @@ import { EmptyState } from "@/components/ui/States";
 /**
  * Analytics.
  *
- * ── Two sources, and no third ────────────────────────────────────────────
- * Everything on this screen comes from one of two places, and each panel says
+ * ── Three sources, and no fourth ─────────────────────────────────────────
+ * Everything on this screen comes from one of three places, and each panel says
  * which: the YouTube figures captured into `data/videos` when that file was
- * written, and playback this browser recorded itself. There is no third
- * source, because there is no analytics endpoint — so there are no reader
- * counts for the written archive, no referrers, no daily series and no
- * "estimated reach". A number that cannot be pointed back at one of those two
- * places does not appear here.
+ * written, playback this browser recorded itself, and — new — the newsroom's
+ * own count of what readers did with the written archive.
+ *
+ * That third one used to be absent, and this comment used to explain why:
+ * "there is no analytics endpoint". There is now, and it is first-party and
+ * anonymous — see `lib/reader-events`. What has not changed is the rule: there
+ * are still no referrers, no daily series and no "estimated reach", and a
+ * number that cannot be pointed back at one of those three places does not
+ * appear here.
  *
  * ── Why the dashboard is not enough on its own ───────────────────────────
  * The dashboard answers "how is the newsroom doing" in four figures and two
@@ -37,6 +43,12 @@ type Sort = "views" | "newest";
 
 export default function AdminAnalytics() {
   const { data: allStories } = useAllStories();
+  const {
+    figures,
+    loading: figuresLoading,
+    error: figuresError,
+  } = useStoryFigures();
+  const { genreLabel } = useTaxonomy();
   const stories = allStories ?? [];
   const storyBySlug = (slug: string) => stories.find((story) => story.slug === slug);
   const [sort, setSort] = useState<Sort>("views");
@@ -78,9 +90,10 @@ export default function AdminAnalytics() {
             <p className="rule-label">Newsroom</p>
             <h1 className="font-display display-2 mt-2 font-semibold">Analytics</h1>
             <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-              Channel figures as captured from {CHANNEL.handle}, and playback recorded by this
-              browser. Nothing here is modelled or estimated — where a number does not exist,
-              the panel says so instead of drawing one.
+              How the written archive travels, channel figures as captured from{" "}
+              {CHANNEL.handle}, and playback recorded by this browser. Nothing here is
+              modelled or estimated — where a number does not exist, the panel says so
+              instead of drawing one.
             </p>
           </div>
           <a
@@ -93,6 +106,104 @@ export default function AdminAnalytics() {
             Open the channel
           </a>
         </div>
+      </Reveal>
+
+      {/* ── The written archive ─────────────────────────────────
+          First, because it is the thing this newsroom actually publishes. The
+          video figures below it are a capture from another platform; these are
+          the site's own count, and they are the only numbers here that move on
+          their own. */}
+      <Reveal variant="fade-up" delay={40} className="surface mt-8 overflow-hidden">
+        <div className="p-5 pb-4 sm:px-6">
+          <p className="rule-label">The written archive</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Counted by the newsroom, once per reader per piece per day. Anonymous — see
+            Readers for exactly what is collected.
+          </p>
+        </div>
+
+        {/* Four states, and the difference between the last two is the whole
+            point: a story nobody has opened is absent from this list, not
+            present with a zero. A zero looks like a measurement. */}
+        {figuresError ? (
+          <EmptyState
+            icon={<Eye className="h-5 w-5" aria-hidden />}
+            title="The figures could not be loaded"
+            description={figuresError}
+            className="border-0"
+          />
+        ) : figuresLoading ? (
+          <EmptyState
+            icon={<Eye className="h-5 w-5" aria-hidden />}
+            title="Reading the figures"
+            description="Asking the newsroom what readers did."
+            className="border-0"
+          />
+        ) : !figures || figures.length === 0 ? (
+          <EmptyState
+            icon={<Eye className="h-5 w-5" aria-hidden />}
+            title="No reading recorded yet"
+            description="Nothing has been opened since counting began. This stays empty rather than showing zeros — an absence and a measurement of nothing are different things."
+            className="border-0"
+          />
+        ) : (
+          <ul className="divide-y divide-border border-t border-border">
+            {figures.map((row) => {
+              const story = storyBySlug(row.slug);
+              return (
+                <li
+                  key={row.storyId}
+                  className="flex items-center gap-4 p-4 transition-colors duration-normal hover:bg-secondary/50 sm:px-6"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{row.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {story ? genreLabel(story.genre) : "/" + row.slug}
+                    </p>
+                  </div>
+                  <dl className="flex shrink-0 items-center gap-4 text-xs tabular-nums sm:gap-6">
+                    <div className="text-right">
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        Opened
+                      </dt>
+                      <dd className="font-semibold">{formatCompact(row.views)}</dd>
+                    </div>
+                    <div className="text-right">
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        Finished
+                      </dt>
+                      <dd className="font-semibold">
+                        {formatCompact(row.reads)}
+                        {row.views > 0 && (
+                          <span className="ml-1 font-normal text-muted-foreground">
+                            {formatPercent(row.reads / row.views)}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="hidden text-right sm:block">
+                      <dt className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        Listened
+                      </dt>
+                      <dd className="font-semibold">
+                        {row.listens === 0 ? (
+                          <span className="font-normal text-muted-foreground">—</span>
+                        ) : (
+                          <>
+                            {formatCompact(row.listens)}
+                            <span className="ml-1 font-normal text-muted-foreground">
+                              {formatTime(row.avgListenSeconds)}
+                            </span>
+                          </>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Reveal>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

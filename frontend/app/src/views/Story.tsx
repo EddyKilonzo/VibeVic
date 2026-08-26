@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Story as StoryRecord, StorySummary } from "@/data/types";
 import { PROFILE } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
+import { recordView } from "@/lib/reader-events";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
 import { storyCover } from "@/lib/cover";
@@ -91,6 +92,21 @@ export default function Story({
   );
   const activeSection = useActiveSection(headings.map((heading) => heading.id));
   const { saved, record, decline } = useReadingPosition(slug);
+
+  /**
+   * The article was opened.
+   *
+   * In an effect rather than in render, because it is a side effect and React
+   * may render this twice before anything is on screen. `recordView` is
+   * idempotent per tab anyway — and the API deduplicates per session per day on
+   * top of that — so the worst a double render costs is a request nobody needed.
+   *
+   * Keyed on the slug so navigating from one article to the next reports the
+   * second one. Nothing about the reader is sent; see `lib/reader-events`.
+   */
+  useEffect(() => {
+    if (slug) recordView(slug);
+  }, [slug]);
 
   const { load, stop, state, activeBlockId, preferences } = useVoice();
   const listening = state === "playing" || state === "paused";

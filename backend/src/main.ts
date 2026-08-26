@@ -2,6 +2,7 @@ import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
+import { json } from 'express';
 import { AppModule } from './app.module';
 import { corsOrigins, type Env } from './config/env';
 
@@ -23,6 +24,23 @@ async function bootstrap(): Promise<void> {
   // content-type headers helmet sets cost nothing and stop a response being
   // embedded or sniffed if one is ever opened directly in a tab.
   app.use(helmet());
+
+  /**
+   * The JSON parser also accepts `text/plain`, for one caller.
+   *
+   * `navigator.sendBeacon` is what reports a finished read, and it fires at the
+   * moment the reader closes the tab. A beacon with `Content-Type:
+   * application/json` is a preflighted cross-origin request, and a preflight
+   * cannot complete during unload — so the count would be lost precisely for
+   * the readers who reached the end, which would bias the one metric that says
+   * whether anybody finishes. A `text/plain` body is a "simple request" and
+   * goes straight out.
+   *
+   * The body is still JSON and is still validated by the same DTO; only the
+   * header differs. Nothing else in this API accepts `text/plain`, so the
+   * widened parser has exactly one user and a malformed body still 400s.
+   */
+  app.use(json({ type: ['application/json', 'text/plain'] }));
 
   /**
    * An allowlist read from validated config, never a wildcard.

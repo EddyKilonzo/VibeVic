@@ -6,10 +6,20 @@
  *
  * Deliberately real and deliberately small. Nothing here invents a number —
  * an article that has never been played reports no plays, and the dashboard
- * renders that as "no data yet" rather than as a zero-shaped chart. Swapping
- * `sink` for a POST to a real endpoint is the only change needed to make this
- * a product metric.
+ * renders that as "no data yet" rather than as a zero-shaped chart.
+ *
+ * ── Two stores now, answering two questions ──────────────────────────────
+ * This one is still local and still per-device, and that is right for what it
+ * holds: playback rates, seeks, which voice, completion ratios — a detailed
+ * record of one browser, useful for tuning the player and useless as an
+ * audience figure.
+ *
+ * The listening *time* is also reported to the API, anonymously, because that
+ * is the part a journalist can actually ask a question of. See
+ * `recordAudioEvent` below and `lib/reader-events` for exactly what leaves.
  */
+
+import { recordListen } from "@/lib/reader-events";
 
 export type AudioEventType = "play" | "pause" | "complete" | "seek" | "rate" | "voice";
 
@@ -60,6 +70,28 @@ export function recordAudioEvent(event: Omit<AudioEvent, "at">): void {
   const events = read();
   events.push({ ...event, at: Date.now() });
   write(events);
+
+  /**
+   * The sink this file always said it was waiting for.
+   *
+   * The note at the top of this module read: "Swapping `sink` for a POST to a
+   * real endpoint is the only change needed to make this a product metric."
+   * This is that change, and it is an addition rather than a swap — the local
+   * store stays, because the two answer different questions.
+   *
+   * The device keeps the detail: playback rates, seek behaviour, which voice,
+   * completion ratios. That is a debugging record of one browser and is no use
+   * as an audience figure. What goes to the server is the part that is: how
+   * long somebody listened, attributed to nobody. `reader-events` explains what
+   * that request does and does not carry.
+   *
+   * Only the two events that measure time are forwarded. A "play" is a button
+   * press and inflates with every pause and resume; "pause" and "complete"
+   * carry the seconds actually listened since the last one.
+   */
+  if ((event.type === "pause" || event.type === "complete") && event.seconds) {
+    recordListen(event.slug, event.seconds);
+  }
 }
 
 export function audioEvents(slug?: string): AudioEvent[] {

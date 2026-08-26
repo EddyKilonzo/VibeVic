@@ -196,6 +196,31 @@ export const CollectionPublicView = definePublicView<
   coverStoryId: collection.coverStoryId ?? undefined,
 }));
 
+/* ── Reader events ─────────────────────────────────────────────── */
+
+/**
+ * The acknowledgement a reader's browser gets for reporting an event.
+ *
+ * One boolean, and it is `accepted` rather than `counted` — those are different
+ * facts and only the first is any of the browser's business. An event can be
+ * accepted and then not counted: a repeat inside the same day is absorbed by
+ * the unique index, and a request that smells like a crawler is dropped. Saying
+ * "counted" would be a lie in both cases, and saying *which* would turn this
+ * into an endpoint that reports on the filter it is subject to.
+ *
+ * Declared as a view for the same reason every other public response is: the
+ * interceptor projects through it, so this route cannot start returning a view
+ * count because somebody returned the wrong object from the service.
+ */
+export interface PublicEventAck {
+  accepted: boolean;
+}
+
+export const EventAckPublicView = definePublicView<PublicEventAck, PublicEventAck>(
+  'EventAckPublicView',
+  (ack) => ({ accepted: ack.accepted }),
+);
+
 /* ── Health ────────────────────────────────────────────────────────────── */
 
 export interface PublicHealth {

@@ -17,25 +17,27 @@ import { newsroomPath } from "@/lib/newsroom-path";
 /**
  * Readers.
  *
- * ── The screen has to start by admitting what it is ──────────────────────
- * There is no audience data. No accounts, no server, no third-party analytics
- * script anywhere in the app — that last one is a deliberate product decision
- * rather than an omission, and it is why nothing here can report how many
- * people read anything.
+ * ── What this screen used to say, and what changed ───────────────────────
+ * It opened by admitting there was no audience data: "no accounts, no server,
+ * no third-party analytics script anywhere in the app". Two of those three are
+ * still true and are meant to stay true. The middle one stopped being true, and
+ * the site now counts reading itself — first-party, anonymously, with no cookie
+ * and no profile. `lib/reader-events` sets out exactly what leaves a reader's
+ * browser and why it cannot identify them.
  *
- * The tempting version of this screen invents a plausible-looking audience
- * out of the one browser it can see: "23 readers", drawn from twenty-three
- * page views on the journalist's own laptop. That number would be believed,
- * repeated, and wrong. So the screen shows exactly what the device knows —
- * what has been saved, how far through each piece this browser got, what it
- * has played aloud — and labels every panel as this device.
+ * The tempting version of this screen was always the one that invented a
+ * plausible audience out of the single browser it could see: "23 readers",
+ * drawn from twenty-three page views on the journalist's own laptop. That
+ * number would be believed, repeated, and wrong. The figures are real now, so
+ * the panels can stop hedging — but the two kinds are still kept apart, because
+ * "how many people finished this" and "how far this browser got" are different
+ * facts and only one of them is about readers.
  *
- * ── Why it is still worth a screen ───────────────────────────────────────
- * Two reasons. The reading state is genuinely useful to the person running
- * the newsroom: it is the archive as their own reader sees it, including
- * which pieces are still unopened. And the second panel states, in one place,
- * exactly what the site does and does not collect about the people who read
- * it — which is the thing a journalist gets asked about their own site.
+ * ── The statement panel is still the point ───────────────────────────────
+ * It sets out in one place what the site does and does not collect about the
+ * people who read it, which is the thing a journalist gets asked about their
+ * own site. It has been rewritten rather than removed: the honest answer
+ * changed, and an out-of-date privacy statement is worse than none.
  */
 export default function AdminReaders() {
   const { data } = usePublishedStories();
@@ -71,9 +73,9 @@ export default function AdminReaders() {
         <p className="rule-label">Newsroom</p>
         <h1 className="font-display display-2 mt-2 font-semibold">Readers</h1>
         <p className="mt-3 max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-          The site has no accounts, no server and no analytics script, so there is no audience
-          to report on. What this browser knows about its own reading is below, labelled as
-          such — nothing here is an estimate of anybody else.
+          The site counts reading itself — no accounts, no cookies, no third-party script,
+          and nothing that can tell two visits apart. What the figures cover is below, and
+          so is what this browser knows about its own reading, kept separate.
         </p>
       </Reveal>
 
@@ -100,8 +102,12 @@ export default function AdminReaders() {
 
         <dl className="mt-5 grid gap-4 sm:grid-cols-2">
           <Fact
-            term="Nothing, off the device"
-            detail="No analytics script is loaded on any page. There is no tag manager, no pixel and no third-party embed on the reading surface except YouTube's player on video pages."
+            term="Counted, not identified"
+            detail="Three things per story: opened, finished, listened to. Each carries a random string this tab invented, which is thrown away when the tab closes and is never read back. No cookie, no address, no profile, and no way to connect two visits."
+          />
+          <Fact
+            term="No third-party anything"
+            detail="No analytics script is loaded on any page. There is no tag manager, no pixel and no third-party embed on the reading surface except YouTube's player on video pages. The counting is the site's own."
           />
           <Fact
             term="Saved stories, locally"
@@ -118,8 +124,9 @@ export default function AdminReaders() {
         </dl>
 
         <p className="mt-5 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">
-          Audience figures would need an API with consent handling behind it. Until that
-          exists, this screen would rather say nothing than guess.
+          A reader who blocks the request, reads offline or has storage disabled is simply
+          not counted. Nothing is estimated to fill the gap, so these figures are a floor
+          rather than an audience — which is the honest thing for them to be.
         </p>
       </Reveal>
 

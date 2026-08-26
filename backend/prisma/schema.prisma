@@ -25,7 +25,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Pooled, for the running server: Neon's PgBouncer hands out a connection
   // per transaction rather than holding one open per process.
   url       = env("DATABASE_URL")
@@ -90,6 +90,18 @@ enum MediaSource {
   LINK
 }
 
+/// What a reader did with a story. Three kinds, and no fourth without a reason:
+/// every kind is a separate row per reader-session per day, so adding one adds
+/// a way to be counted.
+enum ReadEventKind {
+  /// The article was opened.
+  VIEW
+  /// The reader reached the end of it.
+  READ
+  /// It was played through the voice player.
+  LISTEN
+}
+
 enum PortfolioClass {
   STANDARD
   SIGNATURE
@@ -139,12 +151,12 @@ model Story {
   /// The piece at its original home, for imported work. A syndicated article
   /// should always be able to point at the version its author maintains: if the
   /// two diverge, a reader can see which is which instead of trusting this copy.
-  sourceUrl      String?
+  sourceUrl String?
 
   /// A real cover photograph. Null means the site falls back to generated art
   /// keyed off the slug — deliberately abstract, so decoration standing in for a
   /// picture is never mistaken for one.
-  cover          String?
+  cover String?
 
   /// Ordered list of typed blocks, stored as JSON rather than HTML so the
   /// editor can reorder blocks and the voice engine can pick which ones to
@@ -157,20 +169,21 @@ model Story {
 
   // Restrict, not Cascade or SetNull: deleting a genre must never delete
   // published work, and genreSlug is required, so it cannot be nulled either.
-  genre     Genre      @relation(fields: [genreSlug], references: [slug], onDelete: Restrict)
+  genre     Genre           @relation(fields: [genreSlug], references: [slug], onDelete: Restrict)
   stats     StoryStats?
+  events    StoryEvent[]
   portfolio PortfolioEntry?
 
-  ideas      Idea[]
-  pitches    Pitch[]
-  notes      Note[]
-  deadlines  Deadline[]
+  ideas     Idea[]
+  pitches   Pitch[]
+  notes     Note[]
+  deadlines Deadline[]
 
-  sources    StorySource[]
-  quotes     StoryQuote[]
-  interviews StoryInterview[]
-  evidence   StoryEvidence[]
-  timeline   StoryTimelineEvent[]
+  sources     StorySource[]
+  quotes      StoryQuote[]
+  interviews  StoryInterview[]
+  evidence    StoryEvidence[]
+  timeline    StoryTimelineEvent[]
   collections CollectionStory[]
 
   @@index([status, publishedAt])
@@ -193,6 +206,50 @@ model StoryStats {
   story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@map("story_stats")
+}
+
+/// An append-only record of what readers did, and the ledger `StoryStats` is
+/// derived from.
+///
+/// ── Why a table of events and not a counter ─────────────────────────────
+/// `StoriesService.recordView` was left unimplemented on an argument worth
+/// keeping: "Counters need de-duplication, bot filtering and a write path that
+/// does not lock the article row on every page view; an increment here would
+/// produce numbers nobody should quote." All three are answered here rather
+/// than skipped.
+///
+/// De-duplication is the unique index: one row per story, per kind, per
+/// reader-session, per day. Pressing reload twenty times counts once.
+///
+/// The write path never touches `stories`. It writes one narrow row keyed by
+/// that index, so two readers on the same article never contend.
+///
+/// ── What `session` is, and what it is not ───────────────────────────────
+/// A random string the browser mints per tab and keeps in `sessionStorage`. It
+/// is not a cookie, it is not derived from an address or a device, it is never
+/// read back out of this table, and it dies when the tab closes. It exists to
+/// answer "is this the same visit" and cannot answer "who is this" — which is
+/// the whole reason a journalism site can carry it.
+model StoryEvent {
+  id      String        @id @default(cuid())
+  storyId String
+  kind    ReadEventKind
+  session String
+  /// The UTC date as YYYY-MM-DD. A column rather than a function on
+  /// `occurredAt` so it can carry the unique index above.
+  day     String
+  /// Seconds listened, accumulated across one session-day. Zero for VIEW/READ.
+  seconds Int           @default(0)
+
+  occurredAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, kind, session, day])
+  @@index([storyId, kind])
+  @@index([occurredAt])
+  @@map("story_events")
 }
 
 /// The archive is two levels deep and no more: six beats a reader can hold in
@@ -379,19 +436,19 @@ model Idea {
 }
 
 model Pitch {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   ideaId            String?
   title             String
   /// The specific angle, not the subject area.
   angle             String
-  whyItMatters      String   @default("")
-  whatIsKnown       String   @default("")
-  whatIsUnknown     String   @default("")
+  whyItMatters      String    @default("")
+  whatIsKnown       String    @default("")
+  whatIsUnknown     String    @default("")
   targetPublication String?
   deadline          DateTime?
   storyId           String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   idea    Idea?         @relation(fields: [ideaId], references: [id], onDelete: SetNull)
   story   Story?        @relation(fields: [storyId], references: [id], onDelete: SetNull)
@@ -529,7 +586,7 @@ model EvidenceItem {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  source   Source?               @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  source   Source?                 @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   entities EvidenceEntity[]
   stories  StoryEvidence[]
   timeline TimelineEventEvidence[]

@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Lightbulb, Plus, Search, X } from "lucide-react";
-import type { Genre } from "@/data/types";
 import { DEFAULT_BEAT } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
-import { allBeats } from "@/lib/beats";
 import { createStory } from "@/lib/story-save";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
@@ -538,7 +536,6 @@ function IdeaForm({
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Idea["priority"]>("medium");
   const [tags, setTags] = useState<string[]>([]);
-  const [beats, setBeats] = useState<Genre[]>(genres);
   const reduced = useReducedMotion();
 
   /**
@@ -560,19 +557,14 @@ function IdeaForm({
    * even in the case where something else does re-attach it: same beats, same
    * array, no update.
    */
-  const load = useCallback((node: HTMLFormElement | null) => {
-    if (!node) return;
-    setBeats((current) => {
-      const next = allBeats(genres);
-      const same =
-        current.length === next.length && current.every((beat, i) => beat.slug === next[i].slug);
-      return same ? current : next;
-    });
-    // `genres` is a dependency now that the published beats are fetched: a
-    // callback pinned to the empty first-render list would leave the picker
-    // showing only locally-added beats. The comparison above still stops the
-    // re-render when the list has not actually changed.
-  }, [genres]);
+  /**
+   * Nothing to read from storage any more.
+   *
+   * This was a ref callback that merged locally-opened beats into the published
+   * list — see the note it used to carry about the infinite render it caused.
+   * Beats are rows now, so `useTaxonomy().genres` is the whole list and the
+   * merge, the callback and the loop it could cause are all gone.
+   */
 
   /**
    * The fields are cleared only once the idea is actually saved.
@@ -622,7 +614,7 @@ function IdeaForm({
       </span>
       <h2 className="font-display mt-4 text-lg font-semibold tracking-tight">Note an idea</h2>
 
-      <form ref={load} onSubmit={submit} className="mt-5">
+      <form onSubmit={submit} className="mt-5">
         <label htmlFor="idea-title" className="rule-label">
           The idea
         </label>
@@ -655,7 +647,7 @@ function IdeaForm({
           onChange={(e) => setGenre(e.target.value)}
           className="focus-ring mt-2 h-11 w-full rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-accent"
         >
-          <BeatOptions beats={beats} published={genres} />
+          <BeatOptions beats={genres} />
         </select>
 
         <p className="rule-label mt-5">Priority</p>

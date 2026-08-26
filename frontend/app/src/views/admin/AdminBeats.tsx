@@ -1,82 +1,105 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Tags, Trash2 } from "lucide-react";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { useAllStories } from "@/hooks/useStories";
 import { storiesByGenre } from "@/lib/taxonomy";
 import { VIDEOS, videoBeat } from "@/data/videos";
 import { cn } from "@/lib/utils";
-import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
-import { addBeat, listCustomBeats, removeBeat, slugify, type CustomBeat } from "@/lib/beats";
+import { addBeat, removeBeat, slugify } from "@/lib/beats";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 
 /**
- * Beats: the seven the site publishes, and any opened here.
+ * Beats — the taxonomy every story is filed against.
  *
- * The two groups are shown apart rather than in one list, because they are not
- * the same kind of thing. The published seven have public pages, appear in the
- * footer and the sitemap, and are what `generateStaticParams` builds. A beat
- * opened here exists in this browser: a draft can be filed under it today, and
- * it gets a public page when the API lands and a build follows. Merging them
- * into one table would be a tidier screen that tells the reader something
- * untrue.
+ * ── What changed ─────────────────────────────────────────────────────────
+ * This screen used to show two groups apart, and was right to: the published
+ * beats had public pages and a beat opened here lived in `localStorage`, so
+ * merging them "would be a tidier screen that tells the reader something
+ * untrue". Beats are rows now. A beat opened here has a page, appears in the
+ * footer and the sitemap, and is what `generateStaticParams` builds — so the
+ * split has stopped being true and the screen shows one list.
+ *
+ * ── Deleting is refused, not warned about ────────────────────────────────
+ * The old version removed a beat and mentioned in the toast how many stories
+ * were still filed under it, because `localStorage` could not enforce anything.
+ * The API can: `genreSlug` is a foreign key, and a beat with work under it or
+ * subjects beneath it comes back as a 409 naming how many of each. Nothing is
+ * removed, and the message says what to move first.
  */
 export default function AdminBeats() {
-  const [custom, setCustom] = useState<CustomBeat[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const reduced = useReducedMotion();
 
   const { genres, inGenre, parentBeat } = useTaxonomy();
+  // The taxonomy arrives as a server prop, so refreshing it means re-running
+  // the route that fetched it. That also updates every other beat picker on
+  // the site, which is the point: a beat opened here is immediately filable.
+  const router = useRouter();
+  const refresh = () => router.refresh();
   // Drafts included: a beat with only unpublished work filed under it still
   // has work filed under it, and removing it would still strand that work.
   const { data: stories } = useAllStories();
   const filedUnder = (slug: string) => storiesByGenre(genres, stories ?? [], slug).length;
 
-  // Ref callback, not an effect: the route is prerendered, so reading storage
-  // during the first client pass disagrees with the HTML being hydrated.
-  const load = useCallback((node: HTMLDivElement | null) => {
-    if (node) setCustom(listCustomBeats());
-  }, []);
+  const [saving, setSaving] = useState(false);
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const result = addBeat(genres, name, description);
+    if (saving) return;
+
+    setSaving(true);
+    const result = await addBeat(name, description);
+    setSaving(false);
+
     if (!result.ok) {
-      setError(result.reason);
+      // The fields keep what was typed. A duplicate slug is the common failure
+      // and the fix is usually a different name, not a re-typed one.
+      setError(result.message);
       return;
     }
-    setCustom(listCustomBeats());
+
     setName("");
     setDescription("");
     setError(null);
-    notify.success(`Beat “${result.beat.name}” opened`, "Stories can be filed under it now.");
+    // `refresh` rather than a local push: the taxonomy is shared with every
+    // beat picker on the site, and a list updated here alone would leave the
+    // story workspace unable to file anything under the beat just opened.
+    refresh();
+    notify.success(`Beat “${result.value.name}” opened`, "Stories can be filed under it now.");
   };
 
-  const drop = (beat: CustomBeat) => {
-    const filed = filedUnder(beat.slug);
-    removeBeat(beat.slug);
-    setCustom((list) => list.filter((b) => b.slug !== beat.slug));
-    notify.undo(
-      filed > 0
-        ? `“${beat.name}” removed — ${filed} ${filed === 1 ? "story is" : "stories are"} still filed under it`
-        : `“${beat.name}” removed`,
-      () => {
-        addBeat(genres, beat.name, beat.description);
-        setCustom(listCustomBeats());
-      },
-    );
+  /**
+   * Remove, with no undo offered.
+   *
+   * `notify.undo` was right when this wrote to `localStorage` and the delete
+   * always succeeded. Against the API a delete either succeeds — in which case
+   * nothing was filed under it and there is very little to undo — or is refused
+   * outright, and offering to undo a thing that did not happen is the kind of
+   * lie the rest of this workspace has been busy removing.
+   */
+  const drop = async (beat: { slug: string; name: string }) => {
+    const result = await removeBeat(beat.slug);
+    if (!result.ok) {
+      notify.error(
+        result.reason === "blocked" ? "That beat is still in use" : "The beat was not removed",
+        result.message,
+      );
+      return;
+    }
+    refresh();
+    notify.success(`“${beat.name}” removed`);
   };
 
   const preview = slugify(name);
 
   return (
-    <div ref={load} className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Content</p>
         <h1 className="font-display display-2 mt-2 font-semibold">Beats</h1>
@@ -130,59 +153,25 @@ export default function AdminBeats() {
                       {written > 0 && `${written} written`}
                       {reports === 0 && written === 0 && "nothing filed"}
                     </span>
+                    {/* Offered on every beat, including the ones with work
+                        filed under them. The API refuses those with a sentence
+                        naming what is in the way, which is more use than a
+                        control that is simply absent and leaves somebody
+                        wondering whether beats can be removed at all. */}
+                    <button
+                      type="button"
+                      onClick={() => void drop(beat)}
+                      aria-label={`Remove ${beat.name}`}
+                      className="focus-ring tap-square flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    </button>
                   </li>
                 );
               })}
             </ul>
           </Reveal>
 
-          {custom.length > 0 && (
-            <Reveal variant="fade-up" className="surface p-5 sm:p-6">
-              <p className="rule-label">Opened here</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                On this device only, until the API lands.
-              </p>
-
-              <ul className="mt-5 divide-y divide-border">
-                <AnimatePresence initial={false}>
-                  {custom.map((beat, i) => (
-                    <motion.li
-                      key={beat.slug}
-                      layout={!reduced}
-                      initial={reduced ? false : { opacity: 0, y: 8 }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        transition: {
-                          ...transitions.normal,
-                          delay: Math.min(i, 8) * stagger.tight,
-                        },
-                      }}
-                      exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12, height: 0 }}
-                      transition={transitions.normal}
-                      className="group flex items-center gap-4 py-3 first:pt-0"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{beat.name}</p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          /{beat.slug}
-                          {beat.description && ` · ${beat.description}`}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => drop(beat)}
-                        aria-label={`Remove ${beat.name}`}
-                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-              </ul>
-            </Reveal>
-          )}
         </div>
 
         <Reveal

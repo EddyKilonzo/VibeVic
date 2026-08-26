@@ -3,36 +3,46 @@
 import type { Award } from "@/data/types";
 
 /**
- * Awards recorded in the workspace.
+ * Awards, recorded in the newsroom.
  *
  * ── Why this store exists at all ─────────────────────────────────────────
- * `data/content` ships `AWARDS` as an empty array, and the comment above it
- * is explicit about why: inventing a prize for a real journalist would be a
- * fabricated credential. The public page therefore renders an honest empty
- * state "until real entries are added in the admin" — and until now there was
- * no admin to add them in. This is that admin, and it is the only writer of
- * award records anywhere in the product.
+ * `data/content` shipped `AWARDS` as an empty array, and the comment above it
+ * was explicit about why: inventing a prize for a real journalist would be a
+ * fabricated credential. The public page therefore rendered an honest empty
+ * state "until real entries are added in the admin" — and there was no admin to
+ * add them in. This is the writer.
  *
- * ── The rule the store enforces ──────────────────────────────────────────
+ * ── What changed ─────────────────────────────────────────────────────────
+ * It used to write to `localStorage`, and said so: "a record here is still only
+ * a note the journalist made, not a claim the site is making, until it is
+ * written through to the API." It is written through now, so the note and the
+ * claim are one record — which also means the awards page finally has something
+ * to read, since it has always read the API.
+ *
+ * The signatures return promises as a result. A synchronous wrapper that fired
+ * a request and returned as though it had worked would be lying about whether a
+ * credential was recorded, which is the one thing this module exists to be
+ * truthful about.
+ *
+ * ── The rule the store still enforces ────────────────────────────────────
  * Nothing here is generated, suggested or autocompleted. There is no list of
  * plausible bodies to pick from and no default result, because a form that
  * offers "Winner" as the pre-selected answer is a form that will eventually
- * record one that was never won. Every field is typed by the person who knows
- * the answer, and the screen says in as many words that this is a credential.
- *
- * ── Where the records live ───────────────────────────────────────────────
- * This browser, like every other workspace store, and the screen says so.
- * The published awards now come from the database and arrive as an argument;
- * a record here is still only a note the journalist made, not a claim the site
- * is making, until it is written through to the API.
+ * record one that was never won. The API refuses a blank and checks `result`
+ * against the four below — the second of two gates, and the one that still
+ * holds when somebody posts directly.
  */
 
-const KEY = "vv:awards";
+const BASE = "/api/newsroom/catalog/awards";
+
+/** Long enough for a cold connection, short enough that a hang is visible. */
+const TIMEOUT_MS = 15_000;
 
 export interface RecordedAward extends Award {
   id: string;
-  /** ISO, so the list can be ordered by when the entry was made. */
   createdAt: string;
+  /** The version to send back on an edit, so a stale write is refused. */
+  updatedAt: string;
 }
 
 export const RESULTS: Award["result"][] = [
@@ -42,114 +52,128 @@ export const RESULTS: Award["result"][] = [
   "Honourable mention",
 ];
 
-export function listAwards(): RecordedAward[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as RecordedAward[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((a) => a?.id && a?.title && a?.year)
-      // Newest year first: an awards list is read as a career in reverse,
-      // which is how the public timeline renders it too.
-      .sort((a, b) => b.year.localeCompare(a.year));
-  } catch {
-    return [];
+export type AwardResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: "conflict" | "missing" | "failed"; message: string };
+
+/** The handler's own sentence where there is one; it is written for a person. */
+async function messageFrom(response: Response): Promise<string> {
+  if (response.status === 401) {
+    return "Your newsroom session has expired. Unlock it again to continue.";
   }
+  if (response.status === 409) {
+    return "This award changed after you loaded it. Your edit was not applied.";
+  }
+
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === "object" && body !== null) {
+      for (const field of ["error", "message"] as const) {
+        if (field in body) {
+          const value = (body as Record<string, unknown>)[field];
+          if (typeof value === "string" && value) return value;
+          if (Array.isArray(value)) {
+            const joined = value.filter((v): v is string => typeof v === "string").join("; ");
+            if (joined) return joined;
+          }
+        }
+      }
+    }
+  } catch {
+    // A non-JSON error body is ordinary. The status still carries the meaning.
+  }
+  return `The newsroom returned ${response.status}.`;
 }
 
-export type AddAwardResult =
-  | { ok: true; award: RecordedAward }
-  | { ok: false; reason: string };
-
-/**
- * Records an award.
- *
- * The validation is deliberately about *completeness*, not plausibility. A
- * missing awarding body is refused because "Winner, 2025" with no one to have
- * awarded it is not a credential anybody can check — and an unverifiable
- * credential on a journalist's page is worse than none. The year is bounded
- * at both ends for the same reason: a typo that files a prize in 2205 makes
- * the whole list look invented.
- */
-export function addAward(input: {
-  year: string;
-  title: string;
-  body: string;
-  description: string;
-  result: Award["result"];
-}): AddAwardResult {
-  const year = input.year.trim();
-  const title = input.title.trim();
-  const body = input.body.trim();
-
-  if (!title) return { ok: false, reason: "Name the award." };
-  if (!body) {
+async function request<T>(path: string, init: RequestInit = {}): Promise<AwardResult<T>> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...init.headers,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (cause) {
+    const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
     return {
       ok: false,
-      reason: "Name the body that gave it — an award with no awarding body cannot be checked.",
+      reason: "failed",
+      message: timedOut
+        ? "The newsroom took too long to answer. It may be waking up — try again."
+        : "Could not reach the newsroom.",
     };
   }
-  if (!/^\d{4}$/.test(year)) return { ok: false, reason: "The year should be four digits." };
 
-  const numeric = Number(year);
-  const thisYear = new Date().getFullYear();
-  if (numeric < 1900 || numeric > thisYear + 1) {
-    return { ok: false, reason: `That year is outside 1900–${thisYear + 1}.` };
+  if (!response.ok) {
+    const message = await messageFrom(response);
+    const reason =
+      response.status === 409 ? "conflict" : response.status === 404 ? "missing" : "failed";
+    return { ok: false, reason, message };
   }
-
-  const existing = listAwards();
-  if (
-    existing.some(
-      (a) => a.year === year && a.title.toLowerCase() === title.toLowerCase(),
-    )
-  ) {
-    return { ok: false, reason: `“${title}” is already recorded for ${year}.` };
-  }
-
-  const award: RecordedAward = {
-    id: `award_${Date.now().toString(36)}`,
-    year,
-    title,
-    body,
-    description: input.description.trim(),
-    result: input.result,
-    createdAt: new Date().toISOString(),
-  };
 
   try {
-    window.localStorage.setItem(KEY, JSON.stringify([award, ...existing]));
+    return { ok: true, value: (await response.json()) as T };
   } catch {
-    return { ok: false, reason: "This browser refused to save it — storage is full or blocked." };
-  }
-  return { ok: true, award };
-}
-
-export function removeAward(id: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      KEY,
-      JSON.stringify(listAwards().filter((a) => a.id !== id)),
-    );
-  } catch {
-    /* The entry stays. Nothing here is worth an error boundary. */
+    return { ok: false, reason: "failed", message: "The newsroom's answer could not be read." };
   }
 }
 
-/** Puts a removed entry back verbatim — id, timestamp and all. Used by undo. */
-export function restoreAward(award: RecordedAward): void {
-  if (typeof window === "undefined") return;
-  try {
-    const next = [award, ...listAwards().filter((a) => a.id !== award.id)];
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* nothing to restore into */
-  }
+/**
+ * Every award, newest year first.
+ *
+ * Ordered on the server, which is where the ordering belongs now that more than
+ * one device can see the list. An awards list is read as a career in reverse,
+ * which is how the public timeline renders it too.
+ */
+export function listAwards(): Promise<AwardResult<RecordedAward[]>> {
+  return request<RecordedAward[]>(BASE);
 }
 
-/** Everything the site would list: the published entries plus the recorded ones. */
-export function allAwards(published: Award[] = []): Award[] {
-  return [...published, ...listAwards()].sort((a, b) => b.year.localeCompare(a.year));
+export function addAward(award: Award): Promise<AwardResult<RecordedAward>> {
+  return request<RecordedAward>(BASE, {
+    method: "POST",
+    body: JSON.stringify({
+      year: award.year,
+      title: award.title,
+      body: award.body,
+      description: award.description,
+      result: award.result,
+    }),
+  });
+}
+
+/**
+ * Edits one award.
+ *
+ * `expectedUpdatedAt` is required rather than optional, and the caller has to
+ * pass the copy it rendered. The API compares it inside a conditional UPDATE
+ * and answers 409 when it has moved on — so an award edited in another tab is
+ * reported rather than silently overwritten.
+ */
+export function editAward(
+  id: string,
+  patch: Partial<Award>,
+  expectedUpdatedAt: string,
+): Promise<AwardResult<RecordedAward>> {
+  return request<RecordedAward>(`${BASE}/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ...patch, expectedUpdatedAt }),
+  });
+}
+
+/**
+ * Removes one award.
+ *
+ * A hard delete, and safely so: nothing references an award — no story carries
+ * an award id, no view joins one — so the row is the whole fact and removing it
+ * leaves nothing dangling. That is why this is a real delete where a story is
+ * not.
+ */
+export function removeAward(id: string): Promise<AwardResult<{ id: string }>> {
+  return request<{ id: string }>(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

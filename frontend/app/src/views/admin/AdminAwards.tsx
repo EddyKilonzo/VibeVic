@@ -5,8 +5,6 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Plus, ShieldAlert, Trash2, Trophy } from "lucide-react";
 import type { Award } from "@/data/types";
-import { api } from "@/data/api";
-import { useAsync } from "@/hooks/useAsync";
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -14,7 +12,6 @@ import {
   addAward,
   listAwards,
   removeAward,
-  restoreAward,
   RESULTS,
   type RecordedAward,
 } from "@/lib/awards";
@@ -42,32 +39,77 @@ import { EmptyState } from "@/components/ui/States";
  *  - The warning sits above the form rather than under it.
  *
  * ── Where entries go ─────────────────────────────────────────────────────
- * This browser, like the rest of the workspace. The published list is
- * compiled into the site, so an entry recorded here reaches the public page
- * when the API lands and a build follows — the screen says that rather than
- * implying the site has changed.
+ * The newsroom, and therefore the public page. This screen used to keep two
+ * lists side by side — "on the public site", read from the API, and "recorded
+ * here", held in this browser — because there was no way to write an award and
+ * the honest thing was to say so. There is now, and they are one list: the
+ * table this writes to is the table `/awards` reads.
+ *
+ * The split is gone rather than kept as decoration. Two panels over one source
+ * would imply a staging step that does not exist, and the whole reason the old
+ * screen was built that way was to avoid implying one that did not.
  */
 export default function AdminAwards() {
-  // The published entries, from the database. Recorded-here entries live in
-  // this browser and are listed separately below — the screen has always been
-  // explicit that the two are different, and now they have different sources.
-  const { data: published } = useAsync(() => api.awards(), []);
-  const publishedAwards = published ?? [];
-  const [recorded, setRecorded] = useState<RecordedAward[]>([]);
+  const [awards, setAwards] = useState<RecordedAward[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [problem, setProblem] = useState<string | null>(null);
   const reduced = useReducedMotion();
 
-  // Ref callback, not an effect: this route is prerendered, so reading storage
-  // during the first client pass would disagree with the HTML being hydrated.
-  const load = useCallback((node: HTMLDivElement | null) => {
-    if (node) setRecorded(listAwards());
+  const refresh = useCallback(async () => {
+    const result = await listAwards();
+    if (!result.ok) {
+      setStatus("error");
+      setProblem(result.message);
+      return;
+    }
+    setAwards(result.value);
+    setProblem(null);
+    setStatus("ready");
   }, []);
 
-  const drop = (award: RecordedAward) => {
-    removeAward(award.id);
-    setRecorded((list) => list.filter((a) => a.id !== award.id));
+  /**
+   * Loaded from a ref callback rather than an effect.
+   *
+   * The pattern the rest of this admin uses, and for the same two reasons: the
+   * route is prerendered, so the first client pass must not disagree with the
+   * HTML being hydrated, and setting state straight out of an effect body is
+   * the cascading-render shape the linter rightly objects to. The callback
+   * fires once the panel is actually on the page.
+   */
+  const load = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) void refresh();
+    },
+    [refresh],
+  );
+
+  /**
+   * Delete, with an undo that re-records rather than resurrects.
+   *
+   * The local store could put the row back verbatim, id and creation date
+   * included, because it was the only thing that knew them. Against a server
+   * they belong to the database and a create cannot claim them, so undo writes
+   * the award again as a new record — same year, title, body, description and
+   * result, new id. The same trade `AdminIdeas` makes, and for the same reason:
+   * a smaller lie than a button labelled undo that quietly fails.
+   */
+  const drop = async (award: RecordedAward) => {
+    const result = await removeAward(award.id);
+    if (!result.ok) {
+      notify.error("The award was not removed", result.message);
+      return;
+    }
+
+    setAwards((list) => list.filter((a) => a.id !== award.id));
+
     notify.undo(`Removed: ${award.title}`, () => {
-      restoreAward(award);
-      setRecorded(listAwards());
+      void addAward(award).then((restored) => {
+        if (!restored.ok) {
+          notify.error("The award could not be restored", restored.message);
+          return;
+        }
+        void refresh();
+      });
     });
   };
 
@@ -77,21 +119,19 @@ export default function AdminAwards() {
         <p className="rule-label">Recognition</p>
         <h1 className="font-display display-2 mt-2 font-semibold">Awards</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-          Prizes, nominations and shortlistings, recorded as they happen. The public awards
-          page lists what is compiled into the site; an entry made here is held in this
-          browser until the API lands.
+          Prizes, nominations and shortlistings, recorded as they happen. This is the
+          list the public awards page reads — an entry made here is on the site.
         </p>
       </Reveal>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-5 lg:order-1">
-          {/* ── On the public site ──────────────────────────────── */}
-          <Reveal variant="fade-up" delay={60} className="surface p-5 sm:p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <Reveal variant="fade-up" delay={60} className="surface overflow-hidden">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 p-5 pb-4 sm:px-6">
               <div>
-                <p className="rule-label">On the public site</p>
+                <p className="rule-label">Recorded</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Compiled into the build. Editing these means editing the source.
+                  These are what the public awards page lists.
                 </p>
               </div>
               <Link
@@ -102,43 +142,38 @@ export default function AdminAwards() {
               </Link>
             </div>
 
-            {publishedAwards.length === 0 ? (
-              <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm leading-relaxed text-muted-foreground">
-                <span className="font-semibold text-foreground">Nothing is listed.</span> The
-                awards page renders an honest empty state, and it will keep doing so until real
-                entries are added to the source. Nothing has ever been invented for it.
-              </p>
-            ) : (
-              <ul className="mt-5 divide-y divide-border">
-                {publishedAwards.map((award) => (
-                  <li key={`${award.year}-${award.title}`} className="py-3 first:pt-0">
-                    <AwardLine award={award} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Reveal>
-
-          {/* ── Recorded here ───────────────────────────────────── */}
-          <Reveal variant="fade-up" delay={90} className="surface overflow-hidden">
-            <div className="p-5 pb-4 sm:px-6">
-              <p className="rule-label">Recorded here</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                On this device only. Not on the site yet.
-              </p>
-            </div>
-
-            {recorded.length === 0 ? (
+            {/* Three empty-looking states that mean different things, and are
+                said differently. A list that has not arrived is not empty, it
+                is unknown; a list that failed to arrive is a fact about the
+                newsroom rather than about the journalist's career; and no
+                awards is an honest and unremarkable state to be in. Rounding
+                the first two to the third would tell somebody their record is
+                gone. */}
+            {status === "error" ? (
+              <EmptyState
+                icon={<Trophy className="h-5 w-5" aria-hidden />}
+                title="The awards could not be loaded"
+                description={problem ?? "The newsroom did not answer."}
+                className="border-0"
+              />
+            ) : status === "loading" ? (
+              <EmptyState
+                icon={<Trophy className="h-5 w-5" aria-hidden />}
+                title="Loading"
+                description="Reading them from the newsroom."
+                className="border-0"
+              />
+            ) : awards.length === 0 ? (
               <EmptyState
                 icon={<Trophy className="h-5 w-5" aria-hidden />}
                 title="No entries recorded"
-                description="When something is won, shortlisted or nominated, record it here with the body that gave it and the year."
+                description="When something is won, shortlisted or nominated, record it here with the body that gave it and the year. The public page shows an honest empty state until then — nothing has ever been invented for it."
                 className="border-0"
               />
             ) : (
               <ul className="divide-y divide-border border-t border-border">
                 <AnimatePresence initial={false}>
-                  {recorded.map((award, i) => (
+                  {awards.map((award, i) => (
                     <motion.li
                       key={award.id}
                       layout={!reduced}
@@ -160,7 +195,7 @@ export default function AdminAwards() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => drop(award)}
+                        onClick={() => void drop(award)}
                         aria-label={`Remove ${award.title}`}
                         className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
                       >
@@ -174,7 +209,7 @@ export default function AdminAwards() {
           </Reveal>
         </div>
 
-        <AwardForm onAdded={() => setRecorded(listAwards())} />
+        <AwardForm onAdded={refresh} />
       </div>
     </div>
   );
@@ -219,24 +254,30 @@ function AwardLine({ award }: { award: Award }) {
  * submit away from a prize nobody won, and a default of "Finalist" would be
  * the same mistake wearing a quieter coat.
  */
-function AwardForm({ onAdded }: { onAdded: () => void }) {
+function AwardForm({ onAdded }: { onAdded: () => void | Promise<void> }) {
   const [year, setYear] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [description, setDescription] = useState("");
   const [result, setResult] = useState<Award["result"] | "">("");
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!result) {
       setError("Choose what the result actually was.");
       return;
     }
 
-    const outcome = addAward({ year, title, body, description, result });
+    setSaving(true);
+    const outcome = await addAward({ year, title, body, description, result });
+    setSaving(false);
+
     if (!outcome.ok) {
-      setError(outcome.reason);
+      // The fields keep what was typed. A failed write that also emptied the
+      // form would cost the journalist the entry rather than a second press.
+      setError(outcome.message);
       return;
     }
 
@@ -247,7 +288,7 @@ function AwardForm({ onAdded }: { onAdded: () => void }) {
     setResult("");
     setError(null);
     onAdded();
-    notify.success("Award recorded", "On this device — the public page is unchanged.");
+    notify.success("Award recorded", "It is on the public awards page.");
   };
 
   return (
@@ -359,14 +400,19 @@ function AwardForm({ onAdded }: { onAdded: () => void }) {
           </p>
         )}
 
-        <Button type="submit" className="mt-5 w-full" disabled={!title.trim() || !body.trim()}>
+        <Button
+          type="submit"
+          className="mt-5 w-full"
+          disabled={!title.trim() || !body.trim() || saving}
+        >
           <Plus className="icon-pop h-4 w-4" aria-hidden />
-          Record it
+          {saving ? "Recording…" : "Record it"}
         </Button>
 
         <p className="mt-6 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">
-          Recording an entry does not change the public page. It reaches the site when the API
-          lands and a build follows.
+          Every field is typed by the person who knows the answer. Nothing here is
+          suggested, defaulted or autocompleted — an award is a credential, and a form
+          that guesses one will eventually record a prize nobody won.
         </p>
       </form>
     </Reveal>

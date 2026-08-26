@@ -15,27 +15,23 @@ import { topBeats } from "@/lib/taxonomy";
  * has to be filable somewhere, and forcing a wrong child is worse filing than
  * an honest general one.
  *
- * `beats` is the full list the workspace offers — the published beats plus
- * anything opened locally (see `lib/beats`). The parent groups are derived from
- * that same list rather than from a separate constant: two sources for "which
- * beats are top-level" is two answers that can disagree, and the one that
- * disagrees silently drops a beat from the picker.
+ * `beats` is the whole taxonomy, from `useTaxonomy().genres`. It used to be two
+ * lists — the published beats and anything opened locally — because a beat
+ * opened in the workspace had no row and could not have a page. Beats are rows
+ * now, so there is one list and one kind of beat, and the second parameter is
+ * gone rather than kept as a shim that would always receive the same array
+ * twice.
  *
- * Locally-opened beats have no parent, so they gather in a group of their own
- * rather than being dropped — `published` names the ones that came from the
- * API so the two can still be told apart.
+ * The parent groups are derived from that same list rather than from a separate
+ * constant: two sources for "which beats are top-level" is two answers that can
+ * disagree, and the one that disagrees silently drops a beat from the picker.
  */
-export function BeatOptions({
-  beats,
-  published,
-}: {
-  beats: Genre[];
-  /** The beats that came from the API, to separate them from local ones. */
-  published: Genre[];
-}) {
-  const parents = topBeats(published);
+export function BeatOptions({ beats }: { beats: Genre[] }) {
+  const parents = topBeats(beats);
   const known = new Set(parents.map((b) => b.slug));
-  const custom = beats.filter((b) => !b.parent && !known.has(b.slug));
+
+  // A beat with no parent that is not itself a parent still has to be pickable.
+  const loose = beats.filter((b) => !b.parent && !known.has(b.slug));
 
   return (
     <>
@@ -61,9 +57,9 @@ export function BeatOptions({
         );
       })}
 
-      {custom.length > 0 && (
-        <optgroup label="Opened here">
-          {custom.map((beat) => (
+      {loose.length > 0 && (
+        <optgroup label="Other beats">
+          {loose.map((beat) => (
             <option key={beat.slug} value={beat.slug}>
               {beat.name}
             </option>

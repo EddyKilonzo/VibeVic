@@ -15,8 +15,6 @@ import { PROFILE } from "@/data/content";
 import { CHANNEL } from "@/data/videos";
 import { exportAll, forget, useNewsroom, useNewsroomCounts } from "@/data/newsroom/useNewsroom";
 import { listDrafts } from "@/lib/drafts";
-import { listCustomBeats } from "@/lib/beats";
-import { listAwards } from "@/lib/awards";
 import { formatBytes, listMedia } from "@/lib/media";
 import { audioEvents, clearAudioAnalytics } from "@/lib/voice/analytics";
 import { clearReadingPositions, readingMarkCount } from "@/hooks/useReadingPosition";
@@ -40,9 +38,9 @@ import { signOut } from "@/app/admin/settings/actions";
  * ── The part that actually matters ───────────────────────────────────────
  * The newsroom's records — ideas, sources, quotes, the lot — are in Postgres
  * now, so clearing this browser no longer destroys them and a phone sees what
- * a laptop saved. Drafts, custom beats, awards and uploads-in-progress are
- * still this device's, which is why the two are counted separately below
- * rather than added into one reassuring figure.
+ * a laptop saved. Awards moved with them. Drafts are still this device's, which
+ * is why the two are counted separately below rather than added into one
+ * reassuring figure.
  *
  * Two things follow, and this is the screen where both are handled honestly:
  * everything can be exported, so no copy is hostage to one machine; and the
@@ -133,8 +131,6 @@ function Preferences() {
 
 interface Usage {
   drafts: number;
-  beats: number;
-  awards: number;
   media: number;
   mediaBytes: number;
   localBytes: number;
@@ -205,8 +201,6 @@ function StoredData() {
       // browser storage, and a prerendered route that reads it on the first
       // client pass disagrees with the HTML React is hydrating against.
       drafts: listDrafts().length,
-      beats: listCustomBeats().length,
-      awards: listAwards().length,
       media: media.length,
       mediaBytes: media.reduce((n, item) => n + (item.size ?? 0), 0),
       localBytes,
@@ -239,8 +233,11 @@ function StoredData() {
       exportedAt: new Date().toISOString(),
       newsroom: JSON.parse(exportAll(newsroom)) as unknown,
       drafts: listDrafts(),
-      beats: listCustomBeats(),
-      awards: listAwards(),
+      // Awards are not read here any more. They are newsroom records now, and
+      // the export takes those from the snapshot the screen is already holding
+      // rather than making a request — an export that quietly fetched would be
+      // a much heavier operation than the button appears to offer, and one that
+      // could fail halfway through writing a backup.
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -253,7 +250,7 @@ function StoredData() {
     // browser, and an un-revoked object URL pins the blob for the life of the
     // document.
     URL.revokeObjectURL(url);
-    notify.success("Export downloaded", "Drafts, ideas, beats and awards.");
+    notify.success("Export downloaded", "Drafts and the newsroom records.");
   };
 
   /** Two presses, not a modal. The second press is the confirmation. */
@@ -287,16 +284,6 @@ function StoredData() {
             label="Newsroom records"
             value={countsError ? "—" : (records !== null ? String(records) : "…")}
             detail={countsError ? "The newsroom could not be reached" : "Ideas, notes and everything private"}
-          />
-          <Figure
-            label="Beats opened here"
-            value={usage ? String(usage.beats) : "—"}
-            detail="Not yet on the site"
-          />
-          <Figure
-            label="Awards recorded"
-            value={usage ? String(usage.awards) : "—"}
-            detail="Not yet on the site"
           />
           <Figure
             label="Media items"

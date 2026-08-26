@@ -30,7 +30,7 @@ import {
   Trash2,
   Type,
 } from "lucide-react";
-import type { Block, BlockType, Genre, Story, StoryStatus } from "@/data/types";
+import type { Block, BlockType, Story, StoryStatus } from "@/data/types";
 import { DEFAULT_BEAT } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,6 @@ import { useAutosave, type SaveStatus } from "@/hooks/useAutosave";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { createStory, updateStory, type SaveOutcome } from "@/lib/story-save";
-import { allBeats } from "@/lib/beats";
 import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
@@ -329,7 +328,6 @@ export default function StoryWorkspace({
    * the ref callback fires at exactly the moment we need and re-fires when
    * `targetId` changes it, which is also when the offer should come back.
    */
-  const [beats, setBeats] = useState<Genre[]>(genres);
 
   /**
    * Which face the draft is composed in.
@@ -368,15 +366,13 @@ export default function StoryWorkspace({
         setRestoreOffer(true);
       }
 
-      // Same pass, same reason: both stores are read once the sheet is up
-      // rather than during render, which this prerendered route would hydrate
-      // against a different answer.
-      setBeats(allBeats(genres));
+      // Read once the sheet is up rather than during render, which this
+      // prerendered route would otherwise hydrate against a different answer.
     },
-    // `genres` included for the same reason as the beat picker elsewhere: the
-    // published list arrives from the API, and a callback closed over the
-    // first-render value would offer a story nowhere to be filed.
-    [targetId, id, existing, genres],
+    // `genres` was a dependency while this merged locally-opened beats into the
+    // picker. Beats are rows now and the picker reads the taxonomy directly, so
+    // the only thing left here is the stored draft.
+    [targetId, id, existing],
   );
 
   const restore = () => {
@@ -673,7 +669,7 @@ export default function StoryWorkspace({
             >
               {/* Beats opened in the workspace are listed here too — a beat
                   you cannot file anything under is a beat you did not open. */}
-              <BeatOptions beats={beats} published={genres} />
+              <BeatOptions beats={genres} />
             </select>
           </label>
           <span aria-hidden className="h-3 w-px bg-border" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Check, Pencil, Trash2, X } from "lucide-react";
@@ -8,7 +8,6 @@ import type { Genre } from "@/data/types";
 import type { Idea, IdeaStage } from "@/data/newsroom/types";
 import { update } from "@/data/newsroom/useNewsroom";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
-import { allBeats } from "@/lib/beats";
 import { cn } from "@/lib/utils";
 import { formatRelative } from "@/lib/format";
 import { transitions } from "@/lib/motion";
@@ -146,11 +145,6 @@ function IdeaEditor({
   const [saving, setSaving] = useState(false);
   const reduced = useReducedMotion();
 
-  // Safe to read storage during this render: the editor only ever mounts from
-  // a click, which is long after hydration. `IdeaForm` needs a ref callback
-  // because it renders in the prerendered pass; this does not.
-  const beats = useMemo(() => allBeats(genres), [genres]);
-
   const trimmed = title.trim();
   const dirty =
     trimmed !== idea.title ||
@@ -231,7 +225,7 @@ function IdeaEditor({
             onChange={(e) => setGenre(e.target.value)}
             className="focus-ring mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-accent"
           >
-            <BeatOptions beats={beats} published={genres} />
+            <BeatOptions beats={genres} />
           </select>
         </div>
 

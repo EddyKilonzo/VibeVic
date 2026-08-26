@@ -6,6 +6,7 @@ import { NewsroomGuard } from './common/authz/newsroom.guard';
 import { PublicSerializationInterceptor } from './common/serialization/public-serialization.interceptor';
 import { validateEnv } from './config/env';
 import { AuthModule } from './modules/auth/auth.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { NewsroomModule } from './modules/newsroom/newsroom.module';
 import { StoriesModule } from './modules/stories/stories.module';
@@ -43,6 +44,7 @@ import { PrismaModule } from './prisma/prisma.module';
     HealthModule,
     StoriesModule,
     NewsroomModule,
+    CatalogModule,
   ],
   providers: [
     // Global for the same reason the other two are: a filter listed per

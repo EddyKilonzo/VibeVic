@@ -36,7 +36,12 @@ async function bootstrap(): Promise<void> {
    */
   app.enableCors({
     origin: corsOrigins({ CORS_ORIGINS: config.get('CORS_ORIGINS', { infer: true }) }),
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    // PUT is here for the two idempotent setters — a story's portfolio class
+    // and the house style guide. Leaving it out made those routes exist and be
+    // unreachable from a browser, which is the worst of both: the preflight
+    // fails with a CORS message that names no route and sends whoever hits it
+    // looking for a bug in the handler.
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 600,
   });

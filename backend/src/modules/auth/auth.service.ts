@@ -41,8 +41,13 @@ export class AuthService implements TokenVerifier, OnModuleInit {
       );
     }
     if (mode === 'dev') {
+      const confidential = this.config.get('DEV_PRINCIPAL_CONFIDENTIAL', { infer: true });
       this.logger.warn(
-        'AUTH_MODE=dev — a single local principal, no confidential scope. Never use outside a workstation.',
+        `AUTH_MODE=dev — a single local principal${
+          confidential
+            ? ', holding newsroom:confidential (DEV_PRINCIPAL_CONFIDENTIAL=true)'
+            : ', no confidential scope'
+        }. Never use outside a workstation.`,
       );
     }
   }
@@ -75,14 +80,31 @@ export class AuthService implements TokenVerifier, OnModuleInit {
     const ok = given.length === want.length && timingSafeEqual(given, want);
     if (!ok) throw new UnauthorizedException('Invalid token.');
 
+    /**
+     * `newsroom:confidential` is withheld unless it is asked for by name.
+     *
+     * The argument for withholding it has not changed: a mode that exists so a
+     * developer does not have to log in should not also hand out the identities
+     * behind pseudonyms, and convenience and source protection do not belong in
+     * the same grant. What has changed is the recognition that withholding it
+     * unconditionally also makes part of the API untestable — interviews
+     * default to CONFIDENTIAL, so on a default dev principal they cannot be
+     * created and never appear in a list, and a surface nobody can exercise is
+     * a surface nobody finds the bugs in.
+     *
+     * The resolution is an opt-in someone has to type into .env rather than a
+     * default they inherit, and `AUTH_MODE=dev` is already refused outright
+     * when NODE_ENV=production, so this cannot follow a deployment out.
+     */
+    const scopes: Scope[] = ['newsroom:read', 'newsroom:write', 'stories:write'];
+    if (this.config.get('DEV_PRINCIPAL_CONFIDENTIAL', { infer: true })) {
+      scopes.push('newsroom:confidential');
+    }
+
     return {
       id: 'dev-principal',
       email: this.config.get('DEV_PRINCIPAL_EMAIL', { infer: true }) ?? 'dev@localhost',
-      // No newsroom:confidential. A mode that exists so a developer does not
-      // have to log in should not also hand out the identities behind
-      // pseudonyms; convenience and source protection do not belong in the
-      // same grant.
-      scopes: ['newsroom:read', 'newsroom:write', 'stories:write'],
+      scopes,
     };
   }
 

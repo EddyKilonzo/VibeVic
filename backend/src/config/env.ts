@@ -37,6 +37,25 @@ const schema = z
     AUTH_JWT_SECRET: z.string().optional(),
     DEV_PRINCIPAL_TOKEN: z.string().optional(),
     DEV_PRINCIPAL_EMAIL: z.string().optional(),
+    /**
+     * Whether the dev principal also holds `newsroom:confidential`.
+     *
+     * Off by default, and the default is the argued position: a mode that
+     * exists so a developer does not have to log in should not also hand out
+     * the identities behind pseudonyms. But leaving it permanently off makes
+     * two collections untestable on a workstation — interviews default to
+     * CONFIDENTIAL, so they cannot be created and do not appear in a list —
+     * and an API surface nobody can exercise is one nobody finds the bugs in.
+     *
+     * So it is an opt-in that has to be typed out, not a quiet default. It is
+     * unreachable in production for the same reason AUTH_MODE=dev is: the
+     * superRefine below refuses that combination at boot.
+     */
+    DEV_PRINCIPAL_CONFIDENTIAL: z
+      .enum(['true', 'false'])
+      .optional()
+      .default('false')
+      .transform((value) => value === 'true'),
   })
   .superRefine((env, ctx) => {
     if (env.AUTH_MODE === 'jwt' && (env.AUTH_JWT_SECRET ?? '').length < 32) {

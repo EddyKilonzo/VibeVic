@@ -26,11 +26,9 @@ import type { Award, Genre, Publication, Story, StorySummary } from "./types";
  * yesterday's content and look like success.
  */
 
-const BASE = (
-  process.env.API_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:4000/api"
-).replace(/\/+$/, "");
+const CONFIGURED_BASE = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+
+const BASE = (CONFIGURED_BASE ?? "http://localhost:4000/api").replace(/\/+$/, "");
 
 /**
  * How long a server render may reuse a cached read.
@@ -90,11 +88,49 @@ export function getStories(): Promise<StorySummary[]> {
  * site where nothing can be read.
  */
 async function readOrThrow<T>(path: string): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, {
-    headers: { Accept: "application/json" },
-    next: { revalidate: REVALIDATE_SECONDS },
-    signal: AbortSignal.timeout(15_000),
-  });
+  /**
+   * The misconfiguration this exists to name.
+   *
+   * `BASE` falls back to localhost so a developer can run the two halves side
+   * by side without setting anything. On a build server that fallback is always
+   * wrong, and what it produced was `ECONNREFUSED 127.0.0.1:4000` inside
+   * "Failed to collect page data for /beats/[slug]" — a route, a port and no
+   * cause, which sends whoever reads it looking for a bug in the beats page.
+   *
+   * The test is whether the variable was *set*, not whether it points at
+   * localhost. Pointing a production build at a local API is a legitimate thing
+   * to do — it is what `next build` does on a developer's machine — and
+   * refusing it would break the one command most likely to catch this class of
+   * problem before a deploy does.
+   */
+  if (process.env.NODE_ENV === "production" && !CONFIGURED_BASE) {
+    throw new Error(
+      `Cannot build the page list: neither API_URL nor NEXT_PUBLIC_API_URL is set, so the ` +
+        `build fell back to ${BASE}. Set one to the deployed API — and set ` +
+        "NEXT_PUBLIC_API_URL regardless, since the reader-facing views call it from the " +
+        "browser and cannot read a server-only variable.",
+    );
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (cause) {
+    // A build that dies on a bare TypeError leaves the address it tried out of
+    // the message, which is the one fact needed to fix it.
+    const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
+    throw new Error(
+      `Cannot build the page list: ${BASE}${path} ` +
+        (timedOut ? "did not answer in time." : "could not be reached.") +
+        " The API must be running and reachable from the build for the archive to be generated.",
+      { cause },
+    );
+  }
+
   if (!response.ok) {
     throw new Error(`GET ${path} returned ${response.status} while building the page list.`);
   }

@@ -233,25 +233,73 @@ export async function linkMedia(
   }
 }
 
-export async function listMediaAssets(): Promise<MediaAsset[]> {
-  const response = await fetch("/api/newsroom/media", {
-    signal: AbortSignal.timeout(15_000),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(await errorText(response, "The media library could not be loaded."));
+/**
+ * A library request, with the failure `fetch` does not name for you.
+ *
+ * The three functions below used to call `fetch` bare. A refusal was handled —
+ * `response.ok` was checked and `errorText` pulled the handler's own sentence
+ * out — but a *rejection* was not, and those are the two different things that
+ * go wrong. `fetch` rejects when the request never happened at all: no network,
+ * DNS gone, the dev server restarted mid-click. What surfaced then was
+ * `TypeError: Failed to fetch`, rendered verbatim into a toast in front of a
+ * journalist, and the flat contradiction of the one rule this admin keeps —
+ * that a message tells you what happened and what to do about it.
+ *
+ * Doing it here rather than at the three call sites means the timeout and the
+ * wording cannot drift apart, which is what happened the first time.
+ */
+async function libraryRequest(
+  path: string,
+  init: RequestInit,
+  refused: string,
+  unreachable: string,
+  timeoutMs = 15_000,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (cause) {
+    // A deadline and a dead connection lead to different next steps: one is
+    // worth repeating unchanged, the other is not until something has changed.
+    const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
+    throw new Error(
+      timedOut ? "The media library took too long to answer. Try again." : unreachable,
+    );
   }
-  return (await response.json()) as MediaAsset[];
+
+  if (!response.ok) throw new Error(await errorText(response, refused));
+  return response;
+}
+
+export async function listMediaAssets(): Promise<MediaAsset[]> {
+  const response = await libraryRequest(
+    "/api/newsroom/media",
+    {},
+    "The media library could not be loaded.",
+    "Could not reach the media library.",
+  );
+
+  try {
+    return (await response.json()) as MediaAsset[];
+  } catch {
+    throw new Error("The media library's answer could not be read.");
+  }
 }
 
 export async function removeMediaAsset(id: string): Promise<void> {
-  const response = await fetch(`/api/newsroom/media/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!response.ok) {
-    throw new Error(await errorText(response, "That item could not be removed."));
-  }
+  await libraryRequest(
+    `/api/newsroom/media/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+    "That item could not be removed.",
+    "Could not reach the media library. Nothing was removed.",
+    // Longer than the rest: this one deletes the row and then asks Cloudinary
+    // to destroy the file, so it is two round trips wearing one request.
+    20_000,
+  );
 }
 
 export async function setMediaAlt(
@@ -259,14 +307,20 @@ export async function setMediaAlt(
   alt: string,
   expectedUpdatedAt: string,
 ): Promise<MediaAsset> {
-  const response = await fetch(`/api/newsroom/media/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(15_000),
-    body: JSON.stringify({ alt, expectedUpdatedAt }),
-  });
-  if (!response.ok) {
-    throw new Error(await errorText(response, "That description could not be saved."));
+  const response = await libraryRequest(
+    `/api/newsroom/media/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alt, expectedUpdatedAt }),
+    },
+    "That description could not be saved.",
+    "Could not reach the media library. The description was not saved.",
+  );
+
+  try {
+    return (await response.json()) as MediaAsset;
+  } catch {
+    throw new Error("The library's answer could not be read. Reload before editing further.");
   }
-  return (await response.json()) as MediaAsset;
 }

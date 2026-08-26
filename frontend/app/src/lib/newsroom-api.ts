@@ -85,6 +85,24 @@ export async function newsroomFetch<T>(
     if (response.status >= 400 && response.status < 500) {
       throw new NewsroomApiError(detail ?? "The API refused that request.", response.status);
     }
+
+    /**
+     * 501 is forwarded whole, message and all.
+     *
+     * It is the one 5xx that is not about the server's internals. The API uses
+     * it deliberately — publishing transitions, token issuance, view counters —
+     * to say "this is not built", and the sentence it sends names what is
+     * missing. Flattening that to a generic 502 turns a clear answer into an
+     * apparent outage, and sends whoever reads it looking for a bug in a
+     * feature nobody has written yet.
+     */
+    if (response.status === 501) {
+      throw new NewsroomApiError(
+        detail ?? "The API has not implemented that yet.",
+        501,
+      );
+    }
+
     throw new NewsroomApiError("The API could not complete that request.", 502);
   }
 

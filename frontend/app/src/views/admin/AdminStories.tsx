@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Clock, Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
+import { Clock, EyeOff, Headphones, LayoutGrid, List, PenLine, Search } from "lucide-react";
 import type { StorySummary, StoryStatus } from "@/data/types";
 import { ApiError, api } from "@/data/api";
 import { LOCALE, formatRelative } from "@/lib/format";
@@ -114,9 +114,27 @@ export default function AdminStories() {
     return list;
   }, [data, removed, status, query]);
 
+  /**
+   * Hides a row from this list. It does not delete anything, and no longer
+   * says it does.
+   *
+   * ── Why this is not wired to the API ─────────────────────────────────────
+   * There is no delete on `/admin/stories`, and its absence is not an oversight
+   * to be filled in from here. A published story has an address readers have
+   * saved and search engines hold; quotes, evidence and timeline events carry
+   * `storyIds` pointing at it. Removing the row is the easy part of a decision
+   * that also has to answer what those links become and what the old URL says —
+   * the same shape of argument the API makes for not implementing `publish`.
+   *
+   * So the control does what it can honestly do: it takes a piece out of the
+   * writer's way for this session. The label says "Hide", the toast says where
+   * it went, and nothing claims a deletion that did not happen — which is the
+   * bug this replaces, where a trash can quietly hid a story and a reload
+   * brought it back.
+   */
   const remove = (story: StorySummary) => {
     setRemoved((prev) => [...prev, story.id]);
-    notify.undo(`“${story.title}” deleted`, () =>
+    notify.undo(`“${story.title}” hidden from this list`, () =>
       setRemoved((prev) => prev.filter((id) => id !== story.id)),
     );
   };
@@ -308,10 +326,10 @@ export default function AdminStories() {
                       <button
                         type="button"
                         onClick={() => remove(story)}
-                        aria-label={`Delete ${story.title}`}
-                        className="focus-ring tap-square ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`Hide ${story.title} from this list`}
+                        className="focus-ring tap-square ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-muted hover:text-primary"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <EyeOff className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </div>
@@ -394,10 +412,10 @@ export default function AdminStories() {
                       <button
                         type="button"
                         onClick={() => remove(story)}
-                        aria-label={`Delete ${story.title}`}
-                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+                        aria-label={`Hide ${story.title} from this list`}
+                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-muted hover:text-primary md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <EyeOff className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </div>

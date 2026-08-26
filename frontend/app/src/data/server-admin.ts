@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { Story, StorySummary } from "./types";
+import { toStory, type AdminStoryRow } from "@/lib/story-records";
+import type { Story } from "./types";
 
 /**
  * Server-side reads of the newsroom surface.
@@ -22,11 +23,31 @@ const BASE = (
   "http://localhost:4000/api"
 ).replace(/\/+$/, "");
 
-async function readAdmin<T>(path: string, fallback: T): Promise<T> {
+/**
+ * A read that says whether the server answered, not just what it said.
+ *
+ * ── Why "null" was not enough ────────────────────────────────────────────
+ * This used to collapse "no such story" and "the API is down" into the same
+ * `null`, and the workspace read both as "start a blank draft here". That was
+ * survivable while the editor only wrote to `localStorage`. It stopped being
+ * survivable the moment the editor could create rows: open an existing piece
+ * during a thirty-second outage and the first autosave would file a *second*
+ * record for the same article, with a fresh slug and none of the history.
+ *
+ * So the two are separated, and `reachable` is the field the workspace acts
+ * on: an editor that does not know whether a record exists must not create one.
+ */
+interface AdminRead<T> {
+  value: T | null;
+  /** False when the request failed or the credential is missing — not for a 404. */
+  reachable: boolean;
+}
+
+async function readAdmin<T>(path: string): Promise<AdminRead<T>> {
   const token = process.env.NEWSROOM_API_TOKEN;
   if (!token) {
     console.error(`[data/server-admin] NEWSROOM_API_TOKEN is not set; ${path} not attempted.`);
-    return fallback;
+    return { value: null, reachable: false };
   }
 
   try {
@@ -38,77 +59,33 @@ async function readAdmin<T>(path: string, fallback: T): Promise<T> {
       signal: AbortSignal.timeout(15_000),
     });
 
+    // A 404 is an answer: the server is up and this story does not exist.
+    if (response.status === 404) return { value: null, reachable: true };
+
     if (!response.ok) {
-      if (response.status !== 404) {
-        console.error(`[data/server-admin] GET ${path} -> ${response.status}`);
-      }
-      return fallback;
+      console.error(`[data/server-admin] GET ${path} -> ${response.status}`);
+      return { value: null, reachable: false };
     }
 
-    return (await response.json()) as T;
+    return { value: (await response.json()) as T, reachable: true };
   } catch (cause) {
     console.error(`[data/server-admin] GET ${path} failed:`, cause);
-    return fallback;
+    return { value: null, reachable: false };
   }
 }
-
-/** Raw admin row, before it is shaped into the frontend's `Story`. */
-interface AdminStoryRow {
-  id: string;
-  slug: string;
-  title: string;
-  dek: string;
-  genreSlug: string;
-  tags: string[];
-  status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
-  publishedAt: string | null;
-  updatedAt: string;
-  readingMinutes: number;
-  featured: boolean;
-  placeholder: boolean;
-  publication: string | null;
-  sourceUrl: string | null;
-  cover: string | null;
-  body: Story["body"];
-  stats?: StorySummary["stats"] | null;
-}
-
-const STATUS = {
-  PUBLISHED: "published",
-  SCHEDULED: "scheduled",
-  DRAFT: "draft",
-} as const;
 
 /**
  * One story for the editor — drafts included, body and all.
  *
- * Null when it does not exist or the API could not be reached; the workspace
- * treats that as "start a blank draft at this id", which is the right
- * behaviour for a brand-new piece and a survivable one for an outage.
+ * `story` is null both for a piece that does not exist and for one this process
+ * could not ask about; `reachable` is what tells them apart, and the workspace
+ * needs the difference — see `AdminRead` above.
  */
-export async function getAdminStory(id: string): Promise<Story | null> {
-  const row = await readAdmin<AdminStoryRow | null>(
+export async function getAdminStory(
+  id: string,
+): Promise<{ story: Story | null; reachable: boolean }> {
+  const { value, reachable } = await readAdmin<AdminStoryRow>(
     `/admin/stories/${encodeURIComponent(id)}`,
-    null,
   );
-  if (!row) return null;
-
-  return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    dek: row.dek,
-    genre: row.genreSlug,
-    tags: row.tags,
-    status: STATUS[row.status],
-    publishedAt: row.publishedAt ?? "",
-    updatedAt: row.updatedAt,
-    readingMinutes: row.readingMinutes,
-    featured: row.featured,
-    placeholder: row.placeholder,
-    publication: row.publication ?? undefined,
-    sourceUrl: row.sourceUrl ?? undefined,
-    cover: row.cover ?? undefined,
-    body: row.body,
-  };
+  return { story: value ? toStory(value) : null, reachable };
 }

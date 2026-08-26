@@ -13,9 +13,17 @@ import type { Story } from "@/data/types";
  * A writer following that interface all the way through loses their work at
  * the end of it, which is the opposite of a workspace.
  *
- * There is no API yet. What there *is* is this browser, so that is what the
- * draft is written to and exactly what the interface now says: saved on this
- * device. When the API lands this module is the one place that changes.
+ * ── What this is now, since the API landed ───────────────────────────────
+ * Not the store. `lib/story-save.ts` sends the draft to Postgres, and that is
+ * where a piece lives. This is the layer underneath it: `writeDraft` runs first
+ * on every autosave, before the request, because it is synchronous and cannot
+ * fail for a network reason.
+ *
+ * That ordering is the whole value of keeping it. When the request fails — a
+ * dropped connection, a lapsed session, a conflict with another tab — the words
+ * are already on the device, so the editor can say "saved here, not sent yet"
+ * instead of asking somebody to copy their work out of a textarea. It stopped
+ * being the only copy and became the one that cannot go missing.
  *
  * ── What it deliberately does not do ─────────────────────────────────────
  * It never silently replaces the seed copy of a story. A local draft and the

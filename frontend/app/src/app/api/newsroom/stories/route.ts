@@ -1,8 +1,10 @@
 import { isUnlocked } from "@/lib/newsroom-auth";
-import type { StorySummary } from "@/data/types";
+import { errorResponse, newsroomFetch } from "@/lib/newsroom-api";
+import { toApiCreate, toStory, toSummary, type AdminStoryRow } from "@/lib/story-records";
+import type { Story } from "@/data/types";
 
 /**
- * The admin story list, fetched on the server so the API token stays there.
+ * The admin story list, and the route that creates one.
  *
  * The API's `/admin/stories` returns drafts and scheduled pieces, and it wants
  * a bearer token. That token cannot go anywhere the browser can read it, which
@@ -20,128 +22,86 @@ import type { StorySummary } from "@/data/types";
 
 export const dynamic = "force-dynamic";
 
-const API_BASE = (
-  process.env.API_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:4000/api"
-).replace(/\/+$/, "");
-
-/** Rows as the API's admin surface returns them: raw records, not a public view. */
-interface AdminStoryRow {
-  id: string;
-  slug: string;
-  title: string;
-  dek: string;
-  genreSlug: string;
-  tags: string[];
-  status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
-  publishedAt: string | null;
-  updatedAt: string;
-  readingMinutes: number;
-  featured: boolean;
-  placeholder: boolean;
-  publication: string | null;
-  sourceUrl: string | null;
-  cover: string | null;
-  stats?: {
-    views: number;
-    reads: number;
-    listens: number;
-    avgListenSeconds: number;
-  } | null;
-}
-
-const STATUS = {
-  PUBLISHED: "published",
-  SCHEDULED: "scheduled",
-  DRAFT: "draft",
-} as const;
-
-/**
- * Database row to the shape the admin views are written against.
- *
- * Built field by field rather than spread-and-patch. The admin surface returns
- * whole records by design, so a spread here would forward every column the
- * table grows next — the same argument the API's own public views make, and it
- * applies to a proxy just as well.
- *
- * `body` is dropped: the list does not render articles, and shipping every
- * draft's full text to a browser to display a title is waste.
- */
-function toSummary(row: AdminStoryRow): StorySummary {
-  return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    dek: row.dek,
-    genre: row.genreSlug,
-    tags: row.tags,
-    status: STATUS[row.status],
-    // Empty for a piece with no date yet. Nothing in the admin list renders
-    // this; inventing "now" would put a publication date on an unpublished
-    // draft, which is the one wrong answer available.
-    publishedAt: row.publishedAt ?? "",
-    updatedAt: row.updatedAt,
-    readingMinutes: row.readingMinutes,
-    featured: row.featured,
-    placeholder: row.placeholder,
-    publication: row.publication ?? undefined,
-    sourceUrl: row.sourceUrl ?? undefined,
-    cover: row.cover ?? undefined,
-    stats: row.stats ?? undefined,
-  };
-}
-
 export async function GET(): Promise<Response> {
   if (!(await isUnlocked())) {
-    return Response.json({ message: "The newsroom is locked." }, { status: 401 });
-  }
-
-  const token = process.env.NEWSROOM_API_TOKEN;
-  if (!token) {
-    // 501, not 500: nothing has gone wrong, the credential was never set. An
-    // operator reading this should go and configure it, not go bug-hunting.
-    return Response.json(
-      { message: "NEWSROOM_API_TOKEN is not configured, so the admin API cannot be reached." },
-      { status: 501 },
-    );
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}/admin/stories`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      signal: AbortSignal.timeout(15_000),
-      cache: "no-store",
-    });
-  } catch (cause) {
-    // The real reason goes to the server log. What comes back is a sentence a
-    // journalist can act on, with no hostname or stack trace in it.
-    console.error("[newsroom/stories]", cause);
-    return Response.json(
-      { message: "The API could not be reached. Nothing was changed." },
-      { status: 502 },
-    );
-  }
-
-  if (!response.ok) {
-    console.error(`[newsroom/stories] API returned ${response.status}`);
-    return Response.json(
-      {
-        message:
-          response.status === 401 || response.status === 403
-            ? "The API rejected the newsroom credential. Check NEWSROOM_API_TOKEN."
-            : "The API could not list stories.",
-      },
-      { status: 502 },
-    );
+    return Response.json({ error: "The newsroom is locked." }, { status: 401 });
   }
 
   try {
-    const rows = (await response.json()) as AdminStoryRow[];
+    const rows = await newsroomFetch<AdminStoryRow[]>("/admin/stories");
     return Response.json(rows.map(toSummary));
   } catch (cause) {
-    console.error("[newsroom/stories]", cause);
-    return Response.json({ message: "The API's answer could not be read." }, { status: 502 });
+    return errorResponse(cause);
+  }
+}
+
+/**
+ * A slug the API will accept, derived from the headline.
+ *
+ * ── Why the editor does not ask for one ──────────────────────────────────
+ * A slug is a permanent decision — it is the article's address, and the API
+ * refuses to change it afterwards for the reason it should: every link a
+ * reader saved and every canonical URL already in an index points at it. Asking
+ * a writer to commit to that in the first thirty seconds of a draft, before the
+ * headline has settled, gets the decision made at the worst possible moment.
+ *
+ * So it is derived from the title on the one request that sets it, and the
+ * suffix is not decoration: two pieces can legitimately share a headline —
+ * a weekly column, a follow-up — and the API answers 409 on a duplicate. A
+ * four-character suffix turns a hard failure the writer cannot act on into a
+ * distinct address.
+ */
+function slugFor(title: string): string {
+  const base = title
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 140)
+    // A trailing hyphen from the slice would fail the API's own pattern, which
+    // requires words separated by *single* hyphens with nothing hanging off
+    // either end.
+    .replace(/-+$/, "");
+
+  // "untitled" rather than an empty string: the API's pattern rejects empty,
+  // and a draft saved before the headline exists is the ordinary case, not an
+  // error worth refusing the save over.
+  const stem = base || "untitled";
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${stem}-${suffix}`;
+}
+
+export async function POST(request: Request): Promise<Response> {
+  if (!(await isUnlocked())) {
+    return Response.json({ error: "The newsroom is locked." }, { status: 401 });
+  }
+
+  let story: Story;
+  try {
+    story = (await request.json()) as Story;
+  } catch {
+    return Response.json({ error: "That request could not be read." }, { status: 400 });
+  }
+
+  // Checked here rather than left to the API's 400, which would name `title`
+  // and `dek` as validation failures on a draft the writer has barely begun.
+  // An untitled draft is a normal thing to have; an untitled *record* is not,
+  // because the stories list would show a blank row nobody can identify.
+  if (typeof story?.title !== "string" || !story.title.trim()) {
+    return Response.json(
+      { error: "Give the piece a headline before it can be filed. It saves on this device meanwhile." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const created = await newsroomFetch<AdminStoryRow>("/admin/stories", {
+      method: "POST",
+      body: JSON.stringify(toApiCreate(story, slugFor(story.title))),
+    });
+    return Response.json(toStory(created), { status: 201 });
+  } catch (cause) {
+    return errorResponse(cause);
   }
 }

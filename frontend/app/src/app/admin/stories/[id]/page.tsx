@@ -17,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const story = await getAdminStory(id);
+  const { story } = await getAdminStory(id);
   return { title: story?.title ?? "Draft" };
 }
 
@@ -27,9 +27,13 @@ export default async function StoryWorkspaceRoute({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // "new" is the blank-draft route and has no record behind it, so it is not
-  // worth a request that is guaranteed to 404.
-  const existing = id === "new" ? null : await getAdminStory(id);
 
-  return <StoryWorkspace id={id} existing={existing ?? undefined} />;
+  // "new" is the blank-draft route and has no record behind it, so it is not
+  // worth a request that is guaranteed to 404. It is also the one case where
+  // "no record" is certain rather than merely unanswered, which is why it
+  // reports the API as reachable without having asked it.
+  const { story, reachable } =
+    id === "new" ? { story: null, reachable: true } : await getAdminStory(id);
+
+  return <StoryWorkspace id={id} existing={story ?? undefined} apiReachable={reachable} />;
 }

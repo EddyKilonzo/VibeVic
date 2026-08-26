@@ -28,10 +28,15 @@ import { newsroomPath } from "@/lib/newsroom-path";
  * store you cannot trust, and a writer with three half-finished pieces had to
  * remember all three URLs. This is the list.
  *
- * It is explicitly *this device*. Said in the heading, said again under it,
- * and said on every row through "saved here". There is no server yet, and a
- * page that reads as "my drafts" while meaning "my drafts on this laptop" is
- * the same false promise the save indicator used to make.
+ * It is explicitly *this device*, and it still is now that the workspace sends
+ * every save to Postgres as well. What this page enumerates is the local copy,
+ * which is written first on every autosave and survives a failed request — so a
+ * row here is not proof the newsroom has the piece. Usually it does; the case
+ * worth being able to see is the one where it does not, and that is precisely
+ * the case a page saying "my drafts" would hide.
+ *
+ * So the wording stays: said in the heading, said again under it, and said on
+ * every row through "saved here".
  */
 export default function AdminDrafts() {
   const { genreLabel } = useTaxonomy();

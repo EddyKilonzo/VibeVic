@@ -49,10 +49,16 @@ const LOOK: Record<ConnectionStatus, { label: string; icon: typeof Wifi; tone: s
  * glance whether their last paragraph is safe, not to have been told once
  * three minutes ago.
  *
- * Nothing here claims a sync that has not happened. There is no server yet, so
- * `offline` says plainly that the work is on this device — which is true of
- * the online case too, and is stated in the workspace rather than implied by a
- * green tick.
+ * Nothing here claims a sync that has not happened. This badge reports the
+ * browser's own belief about the network and nothing else — it is mounted in
+ * the layout with no props, so it never sees a request outcome and must not
+ * imply one. `offline` says plainly that the work is on this device, which is
+ * what `writeDraft` guarantees in every case.
+ *
+ * Where a save really landed is the workspace's own indicator to report, and it
+ * does: `SaveIndicator` distinguishes "saved to the newsroom" from "saved on
+ * this device only" because it is the thing holding the answer. Two components
+ * both guessing at that would eventually disagree in front of a writer.
  */
 export function ConnectionState({
   saving = false,
@@ -89,9 +95,9 @@ export function ConnectionState({
       )}
     >
       <Icon
-        // "syncing" is in the type because it is a real state once there is a
-        // server to sync with; nothing produces it today, so only "saving"
-        // spins. The unreachable branch is left out rather than faked.
+        // "syncing" is in the type for a screen that watches a request; this
+        // one does not, so nothing produces it here and only "saving" spins.
+        // The unreachable branch is left out rather than faked.
         className={cn("h-3.5 w-3.5", status === "saving" && "animate-spin")}
         aria-hidden
       />

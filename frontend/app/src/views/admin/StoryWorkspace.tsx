@@ -40,6 +40,7 @@ import { notify } from "@/lib/toast";
 import { useAutosave, type SaveStatus } from "@/hooks/useAutosave";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
+import { createStory, updateStory, type SaveOutcome } from "@/lib/story-save";
 import { allBeats } from "@/lib/beats";
 import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { MediaPicker } from "@/components/admin/MediaPicker";
@@ -81,6 +82,17 @@ function emptyBlock(type: BlockType): Block {
   }
 }
 
+/**
+ * Where a saved draft ended up.
+ *
+ * `null` before anything has been saved in this session. Three values rather
+ * than a boolean because a writer does something different with each: `server`
+ * means it is safe to close the laptop, `device` means it is not, and
+ * `conflict` means somebody else's version is the current one and this editor
+ * is now the fork.
+ */
+type Landing = "server" | "device" | "conflict";
+
 const BLANK: Story = {
   id: "new",
   slug: "",
@@ -109,6 +121,7 @@ const BLANK: Story = {
 export default function StoryWorkspace({
   id,
   existing,
+  apiReachable = true,
 }: {
   id?: string;
   /**
@@ -118,6 +131,18 @@ export default function StoryWorkspace({
    * render, so it must hold the same value on the server and on the client.
    */
   existing?: Story;
+  /**
+   * Whether the API answered when the route asked for this story.
+   *
+   * `existing` being absent means one of two things and the editor must not
+   * guess between them. A story that genuinely does not exist should be
+   * created on the first save. A story the server could not be asked about
+   * must not be — creating it would file a second record for an article that
+   * already has one, with a new slug and none of its history. So when this is
+   * false the editor saves to the device and says so, and waits for a reload
+   * that can actually see the newsroom.
+   */
+  apiReachable?: boolean;
 }) {
   const { genres } = useTaxonomy();
   const reduced = useReducedMotion();
@@ -139,6 +164,43 @@ export default function StoryWorkspace({
   const [coverPicking, setCoverPicking] = useState(false);
   const [dragging, setDragging] = useState(false);
 
+  /**
+   * Where the last save actually landed.
+   *
+   * `useAutosave` answers "did the save function resolve"; this answers the
+   * question a writer is really asking, which is where their words are. The two
+   * are not the same now that there are two stores, and collapsing them into
+   * one word is how "Saved" comes to mean "on this machine, until you close
+   * the tab" without anybody noticing.
+   */
+  const [landing, setLanding] = useState<Landing | null>(null);
+  const [landingMessage, setLandingMessage] = useState<string | null>(null);
+
+  /**
+   * The row's identity and version on the server.
+   *
+   * Refs rather than state, and deliberately so: neither belongs in `draft`.
+   * Autosave fires on `draft` changing, so writing the server's new `updatedAt`
+   * back into it after every save would trigger the next save, and the editor
+   * would talk to the API forever without anybody typing. They are also not
+   * rendered — the indicator renders `landing` — so nothing needs a re-render
+   * when they move.
+   */
+  const recordId = useRef<string | null>(existing?.id ?? null);
+  const version = useRef<string | null>(existing?.updatedAt ?? null);
+
+  /**
+   * Whether a first save is allowed to create a record.
+   *
+   * Only when the absence of one is known rather than merely unobserved. A ref
+   * because it is read inside `save`, which is memoised with no dependencies on
+   * purpose — a `save` that changed identity on every render would restart the
+   * autosave timer with it, and the debounce would never expire while somebody
+   * was typing.
+   */
+  const canCreate = useRef(apiReachable);
+  canCreate.current = apiReachable;
+
   // Switching to a different story loads that story's draft. Tracked by id
   // rather than by object identity, so a re-render of the same piece can never
   // discard edits the journalist has made but not yet saved.
@@ -146,20 +208,102 @@ export default function StoryWorkspace({
   if (existing && existing.id !== loadedId) {
     setLoadedId(existing.id);
     setDraft({ ...existing, body: [...existing.body] });
+    // The identity and the version travel with the story, not with the mount.
+    // Leaving them behind would send the next save to the previous piece's row
+    // carrying the previous piece's timestamp — a 409 if you are lucky, and an
+    // overwrite of the wrong article if you are not.
+    recordId.current = existing.id;
+    version.current = existing.updatedAt;
+    setLanding(null);
+    setLandingMessage(null);
   }
 
   /**
    * Autosave.
    *
-   * This used to be `setTimeout(450)` around a discarded argument, and every
-   * label attached to it was therefore a claim about something that had not
-   * happened — "Saved 2 minutes ago" over a draft that existed only in React
-   * state, and lost in full the moment the tab closed. It writes to the
-   * browser now, which is the only store this product has until the API
-   * lands, and the indicator says which store that is.
+   * Two writes, in an order that is the whole design.
+   *
+   * The local one goes first because it is synchronous and cannot fail for a
+   * network reason. By the time the request is made the words are already on
+   * the device, so every failure below is "this has not reached the newsroom
+   * yet" rather than "this is gone" — and the indicator can say so instead of
+   * asking someone to copy their work out of a textarea.
+   *
+   * Then the request. It resolves rather than throws for the outcomes that are
+   * not really failures of saving — a conflict means the server has a *newer*
+   * version, which is a thing to reconcile, not a thing to retry — and throws
+   * only when nothing anywhere holds the change.
    */
   const save = useCallback(async (value: Story) => {
-    writeDraft(value);
+    let onDevice = true;
+    try {
+      writeDraft(value);
+    } catch {
+      // A full quota, or a browser in private mode. Not fatal on its own — the
+      // request below may still land — but it removes the safety net, so the
+      // failure branches stop being able to promise the work is anywhere.
+      onDevice = false;
+    }
+
+    const id = recordId.current;
+    const known = version.current;
+
+    if (!id && !canCreate.current) {
+      // The route asked for this story and got no answer, so whether a record
+      // exists is unknown. Filing a new one on a guess is the failure that
+      // cannot be undone from this screen — see `apiReachable`.
+      setLanding("device");
+      setLandingMessage(
+        "The newsroom could not be reached when this piece was opened, so it has not been filed. Reload to try again; your writing is on this device.",
+      );
+      if (!onDevice) throw new Error("Nothing could be saved.");
+      return;
+    }
+
+    const outcome: SaveOutcome =
+      id && known
+        ? await updateStory(id, value, known)
+        : await createStory(value);
+
+    if (outcome.ok) {
+      recordId.current = outcome.story.id;
+      version.current = outcome.story.updatedAt;
+      setLanding("server");
+
+      /**
+       * The URL catches up with the record, without a navigation.
+       *
+       * `router.replace` would re-run the route's server component, hand the
+       * workspace a fresh `existing` prop and reset the editor from it —
+       * discarding anything typed between the request going out and the answer
+       * coming back. `replaceState` changes the address and nothing else, which
+       * is all that is wanted: a reload now finds the row.
+       *
+       * ── Pass the existing state, never null ──────────────────────────
+       * The App Router keeps its own router state in `history.state`. Calling
+       * `replaceState(null, …)` wipes it, and the next render re-initialises
+       * the router from nothing — which remounts this component as the blank
+       * `/stories/new` route while the writer is looking at it. Handing the
+       * current state straight back changes only the address, which is the one
+       * thing being asked for.
+       */
+      if (outcome.created && typeof window !== "undefined") {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          newsroomPath(`/stories/${outcome.story.id}`),
+        );
+        notify.success("Filed to the newsroom", "This piece now has a record other devices can open.");
+      }
+      return;
+    }
+
+    setLanding(outcome.reason === "conflict" ? "conflict" : "device");
+    setLandingMessage(outcome.message);
+
+    // Nothing holds this change. The only honest thing left is the error state,
+    // which is the one that tells the writer to copy their work out.
+    if (!onDevice) throw new Error(outcome.message);
   }, []);
 
   const { status, savedAt } = useAutosave(draft, save);
@@ -302,14 +446,22 @@ export default function StoryWorkspace({
     }));
 
   /**
-   * Sets the draft's own status field. It does not publish anything.
+   * Marks the draft ready. It still does not publish anything, and now there is
+   * a route it could ask.
    *
    * The toast used to read "Story published", which was false in the way that
    * matters most: the site had not changed, no request had been made, and the
-   * writer had every reason to believe their piece was live. Marking a draft
-   * as ready is a real and useful act — it is just not the same act, and the
-   * interface now uses the same word for it that the writer would.
+   * writer had every reason to believe their piece was live. That got fixed by
+   * changing the words. This is the version that asks the server.
+   *
+   * `status` is kept out of every write in `story-records.ts` — the editor
+   * satisfying `publishedWhere` with a column write would be publishing through
+   * a path the API has deliberately not finished. So the transition goes to
+   * `/publish`, which today answers 501 and names what is missing, and the
+   * writer is told that rather than shown a button that shrugs.
    */
+  const [publishing, setPublishing] = useState(false);
+
   const setStatus = (next: StoryStatus) => {
     setDraft((d) => ({ ...d, status: next }));
     notify.success(
@@ -318,8 +470,48 @@ export default function StoryWorkspace({
         : next === "scheduled"
           ? "Marked as scheduled"
           : "Moved back to drafts",
-      "Saved on this device — the site is unchanged.",
+      "Recorded on the draft. Publishing is a separate step.",
     );
+  };
+
+  const publish = async () => {
+    const id = recordId.current;
+    if (!id) {
+      notify.error(
+        "This piece has no record yet",
+        "Give it a headline and let it save once; publishing needs something to point at.",
+      );
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const response = await fetch(
+        `/api/newsroom/stories/${encodeURIComponent(id)}/publish`,
+        { method: "POST", headers: { Accept: "application/json" }, cache: "no-store" },
+      );
+
+      if (response.ok) {
+        const live = (await response.json()) as Story;
+        version.current = live.updatedAt;
+        setDraft((d) => ({ ...d, status: live.status, publishedAt: live.publishedAt }));
+        notify.success("Published", "The piece is on the site.");
+        return;
+      }
+
+      // The API's own sentence, forwarded. A 501 here names the three things
+      // publishing still needs, which is the useful thing to read; inventing
+      // "something went wrong" over the top of it would help nobody.
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      notify.error(
+        response.status === 501 ? "Publishing is not wired up yet" : "The piece was not published",
+        body?.error ?? `The newsroom returned ${response.status}.`,
+      );
+    } catch {
+      notify.error("The piece was not published", "Could not reach the newsroom. Nothing changed.");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -334,24 +526,32 @@ export default function StoryWorkspace({
             Stories
           </Link>
 
-          <SaveIndicator status={status} savedAt={savedAt} />
+          <SaveIndicator
+            status={status}
+            savedAt={savedAt}
+            landing={landing}
+            message={landingMessage}
+          />
 
           <div className="ml-auto flex items-center gap-2">
             <NarrationPreview draft={draft} />
-            {/* "Mark ready", not "Publish". There is no API to publish to, and
-                a button that says the word does not become true for being
-                pressed — it just sends the writer away believing the piece is
-                live. The line under the sheet says where the work actually
-                is. */}
+            {/* Two separate acts, and two separate buttons, because they are
+                not the same thing and never were. "Mark ready" is the writer's
+                own note that the piece is finished. "Publish" is a request to
+                the server, which is the only thing that can put it on the
+                site — and which currently answers that it cannot yet. */}
             {draft.status === "published" ? (
               <Button size="sm" variant="outline" onClick={() => setStatus("draft")}>
                 Move to drafts
               </Button>
             ) : (
-              <Button size="sm" onClick={() => setStatus("published")}>
+              <Button size="sm" variant="outline" onClick={() => setStatus("published")}>
                 Mark ready
               </Button>
             )}
+            <Button size="sm" onClick={publish} disabled={publishing}>
+              {publishing ? "Publishing…" : "Publish"}
+            </Button>
           </div>
         </div>
       </Reveal>
@@ -621,13 +821,33 @@ export default function StoryWorkspace({
 /* ── Save indicator ──────────────────────────────────────────────
    Three states, each visibly distinct: unsaved, saving, saved.     */
 
-function SaveIndicator({ status, savedAt }: { status: SaveStatus; savedAt: Date | null }) {
+function SaveIndicator({
+  status,
+  savedAt,
+  landing,
+  message,
+}: {
+  status: SaveStatus;
+  savedAt: Date | null;
+  /** Where the last save went. Null before the first one. */
+  landing: Landing | null;
+  /** Why it did not go to the server, when it did not. */
+  message: string | null;
+}) {
   const reduced = useReducedMotion();
 
-  // "on this device" is doing real work in these labels. A bare "Saved" over
-  // a browser-only store is the same promise a CMS makes, and the writer has
-  // no way to tell the difference until they open the site on another machine
-  // and find nothing there.
+  /**
+   * The label distinguishes the two stores, because the writer has to.
+   *
+   * "on this device" used to be the whole truth and did real work in this
+   * string: a bare "Saved" over a browser-only store is the same promise a CMS
+   * makes, and nobody could tell the difference until they opened the site on
+   * another machine and found nothing. There is a newsroom record now, so the
+   * qualifier moved rather than disappeared — it belongs on the case where the
+   * request failed and the words really are on one machine only.
+   */
+  const when = savedAt ? formatRelative(savedAt.toISOString()) : "";
+
   const label =
     status === "saving"
       ? "Saving…"
@@ -635,16 +855,33 @@ function SaveIndicator({ status, savedAt }: { status: SaveStatus; savedAt: Date 
         ? "Unsaved changes"
         : status === "error"
           ? "Couldn't save — copy your work"
-          : savedAt
-            ? `Saved on this device ${formatRelative(savedAt.toISOString())}`
-            : "Up to date";
+          : landing === "conflict"
+            ? "Saved on this device — a newer version exists"
+            : landing === "device"
+              ? `Saved on this device only ${when}`
+              : landing === "server"
+                ? `Saved to the newsroom ${when}`
+                : savedAt
+                  ? `Saved on this device ${when}`
+                  : "Up to date";
+
+  // A failure states its reason, once, next to the thing it happened to. The
+  // toast is gone by the time somebody looks up from a paragraph.
+  const detail = status !== "error" && landing && landing !== "server" ? message : null;
+
+  const wrong = status === "error" || landing === "conflict";
 
   return (
     <span
       aria-live="polite"
+      title={detail ?? undefined}
       className={cn(
         "inline-flex items-center gap-2 text-xs font-medium",
-        status === "error" ? "text-destructive" : "text-muted-foreground",
+        status === "error"
+          ? "text-destructive"
+          : wrong || landing === "device"
+            ? "text-accent"
+            : "text-muted-foreground",
       )}
     >
       <span className="relative flex h-4 w-4 items-center justify-center">

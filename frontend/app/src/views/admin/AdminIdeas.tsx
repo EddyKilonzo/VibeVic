@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Lightbulb, Plus, Trash2 } from "lucide-react";
-import type { Genre, Story } from "@/data/types";
+import type { Genre } from "@/data/types";
 import { DEFAULT_BEAT } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { allBeats } from "@/lib/beats";
-import { writeDraft } from "@/lib/drafts";
+import { createStory } from "@/lib/story-save";
 import { cn } from "@/lib/utils";
 import { formatRelative } from "@/lib/format";
 import { stagger, transitions } from "@/lib/motion";
@@ -158,12 +158,30 @@ export default function AdminIdeas() {
    * journalist's own writing — carrying it across moves their words rather
    * than generating any. Nothing else is filled in: no rewritten headline, no
    * standfirst, no invented angle.
+   *
+   * ── Why this files a real record rather than a local draft ───────────────
+   * It used to invent an id — `idea_<ideaId>` — write the story to
+   * `localStorage` under it, link the idea to that id and navigate there. Every
+   * step worked, and the result was still wrong once stories moved to Postgres:
+   * the id named no row, so `Open the draft` led to a blank editor on any other
+   * machine, and the first save in the workspace created a *second* record with
+   * a real id that the idea did not know about. One idea, two drafts, and the
+   * link pointing at the one that only existed in one browser.
+   *
+   * Creating the record here means the id in `storyId` is the id in the
+   * database. The workspace then opens it the ordinary way, from the API.
    */
+  const [starting, setStarting] = useState<string | null>(null);
+
   const startDraft = async (idea: Idea) => {
-    const storyId = `idea_${idea.id}`;
+    if (starting) return;
+    setStarting(idea.id);
+
     const today = new Date().toISOString().slice(0, 10);
-    const draft: Story = {
-      id: storyId,
+    const created = await createStory({
+      // `id` and `updatedAt` are the server's to decide; the proxy strips what
+      // it does not model and derives the slug from the title, once.
+      id: "new",
       slug: "",
       title: idea.title,
       dek: "",
@@ -173,24 +191,30 @@ export default function AdminIdeas() {
       publishedAt: today,
       updatedAt: today,
       readingMinutes: 1,
-      body: [{ id: `${storyId}_b1`, type: "paragraph", text: idea.note }],
-    };
+      body: [{ id: `b${Date.now()}`, type: "paragraph", text: idea.note }],
+    });
 
-    try {
-      writeDraft(draft);
-    } catch {
-      notify.error("This browser refused to save the draft", "Storage is full or blocked.");
+    if (!created.ok) {
+      setStarting(null);
+      // Nothing is navigated to and nothing is linked. Seeding a local draft
+      // and going anyway is what produced the orphan above: it would leave the
+      // journalist writing into a story the newsroom has no record of, with an
+      // idea still saying "spark" beside it. One more press is the cheaper
+      // failure, and the idea is untouched either way.
+      notify.error("The draft was not started", created.message);
       return;
     }
+
+    const storyId = created.story.id;
 
     // The idea is kept and linked rather than consumed. Where a story came
     // from is worth knowing later, and deleting the idea would throw away the
     // stage history that says how it got here.
     //
-    // The link is written before navigating, not alongside it. The draft is
-    // already saved by this point, so a failure here costs the connection
-    // between the two rather than the work — but leaving without knowing would
-    // strand an idea that says "spark" next to a draft that exists.
+    // The link is written before navigating. The story exists by this point, so
+    // a failure here costs the connection between the two rather than the work
+    // — but leaving without knowing would strand an idea that says "spark"
+    // next to a draft that exists.
     const linked = await update(
       "ideas",
       idea.id,
@@ -199,13 +223,14 @@ export default function AdminIdeas() {
     );
     if (!linked.ok) {
       notify.error(
-        "The draft was saved, but the idea was not updated",
+        "The draft was filed, but the idea was not updated",
         linked.reason === "conflict"
           ? "The idea changed in another tab. Open it again and link the draft by hand."
           : linked.message,
       );
     }
 
+    setStarting(null);
     router.push(newsroomPath(`/stories/${storyId}`));
   };
 

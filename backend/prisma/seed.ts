@@ -18,10 +18,15 @@ import snapshot from './seed-data/content.json';
  *     the seed, their edit is gone. Rows this file does not know about are left
  *     alone.
  *
- * What it deliberately does not create: StoryStats rows, and a User row. Zeroed
+ * What it deliberately does not create: StoryStats rows, and accounts. Zeroed
  * counters would put "0 views" on the public API for articles nobody has
- * measured, and a user record that no code path reads is furniture. Absent
- * means "not measured" and "not implemented", which is the truth in both cases.
+ * measured, and absent means "not measured", which is the truth.
+ *
+ * Accounts are out for a different reason. They used to be furniture — no code
+ * path read a User row. Now sign-in does, which makes creating one a decision
+ * about who may enter the newsroom, and a decision like that should not be a
+ * side effect of a deploy re-running the seed. It has its own command that a
+ * person invokes on purpose: `npm run account -- add`, in prisma/accounts.ts.
  *
  * Input is prisma/seed-data/content.json, written by export-content.js from
  * frontend/app/src/data/content.ts. It is validated here rather than trusted:

@@ -9,6 +9,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { MailModule } from './modules/mail/mail.module';
 import { NewsroomModule } from './modules/newsroom/newsroom.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { PrismaModule } from './prisma/prisma.module';

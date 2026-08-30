@@ -435,7 +435,7 @@ export default function About({
         >
           <p className="rule-label">Quote of the week</p>
           <figure className="mt-5">
-            <blockquote cite="https://en.wikipedia.org/wiki/Carl_Jung">
+            <blockquote cite={QUOTE_OF_THE_WEEK.cite}>
               {/* Typed out on arrival, and again each time it is scrolled back
                   into view. The quotation is short and sits alone in its band,
                   which is the only place on a reading site where watching text

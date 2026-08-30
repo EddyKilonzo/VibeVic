@@ -163,16 +163,139 @@ export const ABOUT_INTRO = {
 } as const;
 
 /**
+ * A quotation, with everything needed to credit it properly.
+ *
+ * `author` and `source` are separate fields rather than one pre-joined string
+ * because they are two different claims: who said it, and where that can be
+ * checked. A site whose premise is that nothing published is invented cannot
+ * render the first without being able to produce the second.
+ */
+export interface Quote {
+  text: string;
+  /** Who said it. For a proverb, the tradition — never the person who repeated it. */
+  author: string;
+  /** Where it can be checked: the work, the speech, the interview. */
+  source: string;
+  /** A page about the author or the work, for the blockquote's `cite`. */
+  cite: string;
+}
+
+/**
+ * The rotation the quote bands draw from.
+ *
+ * ── Why these six, and why nothing else ──────────────────────────────────
+ * Every line here is one somebody demonstrably said or wrote, in a work or on
+ * an occasion named in `source`. That constraint did most of the choosing: the
+ * quotations journalists pass around are, disproportionately, misattributed —
+ * the "journalism is printing what someone else does not want printed" line
+ * that follows Orwell around is the best-known example, and it is not his. A
+ * quotation whose provenance could not be stated was left out rather than
+ * included with a hedge, on the same rule the rest of this file runs on.
+ *
+ * The Igbo proverb is credited to the tradition, not to Chinua Achebe, and
+ * that is the point of the entry as much as the words are. Achebe quoted it —
+ * he was explicit in the Paris Review that he was reaching for "that great
+ * proverb" — so putting his name where the author goes would be inventing an
+ * attribution on a page that exists to argue against doing that.
+ *
+ * ── Order is the rotation ────────────────────────────────────────────────
+ * `quoteOfTheDay` indexes this array by the day, so the sequence a reader
+ * meets over a week is the order written here. Adding a seventh changes which
+ * quote falls on which date, which is a thing to know before reordering but
+ * not a thing to protect against — there is no state anywhere that expects
+ * yesterday's choice to still hold.
+ */
+export const QUOTES: readonly Quote[] = [
+  {
+    text: "Everything that irritates us about others can lead us to an understanding of ourselves.",
+    author: "Carl Gustav Jung",
+    source: "Collected Works, Volume 17",
+    cite: "https://en.wikipedia.org/wiki/Carl_Jung",
+  },
+  {
+    text: "We tell ourselves stories in order to live.",
+    author: "Joan Didion",
+    source: "The White Album, 1979",
+    cite: "https://en.wikipedia.org/wiki/The_White_Album_(book)",
+  },
+  {
+    text: "A critical, independent and investigative press is the lifeblood of any democracy.",
+    author: "Nelson Mandela",
+    source: "International Press Institute Congress, Cape Town, 1994",
+    cite: "https://en.wikipedia.org/wiki/Nelson_Mandela",
+  },
+  {
+    text: "It's the little things citizens do. That's what will make the difference.",
+    author: "Wangari Maathai",
+    source: "Unbowed: A Memoir, 2006",
+    cite: "https://en.wikipedia.org/wiki/Wangari_Maathai",
+  },
+  {
+    text: "To be a good journalist you have to be a good person.",
+    author: "Ryszard Kapuscinski",
+    source: "The Other, 2008",
+    cite: "https://en.wikipedia.org/wiki/Ryszard_Kapu%C5%9Bci%C5%84ski",
+  },
+  {
+    text: "Until the lions have their own historians, the history of the hunt will always glorify the hunter.",
+    author: "Igbo proverb",
+    source: "quoted by Chinua Achebe, The Paris Review, 1994",
+    cite: "https://en.wikipedia.org/wiki/Chinua_Achebe",
+  },
+];
+
+/**
+ * Which day it is, in the timezone the site is read in.
+ *
+ * Nairobi rather than the server's clock, and that is not fussiness: on a UTC
+ * host the quote would change at three in the morning local time, so a reader
+ * opening the page over breakfast would meet a line that had already been up
+ * for five hours and call it yesterday's. `en-CA` is here because it formats
+ * as `YYYY-MM-DD`, which is the one locale format that parses back without
+ * ambiguity.
+ */
+const NAIROBI_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Nairobi",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function dayNumber(now: Date): number {
+  const [year, month, day] = NAIROBI_DAY.format(now).split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+/**
+ * Today's quote.
+ *
+ * ── Called on the server, never in a component body ──────────────────────
+ * The date is the input, so this is exactly the kind of "variable input which
+ * changes each time it's called" that produces a hydration mismatch when a
+ * client component reads it during render. The home route calls it once on the
+ * server and passes the result down as a prop, so the server's choice and the
+ * browser's are the same object rather than two calls that agreed.
+ *
+ * ── Modulo, not random ───────────────────────────────────────────────────
+ * A hash or a shuffle would scatter the order and occasionally repeat a quote
+ * on consecutive days, which reads as a bug to anybody who visits twice. Days
+ * since the epoch modulo the list means the sequence is fixed, every quote
+ * appears exactly as often as every other, and it is trivially checkable: the
+ * page for a given date is the same page tomorrow's reader would predict.
+ */
+export function quoteOfTheDay(now: Date = new Date()): Quote {
+  return QUOTES[dayNumber(now) % QUOTES.length];
+}
+
+/**
  * The quote he runs on his own site.
  *
- * Kept as data with its attribution attached, so it is impossible to render
- * the words without the name — the failure mode for a pull quote on a
- * journalist's site is an unattributed line that reads as his own.
+ * The About page's band is a fixed line rather than the rotation — it is the
+ * one he chose and has kept up, which is a different claim from "here is a
+ * quotation". Defined by reference so the words exist once: the same entry is
+ * the first in the rotation, and a correction to either is a correction to both.
  */
-export const QUOTE_OF_THE_WEEK = {
-  text: "Everything that irritates us about others can lead us to an understanding of ourselves.",
-  author: "Carl Gustav Jung",
-} as const;
+export const QUOTE_OF_THE_WEEK: Quote = QUOTES[0];
 
 /**
  * Iteration order for follow rails.

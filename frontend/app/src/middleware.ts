@@ -1,38 +1,46 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { NEWSROOM_BASE, NEWSROOM_MOVED, ROUTE_ROOT } from "@/lib/newsroom-path";
-import { verifyToken } from "@/lib/newsroom-token";
+import { SESSION_COOKIE, verifySession } from "@/lib/newsroom-session";
 
 /**
  * Access control for the newsroom.
  *
- * ── What this is ─────────────────────────────────────────────────────────
- * A single shared passphrase, checked at the edge before any admin route is
- * served. It is not a user system: there are no accounts, no roles and no
- * sessions beyond one signed cookie, because there is no backend to hold them.
- * For a one-person newsroom that is the right size of lock; the moment a
- * second person needs access, or the NestJS API lands, this is replaced by
- * real authentication rather than extended.
+ * ── What this is, now ────────────────────────────────────────────────────
+ * This block used to open by saying there were no accounts and no roles,
+ * because there was no backend to hold them, and that the whole thing would
+ * be replaced by real authentication when the API landed. It has. What is
+ * checked here is a session the API signed for a named person with a role —
+ * WRITER or DEV — and the shared passphrase is gone from the codebase rather
+ * than kept alongside as a second way in. Two doors into one room is one door
+ * too many, and it is always the forgotten one that is unlocked.
  *
  * ── Why middleware and not a client check ────────────────────────────────
  * Hiding the admin link, or redirecting from inside a React component, only
  * hides the door — the route still renders and its JavaScript still ships to
  * anyone who types the URL. Running here means an unauthenticated request for
- * `/admin/*` never receives the page at all.
+ * the workspace never receives the page at all.
+ *
+ * ── What this check is and is not ────────────────────────────────────────
+ * It answers one question: is this cookie a live session? It does not decide
+ * what the holder may *do*. Roles gate records, and records live behind the
+ * API, which re-verifies every call against the database — the account still
+ * exists, the role as it is now, the revocation clock. So a DEV who is shown
+ * the sources screen still cannot read a protected identity, because the
+ * screen is not what is holding the data back.
  *
  * ── The cookie ───────────────────────────────────────────────────────────
  * httpOnly, sameSite=lax, secure in production, so it is unreadable from
- * JavaScript and does not ride along on cross-site requests. It holds a hash
- * of the passphrase rather than the passphrase itself, so a stolen cookie
- * cannot be read back into the secret.
+ * JavaScript and does not ride along on cross-site requests. It carries the
+ * API's JWT: signed elsewhere, expiring on its own terms, and revocable
+ * server-side in a way the old passphrase hash never was.
  *
  * ── Deliberate failure mode ──────────────────────────────────────────────
- * With no `NEWSROOM_PASSPHRASE` set, the admin is locked rather than open.
- * A missing secret is a misconfiguration, and the safe reading of a
- * misconfigured lock is "closed" — an admin that silently unlocks itself when
- * an environment variable goes missing is how private drafts end up indexed.
+ * With no `AUTH_JWT_SECRET` set, nothing verifies and the workspace is locked
+ * rather than open. A missing secret is a misconfiguration, and the safe
+ * reading of a misconfigured lock is "closed" — an admin that silently
+ * unlocks itself when an environment variable goes missing is how private
+ * drafts end up indexed.
  */
-
-const COOKIE = "vv_newsroom";
 
 /** Everything this gate is responsible for. Anything else leaves immediately. */
 function isGuarded(pathname: string): boolean {
@@ -59,8 +67,17 @@ export async function middleware(request: NextRequest) {
    */
   if (!isGuarded(pathname)) return NextResponse.next();
 
-  // The sign-in page itself must stay reachable, or there is no way in.
-  if (pathname === "/newsroom-access") return NextResponse.next();
+  /*
+   * The sign-in pages must stay reachable, or there is no way in.
+   *
+   * A prefix now rather than one exact path, because the door has grown two
+   * more rooms: `/newsroom-access/forgot` and `/newsroom-access/reset`. A
+   * person who cannot sign in is precisely the person who needs those, so
+   * gating them behind a session would be a lock whose key is inside.
+   */
+  if (pathname === "/newsroom-access" || pathname.startsWith("/newsroom-access/")) {
+    return NextResponse.next();
+  }
 
   /*
    * The workspace answers on one path only.
@@ -78,8 +95,10 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
 
-  const passphrase = process.env.NEWSROOM_PASSPHRASE;
-  const ok = await verifyToken(request.cookies.get(COOKIE)?.value);
+  // "Configured" is now one variable, shared with the API: without it this
+  // app cannot check a signature and the API cannot make one.
+  const configured = Boolean(process.env.AUTH_JWT_SECRET);
+  const ok = (await verifySession(request.cookies.get(SESSION_COOKIE)?.value)) !== null;
 
   if (ok) {
     // The bare mount is the dashboard, so it is rewritten too — `/desk` maps
@@ -115,7 +134,7 @@ export async function middleware(request: NextRequest) {
    */
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(
-      { error: passphrase ? "Not signed in to the newsroom." : "The newsroom is not configured." },
+      { error: configured ? "Not signed in to the newsroom." : "The newsroom is not configured." },
       { status: 401 },
     );
   }
@@ -125,7 +144,7 @@ export async function middleware(request: NextRequest) {
   signIn.search = "";
   // So a successful sign-in lands where they were headed.
   signIn.searchParams.set("next", pathname);
-  if (!passphrase) signIn.searchParams.set("unconfigured", "1");
+  if (!configured) signIn.searchParams.set("unconfigured", "1");
 
   return NextResponse.redirect(signIn);
 }

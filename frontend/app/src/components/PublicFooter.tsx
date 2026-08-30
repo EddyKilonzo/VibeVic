@@ -194,6 +194,26 @@ export function PublicFooter() {
               Journal
             </Link>
           )}
+
+          {/* The door, which is not the same thing as the workspace.
+              The link above publishes the mount — the address the private
+              screens actually answer on — which is why it is off unless
+              somebody asks for it. This one publishes `/newsroom-access`,
+              a page whose entire content is a sign-in form: it is noindex,
+              it holds nothing, and every attempt against it is throttled by
+              the API on the account rather than the caller. Naming the door
+              costs nothing and saves the person who works here from having
+              to remember a path.
+
+              Signed in, it lands in the workspace rather than showing the
+              form again — the page redirects, so the mount is still only
+              ever disclosed to somebody already holding a session. */}
+          <Link
+            href="/newsroom-access"
+            className="focus-ring underline-grow tap inline-flex items-center transition-colors hover:text-primary"
+          >
+            Newsroom sign-in
+          </Link>
         </div>
       </div>
     </footer>

@@ -24,6 +24,12 @@
     // config is to delete it rather than to silence the warning with
     // "ignoreDeprecations". Relative imports are what this codebase actually
     // uses throughout.
+    // Each file transpiles on its own terms. Required by ts-jest under
+    // module: node16, and true of this codebase already — types cross files
+    // through `import type`, so nothing here needs whole-program context to
+    // emit.
+    "isolatedModules": true,
+
     "incremental": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

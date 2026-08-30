@@ -5,11 +5,20 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Environment — .env holds the database URL and, once auth exists, signing keys.
-# Only .env.example is ever committed.
+# Environment. No exceptions, and deliberately none.
+#
+# This used to end with `!.env.example`, holding a door open for a committed
+# template. Auth landed since, and what a template for this server would now
+# have to list is AUTH_JWT_SECRET, RESEND_API_KEY, CLOUDINARY_API_SECRET and
+# two database URLs — a file whose whole purpose is to sit in the repository
+# naming every secret the deployment has, one careless `cp` away from being
+# the real one. The names live in the comments in src/config/env.ts, which is
+# the file that actually enforces them and cannot drift from itself.
+#
+# So: every .env in this directory is ignored, and there is no pattern here
+# that can let one through.
 .env
 .env.*
-!.env.example
 
 # Prisma
 prisma/*.db

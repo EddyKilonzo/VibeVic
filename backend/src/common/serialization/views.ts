@@ -238,4 +238,76 @@ export const HealthPublicView = definePublicView<PublicHealth, PublicHealth>(
   }),
 );
 
+/* ── Sessions ──────────────────────────────────────────────────────────── */
+
+/**
+ * What a sign-in is allowed to hand back.
+ *
+ * ── Why the sign-in routes are on the public surface at all ──────────────
+ * They have to be. A route that requires a token in order to obtain a token
+ * is a door that opens from the inside, which is what `@NewsroomOnly` on
+ * `POST /auth/token` used to mean while issuance threw anyway. Marking them
+ * public is therefore a real widening of the unauthenticated surface, and
+ * these views are the price: whatever the service returns is discarded and
+ * this projection is sent instead.
+ *
+ * ── The shape is declared here, not imported ─────────────────────────────
+ * `common/` does not import feature modules — the same rule `TokenVerifier`
+ * follows — so the input is described structurally rather than pulled in
+ * from `AuthService`. The cost is that the two definitions have to agree;
+ * the benefit is that the serialisation layer stays a leaf.
+ *
+ * `role` and `scopes` go to the browser deliberately. The client needs them
+ * to decide what to draw, and neither is a secret: what a WRITER may do is
+ * in `roles.ts` for anyone to read. They are never what the server trusts —
+ * every request is re-checked against the database (`AuthService.verifyJwt`).
+ */
+export interface PublicSession {
+  token: string;
+  expiresAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    scopes: string[];
+  };
+}
+
+export const SessionPublicView = definePublicView<PublicSession, PublicSession>(
+  'SessionPublicView',
+  (session) => ({
+    token: session.token,
+    expiresAt: session.expiresAt,
+    user: {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      role: session.user.role,
+      // Copied, not passed through: the caller's array must not become part
+      // of the response object it handed us.
+      scopes: [...session.user.scopes],
+    },
+  }),
+);
+
+/**
+ * The answer to "email me a way back in", and to spending a reset link.
+ *
+ * One boolean, and it is always `true`. That is not laziness — it is the
+ * whole security property of the endpoint written into its return type. A
+ * reset request must answer identically whether or not the address has an
+ * account, so there is nothing for the response to vary with, and a shape
+ * that *cannot* carry a difference is a stronger guarantee than a handler
+ * that remembers not to.
+ */
+export interface PublicAccepted {
+  accepted: true;
+}
+
+export const AcceptedPublicView = definePublicView<unknown, PublicAccepted>(
+  'AcceptedPublicView',
+  () => ({ accepted: true }),
+);
+
 export { iso };

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Home from "@/views/Home";
-import { PROFILE } from "@/data/content";
+import { PROFILE, quoteOfTheDay } from "@/data/content";
 import { getStories } from "@/data/server";
 import { CHANNEL } from "@/data/videos";
 import { pageMetadata } from "@/lib/seo";
@@ -22,5 +22,18 @@ export const metadata: Metadata = {
 
 export default async function HomeRoute() {
   const stories = await getStories();
-  return <Home stories={stories} />;
+
+  /*
+   * The day is decided here, once, on the server.
+   *
+   * `Home` is a client component, so a `quoteOfTheDay()` call inside it would
+   * run on both sides of hydration and could disagree across midnight. Reading
+   * the clock in the route and passing the answer down means the browser is
+   * handed a decision rather than asked to repeat one.
+   *
+   * The page is revalidated on the same sixty-second window as the archive
+   * reads in `data/server`, so the band turns over within a minute of midnight
+   * in Nairobi rather than being frozen at whatever the last build thought.
+   */
+  return <Home stories={stories} quote={quoteOfTheDay()} />;
 }

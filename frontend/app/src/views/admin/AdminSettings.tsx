@@ -367,21 +367,25 @@ function Access() {
       <Head
         icon={<Lock className="h-[18px] w-[18px]" aria-hidden />}
         title="Access"
-        detail="One shared passphrase, checked at the edge before any admin route is served."
+        detail="Named accounts with a role, checked at the edge before any workspace route is served."
       />
 
       <ul className="mt-6 space-y-4 text-sm">
         <Point
-          title="It is not an account system"
-          detail="No users, no roles, no sessions beyond one signed cookie — there is no backend to hold them. For a one-person newsroom that is the right size of lock, and it is replaced rather than extended when the API lands."
+          title="Two roles, and the split is not seniority"
+          detail="A writer holds every scope including newsroom:confidential, because protecting a source and knowing who they are cannot be separated. A dev holds everything else — enough to reproduce a bug, never enough to expose an identity."
         />
         <Point
-          title="The passphrase is set in the environment"
-          detail="NEWSROOM_PASSPHRASE, read on the server. Changing it signs every open session out at the next request, because the cookie holds a hash of the old one."
+          title="Your own credential travels with each request"
+          detail="The workspace forwards your session token to the API rather than one shared server key. What a page can load is bounded by your role, not by the widest credential on the box."
         />
         <Point
-          title="A missing passphrase locks the door"
-          detail="With nothing configured the workspace stays shut rather than opening. A misconfigured lock reads as closed."
+          title="A missing signing secret locks the door"
+          detail="AUTH_JWT_SECRET, held by this app and the API. With nothing configured the workspace stays shut rather than opening — a misconfigured lock reads as closed."
+        />
+        <Point
+          title="A password reset ends every session"
+          detail="Setting a new password moves the account's revocation clock forward, so every token issued before it stops verifying — on every device, at the next request. That is the answer to “someone else may have this password”; the button below only ends this browser's."
         />
         <Point
           title="The session lasts twelve hours"

@@ -87,7 +87,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
-      <body>
+      {/*
+        Grammarly and its relatives write their own attributes onto <body> —
+        `data-gr-ext-installed`, `data-new-gr-c-s-check-loaded` and a pair of
+        per-connection ids — between the server's HTML arriving and React
+        hydrating it. React compares the two, finds attributes it did not
+        render, and reports a hydration mismatch that names this line.
+
+        The warning is real and the mismatch is not ours: nothing in this tree
+        renders those attributes, and there is no server/client branch here to
+        fix. Suppressing it on this one element is the documented answer, and
+        it is deliberately scoped to <body> alone — the flag does not
+        inherit, so a genuine mismatch anywhere inside still reports.
+      */}
+      <body suppressHydrationWarning>
         <a
           href="#main"
           className="focus-ring sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"

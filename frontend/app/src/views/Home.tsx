@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, GraduationCap, Headphones, MapPin, Youtube } from "lucide-react";
-import { PROFILE, SOCIAL_ACCOUNTS } from "@/data/content";
+import { PROFILE, SOCIAL_ACCOUNTS, type Quote } from "@/data/content";
 import type { StorySummary } from "@/data/types";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { publishedStories, storiesByGenre } from "@/lib/taxonomy";
@@ -18,6 +18,7 @@ import {
   Reveal,
   Stagger,
   StaggerItem,
+  Typewriter,
 } from "@/components/motion";
 import { VideoCard } from "@/components/video/VideoCard";
 import { VideoPoster } from "@/components/video/VideoPoster";
@@ -72,6 +73,7 @@ function reportSpan(index: number): string {
 
 export default function Home({
   stories,
+  quote,
 }: {
   /**
    * Published work, fetched by the route on the server.
@@ -81,6 +83,18 @@ export default function Home({
    * after a round trip that would leave the hero empty on landing.
    */
   stories: StorySummary[];
+  /**
+   * Today's line, chosen by the route.
+   *
+   * A prop for a stricter reason than the stories are. This component is
+   * `"use client"`, so calling `quoteOfTheDay()` in its body would run the
+   * clock twice — once when the server rendered the HTML and again when React
+   * hydrated it — and the two calls can straddle midnight in Nairobi. React
+   * would then find text it did not expect and report a hydration mismatch on
+   * a band that is only ever meant to sit still. Choosing once, on the server,
+   * removes the second call rather than papering over what it produces.
+   */
+  quote: Quote;
 }) {
   const { genres, topBeats, childBeats, inGenre } = useTaxonomy();
   const router = useRouter();
@@ -578,6 +592,44 @@ export default function Home({
           </Stagger>
         </section>
       )}
+
+      {/* ── Quote of the day ─────────────────────────────────────
+          The same band the About page closes on, and deliberately identical:
+          honeycomb card, typed line, attribution in the markup as well as on
+          screen. What differs is only which quotation it holds — one of six,
+          picked by the date in `data/content` and handed down by the route.
+
+          It sits here, after the work and before the subscribe panel, for the
+          reason About puts its own quote where it does: a page that ends on a
+          call to action reads better with a beat of reflection in front of it
+          than with the reporting running straight into a button. */}
+      <section className="container-site mt-28">
+        <Reveal
+          variant="fade-up"
+          className="honeycomb honeycomb-strong overflow-clip rounded-2xl border border-border p-8 sm:p-12"
+        >
+          <p className="rule-label">Quote of the day</p>
+          <figure className="mt-5">
+            <blockquote cite={quote.cite}>
+              {/* Keyed on the text so the animation restarts cleanly if the
+                  band ever re-renders with a different day's line, rather than
+                  typing the new quotation from wherever the old one had got to. */}
+              <Typewriter
+                key={quote.text}
+                text={`“${quote.text}”`}
+                className="font-display max-w-[34ch] text-balance text-2xl font-semibold leading-[1.35] text-primary sm:text-[2rem]"
+              />
+            </blockquote>
+            <figcaption className="mt-5 text-sm text-muted-foreground">
+              — <cite className="not-italic font-semibold">{quote.author}</cite>
+              {/* The source is rendered, not merely stored. An attribution a
+                  reader cannot check is a claim, and this site does not make
+                  claims it will not show the working for. */}
+              <span className="block text-xs">{quote.source}</span>
+            </figcaption>
+          </figure>
+        </Reveal>
+      </section>
 
       {/* ── Channel ──────────────────────────────────────────────── */}
       <section className="container-site mt-28">

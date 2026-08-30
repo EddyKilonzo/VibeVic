@@ -9,10 +9,13 @@ out/
 dist/
 build/
 
-# Environment
+# Environment. Every one of them, at every depth — the repo holds a Nest
+# server and a Next app, each with its own, and none of them is ever
+# committed. No template is checked in either; see backend/.gitignore.
 .env
-.env.local
-.env.*.local
+.env.*
+**/.env
+**/.env.*
 
 # TypeScript / Next
 *.tsbuildinfo
@@ -34,4 +37,3 @@ Thumbs.db
 coverage/
 
 .vercel
-.env*

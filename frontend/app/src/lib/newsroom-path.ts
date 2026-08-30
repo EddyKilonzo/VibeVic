@@ -15,7 +15,7 @@
  * mean something.
  *
  * So: worth doing, worth one variable, and never a reason to relax the lock.
- * The lock is `middleware.ts` and the signed session in `newsroom-token.ts`.
+ * The lock is `middleware.ts` and the signed session in `newsroom-session.ts`.
  *
  * Set `NEXT_PUBLIC_NEWSROOM_BASE=/whatever-you-like` to move it. One path
  * segment, letters, digits and hyphens — the middleware maps exactly one

@@ -111,21 +111,101 @@ enum PortfolioClass {
 
 // ── Accounts ────────────────────────────────────────────────────────────
 
-/// The journalist's account. Deliberately minimal: no credential column yet,
-/// because the auth module does not issue credentials yet and an unused
-/// password field invites someone to write a login against it before the rest
-/// of the story (hashing, rotation, lockout) exists.
+/// What someone is here to do, and therefore what they may see.
+///
+/// Two roles, because there are two jobs and they are genuinely different —
+/// not two rungs of one ladder. The split that matters is
+/// `newsroom:confidential`, and it does not run the way seniority would
+/// suggest:
+///
+///   * WRITER is the journalist. She holds every scope, confidential
+///     included, because protecting a source and knowing who that source is
+///     are the same act. Withholding it from her would not protect anybody;
+///     it would only stop the newsroom from being used for reporting.
+///
+///   * DEV maintains the software. That job needs to read and write records,
+///     reproduce a bug, and check a migration — none of which needs the name
+///     behind a pseudonym. So the account that a laptop, a CI run and a
+///     support session all touch is the one that cannot expose an identity,
+///     and the blast radius of losing it stops short of a source.
+///
+/// This is the same argument `DEV_PRINCIPAL_CONFIDENTIAL` makes about the
+/// dev auth mode, now written into the schema rather than an env var.
+enum Role {
+  WRITER
+  DEV
+}
+
+/// An account that can sign in.
+///
+/// Scopes used to live here as a string array with a note calling it a
+/// scaffold. They are derived from `role` now (see `modules/auth/roles.ts`),
+/// which means a permission cannot be edited onto one row by hand: changing
+/// what a writer may do is a code change that shows up in a diff, not an
+/// UPDATE somebody ran once and nobody reviewed.
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  /// Scope strings as understood by AccessPolicyService, e.g. "newsroom:read".
-  /// A separate table would be tidier; this is a scaffold and the list is short.
-  scopes    String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id    String @id @default(cuid())
+  email String @unique
+  name  String
+  role  Role   @default(WRITER)
+
+  /// argon2id, or null.
+  ///
+  /// Null is a real state and not a defect: an account is created before its
+  /// owner has chosen a password, and until they do it can request a reset
+  /// link but cannot log in. Making the column non-null would have forced a
+  /// placeholder hash, and a placeholder that happens to be guessable is a
+  /// login. Null cannot be guessed.
+  passwordHash String?
+
+  /// Sessions issued before this instant are refused.
+  ///
+  /// The revocation the old auth module said it did not have. A JWT cannot be
+  /// withdrawn once signed, so this moves forward whenever the password
+  /// changes and every token older than it stops verifying — which is what
+  /// "I think someone has my password" has to mean to be worth saying.
+  tokensValidFrom DateTime @default(now())
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  passwordResets PasswordReset[]
 
   @@map("users")
+}
+
+/// One outstanding "email me a way back in".
+///
+/// The token that was emailed is not in this table. What is stored is its
+/// SHA-256, so a dump of this table — a backup, a support query, a log of a
+/// slow statement — cannot be replayed into somebody's account. The row is
+/// the receipt; the secret left in the email and is not kept anywhere else.
+///
+/// SHA-256 rather than argon2id, deliberately: this token is 256 bits of
+/// `randomBytes`, so there is no dictionary to slow down and nothing for a
+/// work factor to buy. Password hashing is slow because passwords are
+/// guessable. This is not.
+model PasswordReset {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  /// Set the moment it is spent. Single use is the whole point: a reset link
+  /// sits in an inbox, and an inbox is not a place a reusable key belongs.
+  usedAt    DateTime?
+
+  /// The forwarded address that asked. Kept so a burst of requests against
+  /// one account is visible afterwards, not to decide anything at the time.
+  requestedFrom String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_resets")
 }
 
 // ── Public content ──────────────────────────────────────────────────────

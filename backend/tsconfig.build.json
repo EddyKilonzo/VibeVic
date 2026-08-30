@@ -1,4 +1,13 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "prisma/seed.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "prisma/seed.ts",
+    "**/*.spec.ts",
+    // Test doubles. Typechecked by tsconfig.json with the rest of src,
+    // and kept out of the build for the same reason the specs are: the
+    // running server has no use for a fake ConfigService.
+    "src/testing/**"
+  ]
 }

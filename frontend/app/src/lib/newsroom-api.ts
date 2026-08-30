@@ -1,5 +1,7 @@
 import "server-only";
 
+import { sessionToken } from "./newsroom-auth";
+
 /**
  * Calling the newsroom API from a Next route handler.
  *
@@ -8,8 +10,21 @@ import "server-only";
  * can act on. Written once here rather than four times, because the copy that
  * gets forgotten is the one without the timeout.
  *
- * This module never decides authorisation. Callers are behind the middleware
- * matcher and check `isUnlocked()` themselves; a helper that both held the
+ * ── Whose credential this sends ──────────────────────────────────────────
+ * The signed-in person's, taken from their own session cookie. It used to be
+ * `NEWSROOM_API_TOKEN`: one shared key, held by the server, identical for
+ * every caller. That key is gone, and its absence is the point of the whole
+ * accounts change — while it existed, the API could not tell a writer from a
+ * developer no matter what roles the database held, because every request
+ * arrived wearing the same badge. Forwarding the caller's token is what makes
+ * `newsroom:confidential` mean anything from a browser.
+ *
+ * It also means this proxy cannot do more than the person using it. A bug in
+ * a route handler is now bounded by the role of whoever triggered it, rather
+ * than by the most privileged credential on the server.
+ *
+ * This module still never decides authorisation. It reads a token and passes
+ * it on; the API decides what that token may do. A helper that both held a
  * credential and judged who may use it would be a helper somebody calls from
  * the wrong place believing they are safe.
  */
@@ -34,20 +49,32 @@ export class NewsroomApiError extends Error {
  * Performs the call and returns the parsed body.
  *
  * Throws `NewsroomApiError` with a status the caller can pass straight back.
- * The distinction that matters: 501 means the credential was never configured,
- * 502 means the API could not be reached or refused us — one is a settings
- * problem and the other is an outage, and they send someone to different files.
+ * Three distinctions worth keeping apart: 401 means nobody is signed in, 501
+ * means the API says a feature is not built, and 502 means the API could not
+ * be reached or refused us. They send whoever reads them to three different
+ * places — the sign-in page, a roadmap, and a status page.
  */
 export async function newsroomFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const token = process.env.NEWSROOM_API_TOKEN;
+  const token = await sessionToken();
   if (!token) {
-    console.error(`[newsroom-api] NEWSROOM_API_TOKEN is not set; ${path} not attempted.`);
+    /*
+     * 401, where this used to answer 501.
+     *
+     * The old code was reporting on the server's configuration, because the
+     * credential was the server's. This one reports on the caller, because
+     * the credential is theirs — and "sign in again" is something the person
+     * reading it can act on, while "a variable is unset" was not.
+     *
+     * Reachable in normal use: the middleware refuses an expired session on
+     * the way in, but a session can expire between the page loading and the
+     * button being pressed, and that lands here.
+     */
     throw new NewsroomApiError(
-      "NEWSROOM_API_TOKEN is not configured, so the newsroom API cannot be reached.",
-      501,
+      "Your newsroom session has ended. Sign in again to continue.",
+      401,
     );
   }
 
@@ -76,10 +103,31 @@ export async function newsroomFetch<T>(
     const detail = await messageFrom(response);
     console.error(`[newsroom-api] ${init.method ?? "GET"} ${path} -> ${response.status}`);
 
-    if (response.status === 401 || response.status === 403) {
+    /*
+     * The API's own 401 and 403 are forwarded rather than flattened to 502.
+     *
+     * They used to become "check NEWSROOM_API_TOKEN", which was fair when the
+     * credential belonged to the server. Now they are two different facts
+     * about the person at the keyboard, and both are actionable:
+     *
+     *   401 — the session ended, or the account's tokens were revoked. Sign
+     *         in again. (The API revokes on password reset, so this is what a
+     *         second device sees after somebody changes their password.)
+     *   403 — signed in, and this role may not do that. A DEV reaching for a
+     *         confidential record is the case that exists on purpose; telling
+     *         them to check a token would send them hunting for a bug that is
+     *         a policy.
+     */
+    if (response.status === 401) {
       throw new NewsroomApiError(
-        "The API rejected the newsroom credential. Check NEWSROOM_API_TOKEN.",
-        502,
+        "Your newsroom session has ended. Sign in again to continue.",
+        401,
+      );
+    }
+    if (response.status === 403) {
+      throw new NewsroomApiError(
+        detail ?? "Your account does not have access to that.",
+        403,
       );
     }
     if (response.status >= 400 && response.status < 500) {

@@ -1,5 +1,5 @@
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText, Output } from "ai";
+import { google } from "@ai-sdk/google";
+import { APICallError, generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { getGenres } from "@/data/server";
 import { isUnlocked } from "@/lib/newsroom-auth";
@@ -30,6 +30,44 @@ import { isUnlocked } from "@/lib/newsroom-auth";
  * `node:crypto` is what the newsroom check runs on.
  */
 export const maxDuration = 60;
+
+/**
+ * The model, named in exactly one place.
+ *
+ * ── Why this is a function and not an inline argument ────────────────────
+ * The provider has now changed twice — the Vercel AI Gateway, then Anthropic
+ * directly, now Google — and each time the edit reached into the middle of the
+ * `generateText` call and its surrounding comment. That is the wrong shape for
+ * something that is a deployment decision rather than a design one: which model
+ * answers has never changed what this route *means*. Putting the choice behind
+ * one function means the next swap is this block and nothing else.
+ *
+ * ── Why Google, and what it costs ────────────────────────────────────────
+ * Gemini's free tier has no card behind it, which is the whole reason: the
+ * Anthropic account this route used to spend against ran out of credit, and a
+ * feature that stops working when a balance hits zero is a feature a one-person
+ * newsroom cannot rely on. The tier is rate-limited rather than capped in
+ * money, so the failure mode is "wait" rather than "top up".
+ *
+ * ── What that trade actually is, said plainly ────────────────────────────
+ * Free-tier prompts may be used to improve Google's products. What this route
+ * sends is an unpublished story idea and the journalist's own note about it,
+ * and that note can describe a source. That is a real editorial cost and it was
+ * weighed rather than missed. Two things follow, and neither is optional:
+ * nothing here should ever be sent a source's identity, and moving to a paid
+ * tier or a local model is a one-line change in this function by design.
+ */
+const DEFAULT_MODEL = "gemini-3.7-flash";
+
+function pitchModel(): { model: LanguageModel; keyName: string } {
+  return {
+    // Overridable because free-tier model availability moves, and the fix for
+    // "this model is not on your tier" should be an env var rather than a
+    // deploy. `gemini-2.5-flash` is the conservative fallback.
+    model: google(process.env.PITCH_MODEL ?? DEFAULT_MODEL),
+    keyName: "GOOGLE_GENERATIVE_AI_API_KEY",
+  };
+}
 
 /**
  * The pitch schema, built per request around the beats that actually exist.
@@ -84,13 +122,13 @@ export async function POST(request: Request) {
   }
 
   // Checked here rather than left to the SDK, which fails at call time with a
-  // provider error a journalist cannot act on. This says which name to set.
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // provider error a journalist cannot act on. This says which name to set,
+  // and asks the model function rather than hardcoding the variable — so a
+  // provider swap cannot leave this branch naming the wrong key.
+  const { model, keyName } = pitchModel();
+  if (!process.env[keyName]) {
     return Response.json(
-      {
-        error:
-          "No Anthropic key is configured. Set ANTHROPIC_API_KEY and restart, and this comes alive.",
-      },
+      { error: `No model key is configured. Set ${keyName} and restart, and this comes alive.` },
       { status: 503 },
     );
   }
@@ -126,16 +164,7 @@ export async function POST(request: Request) {
 
   try {
     const { output } = await generateText({
-      /**
-       * The Anthropic provider directly, not a bare "anthropic/…" string.
-       *
-       * A plain provider string resolves through the Vercel AI Gateway, which
-       * authenticates with AI_GATEWAY_API_KEY or a Vercel OIDC token — so it
-       * never reads ANTHROPIC_API_KEY, and this route answered 503 for anyone
-       * holding only an Anthropic key. Naming the provider spends the key that
-       * is actually configured.
-       */
-      model: anthropic("claude-sonnet-5"),
+      model,
       system: SYSTEM,
       output: Output.object({ schema: Pitch }),
       prompt: [
@@ -151,12 +180,84 @@ export async function POST(request: Request) {
 
     return Response.json(output);
   } catch (cause) {
-    // The message is for a journalist, not a stack trace reader. The real one
-    // goes to the server log, where it belongs.
+    // The real error goes to the server log, where it belongs. What comes back
+    // is a sentence for a journalist — but which sentence depends on the
+    // failure, and that is the whole point of what follows.
     console.error("[pitch]", cause);
-    return Response.json(
-      { error: "The model could not be reached. Nothing was saved; try again." },
-      { status: 502 },
-    );
+    return Response.json({ error: explain(cause) }, { status: statusFor(cause) });
   }
+}
+
+/**
+ * Telling a permanent failure from a temporary one.
+ *
+ * ── Why this is not one message ──────────────────────────────────────────
+ * Every failure here used to come back as "The model could not be reached.
+ * Nothing was saved; try again." — which is true of a dropped connection and
+ * false of nearly everything else. A key that was never valid will not become
+ * valid on the second press, and a journalist told to try again would press it
+ * until they gave up. So the cases that actually happen are separated, on the
+ * same reasoning `newsroom-api.ts` uses for 501 against 502: one is a settings
+ * problem, one is an outage, and they send whoever reads them to different
+ * places.
+ *
+ * ── Written for two providers, deliberately ──────────────────────────────
+ * The checks below match on both status and message because the two providers
+ * this route has run on report the same conditions differently — Anthropic
+ * answers 400 for an exhausted balance, Gemini answers 429 for an exhausted
+ * quota. Matching only what the current provider does would mean this file
+ * silently degrades to a generic 502 the next time `pitchModel` changes, which
+ * is precisely when a clear error matters most.
+ */
+function looksLike(error: APICallError, pattern: RegExp): boolean {
+  return pattern.test(error.responseBody ?? error.message);
+}
+
+/** Out of money (a paid tier) or out of allowance (a free one). */
+function exhausted(error: APICallError): boolean {
+  return (
+    looksLike(error, /credit balance|billing|quota|insufficient|RESOURCE_EXHAUSTED/i) ||
+    error.statusCode === 402
+  );
+}
+
+/** The key is missing, malformed, revoked, or not entitled to this model. */
+function badKey(error: APICallError): boolean {
+  return (
+    error.statusCode === 401 ||
+    error.statusCode === 403 ||
+    looksLike(error, /API_KEY_INVALID|api key not valid|PERMISSION_DENIED|unauthenticated/i)
+  );
+}
+
+function explain(cause: unknown): string {
+  if (APICallError.isInstance(cause)) {
+    if (badKey(cause)) {
+      return "The model provider refused the API key. Check GOOGLE_GENERATIVE_AI_API_KEY — retrying with the same key will not work.";
+    }
+    if (exhausted(cause)) {
+      // Phrased for the free tier, which is what this runs on: the daily cap
+      // resets, so "come back later" is true here in a way it was not when the
+      // route was spending a balance that only a payment would refill.
+      return "The free model allowance is used up for now. It resets — try again later, or set PITCH_MODEL to a lighter model.";
+    }
+    if (cause.statusCode === 429) {
+      return "The model is rate-limited right now. Give it a minute and try again.";
+    }
+  }
+  return "The model could not be reached. Nothing was saved; try again.";
+}
+
+/**
+ * 503 for "this desk is not usable until someone changes a setting", 429 for
+ * "not right now, but soon", 502 for a genuine outage. The route already
+ * answers 503 for a missing key and a missing beat list, so an unusable desk
+ * answering 503 is the shape the caller has been handling all along.
+ */
+function statusFor(cause: unknown): number {
+  if (APICallError.isInstance(cause)) {
+    if (badKey(cause)) return 503;
+    if (exhausted(cause) || cause.statusCode === 429) return 429;
+  }
+  return 502;
 }

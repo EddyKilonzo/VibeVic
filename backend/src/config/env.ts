@@ -56,6 +56,48 @@ const schema = z
       .optional()
       .default('false')
       .transform((value) => value === 'true'),
+
+    /**
+     * How long a session lasts.
+     *
+     * Twelve hours by default, matching the frontend cookie: one working day,
+     * not forever. There is no refresh token, so this is the whole answer to
+     * "how long until I sign in again" — and a longer window is not free,
+     * because a JWT that has been signed cannot be called back. Revocation
+     * exists (`User.tokensValidFrom`), but it is a blunt instrument that ends
+     * every session at once; the ordinary limit on a stolen token is this
+     * number.
+     */
+    AUTH_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().max(1440).default(720),
+
+    /**
+     * Where the newsroom's browser side lives, used to build the reset link.
+     *
+     * Configuration rather than the request's own Host header, and that is the
+     * point. Reading the host off an unauthenticated request would let anyone
+     * who can reach this endpoint choose the domain in an email this server
+     * sends — the classic host-header password-reset poisoning, where the
+     * victim clicks a real message and hands their token to somebody else's
+     * site. A value from the environment cannot be typed by a caller.
+     */
+    APP_URL: z.string().url().optional(),
+
+    /* ── Email ──────────────────────────────────────────────────────────
+     * Optional as a group. With none of it set the server runs and refuses
+     * password resets with a 503 that names what is missing, which is the
+     * honest answer for a deployment that has not been given a way to send.
+     */
+    RESEND_API_KEY: z.string().optional(),
+    /** RFC 5322, so `VibeVic <newsroom@example.com>` is valid and expected. */
+    MAIL_FROM: z.string().optional(),
+    MAIL_REPLY_TO: z.string().email().optional(),
+
+    /**
+     * How long a reset link stays good. Thirty minutes: long enough to walk
+     * to another device and find the email, short enough that a link sitting
+     * in a mailbox someone else later reads is usually already dead.
+     */
+    PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().max(240).default(30),
   })
   .superRefine((env, ctx) => {
     if (env.AUTH_MODE === 'jwt' && (env.AUTH_JWT_SECRET ?? '').length < 32) {
@@ -84,6 +126,35 @@ const schema = z
         path: ['DEV_PRINCIPAL_TOKEN'],
         message:
           'AUTH_MODE=dev requires DEV_PRINCIPAL_TOKEN of at least 16 characters. Generate your own; there is no default.',
+      });
+    }
+
+    /*
+     * A key with no from-address is a half-configured mailer, and the half
+     * that is missing is the one Resend rejects at send time — so the failure
+     * would arrive as a 503 during somebody's password reset rather than at
+     * boot, when there is nobody to read it.
+     */
+    if (env.RESEND_API_KEY && !env.MAIL_FROM) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['MAIL_FROM'],
+        message:
+          'RESEND_API_KEY is set but MAIL_FROM is not. Set the address mail is sent from, e.g. "VibeVic <newsroom@example.com>".',
+      });
+    }
+
+    /*
+     * Likewise a mailer with nowhere to point. A reset email whose link is
+     * built from a missing APP_URL is a message that cannot be acted on, and
+     * discovering that requires a person to have already lost their password.
+     */
+    if (env.RESEND_API_KEY && !env.APP_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['APP_URL'],
+        message:
+          'RESEND_API_KEY is set but APP_URL is not. Reset links have no origin to point at.',
       });
     }
   });

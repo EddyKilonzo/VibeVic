@@ -1,5 +1,6 @@
 import "server-only";
 
+import { sessionToken } from "@/lib/newsroom-auth";
 import { toStory, type AdminStoryRow } from "@/lib/story-records";
 import type { Story } from "./types";
 
@@ -7,14 +8,24 @@ import type { Story } from "./types";
  * Server-side reads of the newsroom surface.
  *
  * Split from `data/server.ts` because these carry a credential and those do
- * not. Everything in this file sends `NEWSROOM_API_TOKEN`, so everything in it
- * can see drafts — and keeping that in a separate module makes it obvious in
- * an import line when a page has reached for the privileged reader.
+ * not. Everything in this file sends the reader's own session token, so
+ * everything in it can see drafts — and keeping that in a separate module
+ * makes it obvious in an import line when a page has reached for the
+ * privileged reader.
  *
- * Callers must already be behind the newsroom gate. Every route that uses this
- * lives under `/admin`, which the middleware matcher covers; this file does not
- * re-check, because a data module that decides authorisation is a data module
- * somebody will call from the wrong place and believe they are safe.
+ * ── The credential used to belong to the server ──────────────────────────
+ * It was `NEWSROOM_API_TOKEN`, one shared key with the widest role on the
+ * system, sent for whoever happened to be looking at the page. It is the
+ * caller's own token now, which means a page rendered for a DEV account is
+ * subject to what a DEV may read — the API filters confidential records out
+ * of the query rather than out of the markup, so the difference is real
+ * rather than cosmetic.
+ *
+ * Callers must already be behind the newsroom gate. Every route that uses
+ * this lives under the workspace mount, which the middleware covers; this
+ * file does not re-check, because a data module that decides authorisation is
+ * a data module somebody will call from the wrong place and believe they are
+ * safe.
  */
 
 const BASE = (
@@ -39,14 +50,23 @@ const BASE = (
  */
 interface AdminRead<T> {
   value: T | null;
-  /** False when the request failed or the credential is missing — not for a 404. */
+  /** False when the request failed or there is no session — not for a 404. */
   reachable: boolean;
 }
 
 async function readAdmin<T>(path: string): Promise<AdminRead<T>> {
-  const token = process.env.NEWSROOM_API_TOKEN;
+  const token = await sessionToken();
   if (!token) {
-    console.error(`[data/server-admin] NEWSROOM_API_TOKEN is not set; ${path} not attempted.`);
+    /*
+     * No session, so `reachable: false` — and that is the correct reading
+     * rather than a convenient one. The caller's contract is "do not create a
+     * record when you cannot tell whether one exists", and an unauthenticated
+     * read tells you exactly as little as a failed one does.
+     *
+     * In practice the middleware has already redirected anybody in this state
+     * to the sign-in page; this is the second lock reporting honestly.
+     */
+    console.error(`[data/server-admin] no newsroom session; ${path} not attempted.`);
     return { value: null, reachable: false };
   }
 

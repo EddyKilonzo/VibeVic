@@ -1362,6 +1362,36 @@
   }
 
   /* Scroll indicator line pulse */
+  /*
+   * The light behind a pane of glass, drifting.
+   *
+   * Frost is only convincing while there is something to look at through it —
+   * a blur over a flat colour is just a lighter flat colour. These two blobs
+   * are what the quote band's pane has to work on, and moving them slowly is
+   * what stops the effect reading as a static screenshot of glass.
+   *
+   * Forty seconds, and no more than a tenth of the panel's width of travel:
+   * fast enough to notice if you rest on the section, slow enough that it is
+   * never the thing you are looking at while reading a sentence.
+   */
+  @keyframes glass-drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(6%, -4%, 0) scale(1.12); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+  .glass-drift {
+    animation: glass-drift 40s var(--ease, ease-in-out) infinite;
+    will-change: transform;
+  }
+  .glass-drift-slow {
+    animation: glass-drift 56s var(--ease, ease-in-out) infinite reverse;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glass-drift,
+    .glass-drift-slow { animation: none; }
+  }
+
   @keyframes scrollpulse {
     0% { transform: scaleY(0); transform-origin: top; }
     45% { transform: scaleY(1); transform-origin: top; }

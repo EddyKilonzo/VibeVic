@@ -82,14 +82,35 @@ const schema = z
      */
     APP_URL: z.string().url().optional(),
 
-    /* ── Email ──────────────────────────────────────────────────────────
+    /* ── Email: SMTP ────────────────────────────────────────────────────
      * Optional as a group. With none of it set the server runs and refuses
      * password resets with a 503 that names what is missing, which is the
      * honest answer for a deployment that has not been given a way to send.
+     *
+     * SMTP rather than a provider SDK. This was Resend's HTTP API and is now
+     * Brevo's relay, and the only code that changed is a transport — which is
+     * the argument for the protocol over the SDK. A provider package puts a
+     * vendor's name in the import list of a service whose job is "send this
+     * text to this address", and moving between them means a rewrite rather
+     * than four variables. Brevo, Resend, Postmark, SES and a self-hosted
+     * Postfix all speak this.
      */
-    RESEND_API_KEY: z.string().optional(),
-    /** RFC 5322, so `VibeVic <newsroom@example.com>` is valid and expected. */
-    MAIL_FROM: z.string().optional(),
+    SMTP_HOST: z.string().optional(),
+    // Brevo's relay answers on 587 and 2525; 465 is implicit TLS. The
+    // transport reads the number to decide which, so it is not a free-form
+    // detail — see `MailService`.
+    SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    /** RFC 5322, so `VicUnfiltered <vic@example.com>` is valid and expected. */
+    SMTP_FROM: z.string().optional(),
+    /**
+     * The bare address mail is sent from, when it differs from the display
+     * form above. Brevo calls this the sender and verifies it; some relays
+     * reject an envelope sender that is not the verified one even when the
+     * `From` header renders a name. Optional, and only used when set.
+     */
+    SENDER_EMAIL: z.string().email().optional(),
     MAIL_REPLY_TO: z.string().email().optional(),
 
     /**
@@ -130,32 +151,43 @@ const schema = z
     }
 
     /*
-     * A key with no from-address is a half-configured mailer, and the half
-     * that is missing is the one Resend rejects at send time — so the failure
-     * would arrive as a 503 during somebody's password reset rather than at
-     * boot, when there is nobody to read it.
+     * A half-configured mailer fails at send time, which means the failure
+     * arrives as a 503 during somebody's password reset rather than at boot,
+     * when there is a person watching a log who can fix it.
+     *
+     * "Configured at all" is a host. Once there is one, the rest is required:
+     * a relay with no credentials is an open relay's worth of wishful
+     * thinking, and one with no from-address is rejected by every provider.
      */
-    if (env.RESEND_API_KEY && !env.MAIL_FROM) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['MAIL_FROM'],
-        message:
-          'RESEND_API_KEY is set but MAIL_FROM is not. Set the address mail is sent from, e.g. "VibeVic <newsroom@example.com>".',
-      });
-    }
+    const mailStarted = Boolean(env.SMTP_HOST);
+    if (mailStarted) {
+      for (const [key, value] of [
+        ['SMTP_USER', env.SMTP_USER],
+        ['SMTP_PASS', env.SMTP_PASS],
+        ['SMTP_FROM', env.SMTP_FROM],
+      ] as const) {
+        if (!value) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `SMTP_HOST is set but ${key} is not. A half-configured mailer fails at send time, in front of somebody who has lost their password.`,
+          });
+        }
+      }
 
-    /*
-     * Likewise a mailer with nowhere to point. A reset email whose link is
-     * built from a missing APP_URL is a message that cannot be acted on, and
-     * discovering that requires a person to have already lost their password.
-     */
-    if (env.RESEND_API_KEY && !env.APP_URL) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['APP_URL'],
-        message:
-          'RESEND_API_KEY is set but APP_URL is not. Reset links have no origin to point at.',
-      });
+      /*
+       * A mailer with nowhere to point. A reset email whose link is built
+       * from a missing APP_URL is a message that cannot be acted on, and
+       * discovering that requires a person to have already lost their
+       * password.
+       */
+      if (!env.APP_URL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['APP_URL'],
+          message: 'SMTP_HOST is set but APP_URL is not. Reset links have no origin to point at.',
+        });
+      }
     }
   });
 

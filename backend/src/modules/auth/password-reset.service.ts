@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env';
 import { MailService } from '../mail/mail.service';
+import { passwordChangedEmail } from '../mail/templates/password-changed';
 import { passwordResetEmail } from '../mail/templates/password-reset';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
@@ -32,11 +33,15 @@ import { PasswordService } from './password.service';
  *    person's existing token alive for another twelve hours would answer the
  *    wrong half of the problem.
  *
+ * 5. Changing a password tells the account it happened. That message is the
+ *    only one in the flow that reaches somebody who did not ask for
+ *    anything, and it exists for the case where they did not: without it the
+ *    first sign of a stolen account is a password that stopped working,
+ *    which reads as a bug rather than as a theft.
+ *
  * ── What it still does not do ────────────────────────────────────────────
- * There is no notification to the account when the password actually
- * changes, which is the other email worth sending and is not written yet.
- * The throttle below is per instance and per address, with the same honest
- * limits as the one in AuthService.
+ * Nothing outstanding. The throttle moved to `RateLimitService` and Postgres,
+ * so it is no longer per instance.
  */
 @Injectable()
 export class PasswordResetService {
@@ -66,7 +71,7 @@ export class PasswordResetService {
       // deploy log rather than the form. It says nothing about accounts, and
       // it is raised before any lookup so it cannot depend on one.
       throw new ServiceUnavailableException(
-        'This newsroom cannot send email yet, so a reset link cannot be issued. Set RESEND_API_KEY, MAIL_FROM and APP_URL.',
+        'This newsroom cannot send email yet, so a reset link cannot be issued. Set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM and APP_URL.',
       );
     }
 
@@ -160,7 +165,16 @@ export class PasswordResetService {
   async reset(token: string, password: string): Promise<void> {
     const record = await this.prisma.passwordReset.findUnique({
       where: { tokenHash: hashToken(token) },
-      select: { id: true, userId: true, expiresAt: true, usedAt: true },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        usedAt: true,
+        // For the notification below. Joined here rather than fetched after
+        // the transaction, so the address is the one that existed when the
+        // link was spent.
+        user: { select: { email: true, name: true } },
+      },
     });
 
     if (!record) {
@@ -206,6 +220,48 @@ export class PasswordResetService {
     ]);
 
     this.logger.log(`Password reset completed for user ${record.userId}; sessions revoked.`);
+
+    /*
+     * Tell the account it happened — after the commit, and never in a way
+     * that can undo it.
+     *
+     * The password has changed by this point. If the relay is down, the right
+     * outcome is a changed password and a logged failure, not a 500 that
+     * tells the person their reset did not work when it did — they would ask
+     * for another link, and the one they just spent is gone.
+     *
+     * Not awaited into the response for the same reason it is not in the
+     * transaction: the person is watching a redirect to the sign-in page, and
+     * holding that on an SMTP round trip to a third party is latency spent on
+     * something they are not waiting for.
+     */
+    void this.notifyPasswordChanged(record.user.email, record.user.name, now);
+  }
+
+  /**
+   * The "your password was changed" message.
+   *
+   * Swallows everything. Every failure here is a message that did not arrive
+   * about a change that did, and there is no caller who can act on the
+   * difference — so it is logged where an operator will see it and goes no
+   * further.
+   */
+  private async notifyPasswordChanged(email: string, name: string, at: Date): Promise<void> {
+    try {
+      await this.mail.send(
+        passwordChangedEmail({
+          to: email,
+          name,
+          // Named zone rather than the server's local time, which is a
+          // container's idea of where it is. "18:42" means nothing to a
+          // reader deciding whether they recognise the moment.
+          at: `${at.toISOString().replace('T', ' ').slice(0, 16)} UTC`,
+          resetUrl: `${this.appOrigin()}/newsroom-access/forgot`,
+        }),
+      );
+    } catch (cause) {
+      this.logger.error(`Could not send the password-changed notice to ${email}.`, cause);
+    }
   }
 
   /**
@@ -217,8 +273,12 @@ export class PasswordResetService {
    * the day someone would otherwise find out it needed escaping.
    */
   private linkTo(token: string): string {
-    const base = (this.config.get('APP_URL', { infer: true }) ?? '').replace(/\/+$/, '');
-    return `${base}/newsroom-access/reset?token=${encodeURIComponent(token)}`;
+    return `${this.appOrigin()}/newsroom-access/reset?token=${encodeURIComponent(token)}`;
+  }
+
+  /** APP_URL without its trailing slash, in the one place that decides that. */
+  private appOrigin(): string {
+    return (this.config.get('APP_URL', { infer: true }) ?? '').replace(/\/+$/, '');
   }
 
   /* ── Request throttling ─────────────────────────────────────────────────

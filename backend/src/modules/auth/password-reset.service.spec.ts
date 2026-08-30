@@ -42,6 +42,8 @@ interface ResetRow {
   userId: string;
   expiresAt: Date;
   usedAt: Date | null;
+  /** Joined in the lookup, so the notice goes to the address as it was then. */
+  user: { email: string; name: string };
 }
 
 function build(options: {
@@ -310,6 +312,7 @@ describe('PasswordResetService.reset', () => {
     userId: 'user_1',
     expiresAt: new Date(NOW + 10 * 60_000),
     usedAt: null,
+    user: { email: 'vic@example.com', name: 'Victor' },
   };
 
   it('looks the link up by its hash, never by the token itself', async () => {
@@ -396,4 +399,67 @@ describe('PasswordResetService.reset', () => {
       clock.restore();
     }
   });
+
+  it('tells the account its password changed', async () => {
+    const clock = withClock(NOW);
+    try {
+      const { service, send } = build({ reset: live });
+
+      await service.reset('token', 'a decent long passphrase');
+      await flush();
+
+      const message = sentMessage(send);
+      expect(message.to).toBe('vic@example.com');
+      expect(message.subject).toMatch(/password was changed/i);
+      // It says the sessions are gone, because they are — that is the fact a
+      // reader needs to make sense of being signed out everywhere.
+      expect(message.text).toMatch(/ended/i);
+    } finally {
+      clock.restore();
+    }
+  });
+
+  it('puts no credential in that notice', async () => {
+    const clock = withClock(NOW);
+    try {
+      const { service, send } = build({ reset: live });
+
+      await service.reset('a'.repeat(64), 'a decent long passphrase');
+      await flush();
+
+      const message = sentMessage(send);
+      // The spent token, the new password, and any link that would act on the
+      // account. This message sits in a mailbox for years; it has to be inert.
+      expect(message.text).not.toContain('a'.repeat(64));
+      expect(message.text).not.toContain('a decent long passphrase');
+      expect(message.text).not.toContain('/newsroom-access/reset?token=');
+      // The way back is a page you ask at, not a link that already works.
+      expect(message.text).toContain('/newsroom-access/forgot');
+    } finally {
+      clock.restore();
+    }
+  });
+
+  it('keeps the new password when the notice cannot be sent', async () => {
+    const clock = withClock(NOW);
+    try {
+      const { service, send, prisma } = build({ reset: live });
+      send.mockRejectedValue(new Error('relay is down'));
+
+      // The password has already changed by the time this is attempted. A
+      // throw here would tell somebody their reset failed when it did not,
+      // and send them back for a second link with the first one spent.
+      await expect(service.reset('token', 'a decent long passphrase')).resolves.toBeUndefined();
+      await flush();
+
+      expect(prisma.user.update).toHaveBeenCalled();
+    } finally {
+      clock.restore();
+    }
+  });
 });
+
+/** Lets the un-awaited notification settle before a test looks for it. */
+function flush(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}

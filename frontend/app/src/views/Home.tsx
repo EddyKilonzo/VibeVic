@@ -604,11 +604,49 @@ export default function Home({
           call to action reads better with a beat of reflection in front of it
           than with the reporting running straight into a button. */}
       <section className="container-site mt-28">
-        <Reveal
-          variant="fade-up"
-          className="honeycomb honeycomb-strong overflow-clip rounded-2xl border border-border p-8 sm:p-12"
-        >
-          <p className="rule-label">Quote of the day</p>
+        <Reveal variant="fade-up" className="relative overflow-clip rounded-2xl">
+          {/* What the pane has to blur.
+
+              A frosted panel over a flat background is just a paler flat
+              background — the effect is entirely in what shows through, so
+              the lattice goes *behind* the glass rather than on it, at the
+              intense weight because a blur eats contrast, and two soft
+              washes of brand colour sit behind that to give the frost
+              something with hue in it to scatter.
+
+              They drift, slowly and in opposite directions. That is the only
+              motion in the band, it is under a tenth of the panel's width,
+              and it stops entirely under prefers-reduced-motion — the point
+              is that the section looks alive when you rest on it, not that
+              anything moves while a sentence is being read. */}
+          {/* A coloured ground first. The blobs alone were not enough: a 28px
+              blur with a brightness lift over a near-white page averages out
+              to a near-white rectangle, and the panel read as a pale box
+              rather than as glass. Frost needs saturated colour underneath it
+              before it has anything to scatter. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--sky)/0.55),hsl(var(--accent)/0.28)_45%,hsl(var(--ink)/0.16))]"
+          />
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-clip">
+            <div className="glass-drift absolute -left-[15%] -top-[60%] h-[190%] w-[70%] rounded-full bg-[radial-gradient(circle,hsl(var(--accent)/0.70),transparent_68%)]" />
+            <div className="glass-drift-slow absolute -bottom-[70%] -right-[10%] h-[190%] w-[65%] rounded-full bg-[radial-gradient(circle,hsl(var(--ink)/0.50),transparent_68%)]" />
+          </div>
+          {/* The lattice last of the three, so it reads as etched into the
+              colour rather than laid over the page. */}
+          <div aria-hidden className="honeycomb honeycomb-intense absolute inset-0" />
+
+          {/* The pane itself. `frost` draws the lit top-left rim and the
+              shadowed bottom-right one; `glass-strong` is the blur, the
+              saturation lift and the brightness lift that keep it reading as
+              frost rather than as a translucent grey. */}
+          <div className="frost glass relative rounded-2xl p-8 sm:p-12">
+          {/* Both small lines are overridden off `muted-foreground`. That
+              token is chosen against the page's near-white ground, and this
+              panel is not one — grey at that lightness over a saturated blue
+              lands around 3:1, which is under the floor for text this size.
+              The quotation itself was always dark enough; these two were not. */}
+          <p className="rule-label text-primary/80">Quote of the day</p>
           <figure className="mt-5">
             <blockquote cite={quote.cite}>
               {/* Keyed on the text so the animation restarts cleanly if the
@@ -620,14 +658,15 @@ export default function Home({
                 className="font-display max-w-[34ch] text-balance text-2xl font-semibold leading-[1.35] text-primary sm:text-[2rem]"
               />
             </blockquote>
-            <figcaption className="mt-5 text-sm text-muted-foreground">
+            <figcaption className="mt-5 text-sm text-primary/85">
               — <cite className="not-italic font-semibold">{quote.author}</cite>
               {/* The source is rendered, not merely stored. An attribution a
                   reader cannot check is a claim, and this site does not make
                   claims it will not show the working for. */}
-              <span className="block text-xs">{quote.source}</span>
+              <span className="block text-xs text-primary/70">{quote.source}</span>
             </figcaption>
           </figure>
+          </div>
         </Reveal>
       </section>
 

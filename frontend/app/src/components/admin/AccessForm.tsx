@@ -27,6 +27,15 @@ import { AccessCard, Field, Unconfigured } from "./AccessCard";
  * submission — without JavaScript the form still posts and the page still
  * comes back with the same sentence on it.
  *
+ * ── Why the door no longer explains the roles ────────────────────────────
+ * There was a footnote here setting out the WRITER/DEV split and naming what
+ * a writer can see that a dev cannot. It was accurate and it was in the wrong
+ * place twice over. Nobody reading a sign-in form needs the authorisation
+ * model — they need to sign in — and the people who can reach this page
+ * include everybody on the internet who finds it, so it published which role
+ * to go after and what that role is worth. What each account may do is now
+ * shown to the account, in the workspace, once it has proved who it is.
+ *
  * ── Why every failure says the same thing ────────────────────────────────
  * The message comes from the API, which answers "that email and password were
  * not recognised" to a wrong password, an unknown address, an account with no
@@ -51,15 +60,6 @@ export function AccessForm({
       icon={<Lock className="h-5 w-5" aria-hidden />}
       title="Newsroom access"
       intro="The workspace holds drafts, sources and notes that are not published. It is not part of the public site."
-      footnote={
-        <>
-          Two roles, and they are not two rungs of a ladder. A{" "}
-          <span className="font-semibold text-foreground">writer</span> can read the identity
-          behind a pseudonym because protecting a source and knowing who they are cannot be
-          separated. A <span className="font-semibold text-foreground">dev</span> cannot, and
-          does not need to in order to fix anything.
-        </>
-      }
     >
       {unconfigured ? (
         <Unconfigured>

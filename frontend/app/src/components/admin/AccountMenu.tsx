@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AlertTriangle, LogOut, ShieldCheck, Wrench } from "lucide-react";
+import { AlertTriangle, Check, LogOut, Minus, ShieldCheck, Wrench } from "lucide-react";
 import type { NewsroomRole } from "@/lib/newsroom-session";
+import { capabilitiesFor } from "@/lib/role-capabilities";
 import { signOut } from "@/app/admin/settings/actions";
 import { Button } from "@/components/ui/Button";
 import { forget } from "@/data/newsroom/store";
@@ -47,12 +48,6 @@ export interface SessionSummary {
 const ROLE_LABEL: Record<NewsroomRole, string> = {
   WRITER: "Writer",
   DEV: "Dev",
-};
-
-const ROLE_NOTE: Record<NewsroomRole, string> = {
-  WRITER:
-    "Every scope, confidential included — protecting a source and knowing who they are cannot be separated.",
-  DEV: "Everything except the identity behind a pseudonym. Enough to fix anything, never enough to expose anyone.",
 };
 
 export function AccountMenu({ session }: { session: SessionSummary }) {
@@ -128,9 +123,7 @@ export function AccountMenu({ session }: { session: SessionSummary }) {
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">{ROLE_LABEL[session.role]}</p>
 
-          <p className="mt-3 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
-            {ROLE_NOTE[session.role]}
-          </p>
+          <Capabilities role={session.role} />
 
           <SessionClock expiresAt={session.expiresAt} remaining={remaining} />
 
@@ -148,6 +141,54 @@ export function AccountMenu({ session }: { session: SessionSummary }) {
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What this account can do, and the one thing it may not.
+ *
+ * ── Why the withheld row is shown rather than hidden ─────────────────────
+ * A list of only what you can do leaves you to discover the boundary by
+ * hitting it — which for a DEV means opening a source record, seeing a
+ * pseudonym, and not knowing whether that is the whole truth or a permission
+ * they do not have. Naming it, with the reason, turns a confusing absence
+ * into a stated rule. It is also not a secret from the person holding the
+ * account: the API enforces it whatever this panel says.
+ *
+ * The reason travels with the withheld line only. Four paragraphs of
+ * justification under things you can already do is a panel nobody reads
+ * twice.
+ */
+function Capabilities({ role }: { role: NewsroomRole }) {
+  const { allowed, withheld } = capabilitiesFor(role);
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="rule-label text-[10px]">What you can do</p>
+      <ul className="mt-2 space-y-1.5">
+        {allowed.map((capability) => (
+          <li key={capability.label} className="flex gap-2">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+            <span className="text-[11px] leading-relaxed" title={capability.detail}>
+              {capability.label}
+            </span>
+          </li>
+        ))}
+        {withheld.map((capability) => (
+          <li key={capability.label} className="flex gap-2">
+            <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="text-[11px] leading-relaxed text-muted-foreground">
+              <span className="line-through decoration-muted-foreground/40">
+                {capability.label}
+              </span>
+              <span className="mt-0.5 block text-[10px] leading-relaxed">
+                {capability.detail}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

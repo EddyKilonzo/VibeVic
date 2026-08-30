@@ -7,6 +7,8 @@ import { VideoPoster } from "./VideoPoster";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/motion";
+import { BookmarkButton } from "@/components/story/BookmarkButton";
+import { ShareButton } from "@/components/story/ShareButton";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -37,7 +39,7 @@ export function VideoCard({
   const isFeature = variant === "feature";
 
   return (
-    <Reveal variant="fade-up" as="article" className={cn("group h-full", className)}>
+    <Reveal variant="fade-up" as="article" className={cn("group relative h-full", className)}>
       {/* The same shape as the story card, deliberately: one surface, the
           media running to its own edges, the words on a padded sheet with a
           hairline floor. Video and writing are one body of work and should
@@ -131,6 +133,17 @@ export function VideoCard({
           </div>
         </div>
       </Link>
+
+      {/* The same corner cluster as the story card, for the same reasons —
+          outside the <a> so neither press navigates, revealed on hover where
+          there is a pointer, permanently visible below `md` where there is
+          not. Reports were the half of the work you could not share without
+          opening first, which is the wrong way round: a listing is where
+          somebody decides which one to send to a friend. */}
+      <div className="absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-normal focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
+        <BookmarkButton itemId={`video:${video.id}`} title={video.title} variant="floating" />
+        <ShareButton title={video.title} path={`/videos/${video.id}`} variant="floating" />
+      </div>
     </Reveal>
   );
 }

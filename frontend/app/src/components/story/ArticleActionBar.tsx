@@ -10,6 +10,7 @@ import { formatDuration } from "@/lib/format";
 import { useVoice } from "@/context/VoiceProvider";
 import { BookmarkButton } from "./BookmarkButton";
 import { ShareSheet } from "./ShareSheet";
+import { useShare } from "@/hooks/useShare";
 import { VoicePlayer } from "@/components/voice/VoicePlayer";
 import { ChapterRail } from "@/components/voice/ChapterRail";
 
@@ -29,37 +30,21 @@ export function ArticleActionBar({ story, className }: { story: Story; className
   const reduced = useReducedMotion();
   const [mode, setMode] = useState<"read" | "listen">("read");
   const [chaptersOpen, setChaptersOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-
-  /**
-   * Prefer the platform's own share sheet where it exists.
-   *
-   * On a phone, `navigator.share` opens the list of apps the reader actually
-   * uses — including the ones this product has never heard of — and it is the
-   * only route to a native "Save to Files" or an AirDrop. Our own sheet is the
-   * fallback for desktop browsers, which mostly do not implement it.
-   *
-   * A dismissed native sheet rejects with AbortError; that is the reader
-   * saying no, not a failure, so it opens nothing in its place.
+  /*
+   * The platform-first logic used to be written out here, and a near-copy of
+   * it did not exist on the video page — which is how sharing a report and
+   * sharing an article came to behave differently on the same phone. It is
+   * `useShare` now, and the cards use it too.
    */
-  const share = async () => {
-    const path = `/stories/${story.slug}`;
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          title: story.title,
-          text: story.dek,
-          url: `${window.location.origin}${path}`,
-        });
-        return;
-      } catch (error) {
-        if ((error as DOMException)?.name === "AbortError") return;
-        // Anything else — a permissions policy block, an unsupported payload —
-        // falls through to the sheet we control.
-      }
-    }
-    setShareOpen(true);
-  };
+  const {
+    share,
+    sheetOpen: shareOpen,
+    closeSheet: closeShare,
+  } = useShare({
+    title: story.title,
+    text: story.dek,
+    path: `/stories/${story.slug}`,
+  });
 
   const listening = state === "playing" || state === "paused";
   const expanded = mode === "listen";
@@ -173,7 +158,7 @@ export function ArticleActionBar({ story, className }: { story: Story; className
         title={story.title}
         path={`/stories/${story.slug}`}
         open={shareOpen}
-        onClose={() => setShareOpen(false)}
+        onClose={closeShare}
       />
     </div>
   );

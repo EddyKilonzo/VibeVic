@@ -82,7 +82,12 @@ export function DockedPlayer({
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Close the floating player"
-            className="focus-ring absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-brand-ink-deep/80 text-white transition-colors hover:bg-brand-ink-deep"
+            // 28px is deliberate — the player is 240px wide on a phone and a
+            // 44px button would be a quarter of it. `tap-reach` leaves the
+            // circle this size and extends the touch target around it, which
+            // matters more here than anywhere: this is the only way to get rid
+            // of a player that is floating over what you were reading.
+            className="focus-ring tap-reach absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-brand-ink-deep/80 text-white transition-colors hover:bg-brand-ink-deep"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
           </button>

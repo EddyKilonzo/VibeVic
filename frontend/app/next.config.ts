@@ -138,10 +138,32 @@ const isProduction = process.env.NODE_ENV === "production";
  * There is no nonce for an attribute.
  */
 function contentSecurityPolicy(): string {
-  // The API the browser actually calls. Read here rather than hardcoded: it
-  // differs per deployment, and a policy naming the wrong host fails as a
-  // site whose data never loads.
+  /*
+   * The API the browser actually calls. Read here rather than hardcoded: it
+   * differs per deployment, and a policy naming the wrong host fails as a
+   * site whose data never loads.
+   *
+   * The warning matters more than it looks. This value is baked into the
+   * policy at build time, so a production build that cannot see
+   * NEXT_PUBLIC_API_URL ships a CSP whose `connect-src` names localhost — and
+   * the failure is a deployed site where every fetch is blocked by the
+   * browser, with nothing in the server logs because the request was never
+   * made. Said out loud here, it appears in the build output next to the
+   * commit that caused it.
+   *
+   * A warning and not a throw: `next build` is also run locally against a
+   * local API, and a build step that refuses to run on a developer's machine
+   * gets worked around rather than fixed.
+   */
   const api = originOf(process.env.NEXT_PUBLIC_API_URL) ?? "http://localhost:4000";
+
+  if (isProduction && api.includes("localhost")) {
+    console.warn("");
+    console.warn("  WARNING: NEXT_PUBLIC_API_URL is not set for this production build.");
+    console.warn("  The Content-Security-Policy will only allow connections to localhost,");
+    console.warn("  so every API call from the deployed site will be blocked by the browser.");
+    console.warn("");
+  }
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],

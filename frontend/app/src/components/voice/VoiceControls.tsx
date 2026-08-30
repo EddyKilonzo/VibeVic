@@ -319,7 +319,11 @@ function VoiceRow({
         aria-label={sampling ? `Sampling ${voice.name}` : `Hear ${voice.name}`}
         title="Hear a sample"
         className={cn(
-          "focus-ring flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-fast hover:bg-background hover:text-primary",
+          // `tap-square` rather than `tap-reach`: this sits hard against the
+          // voice-name button beside it, and an invisible 44px reach would
+          // take taps meant for its neighbour. Growing the box instead makes
+          // the row taller on a phone, which the row can afford.
+          "focus-ring tap-square flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-fast hover:bg-background hover:text-primary",
           sampling ? "text-accent" : "text-muted-foreground",
         )}
       >

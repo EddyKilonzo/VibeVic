@@ -373,6 +373,20 @@
    */
   .article-body {
     @apply font-display text-foreground/90;
+    /*
+     * Break a word rather than the page.
+     *
+     * Reporting from this newsroom is full of things that are one long
+     * token — @JournalistVictorKiplimo, a wordpress.com permalink pasted into
+     * a paragraph, a hashtag. Any of them wider than the column pushes the
+     * article past the viewport on a 320px screen, and the symptom a reader
+     * gets is not "that word looks odd", it is a whole page that scrolls
+     * sideways and a headline they cannot read the end of.
+     *
+     * `break-word`, never `break-all`: this only breaks a word that would
+     * otherwise overflow on its own, so ordinary prose is untouched.
+     */
+    overflow-wrap: break-word;
     font-size: calc(var(--reading-scale, 1) * clamp(1.05rem, 1rem + 0.28vw, 1.2rem));
     line-height: 1.78;
     font-variant-numeric: oldstyle-nums proportional-nums;
@@ -741,6 +755,38 @@
     .tap-square {
       min-height: 0;
       min-width: 0;
+    }
+  }
+
+  /*
+   * A 44px reach around a control that has to stay small.
+   *
+   * `.tap` and `.tap-square` grow the element itself, which is right almost
+   * everywhere and wrong for the handful of controls whose visual size is
+   * load-bearing — a close button on a 240px floating player becomes the
+   * player if it grows to 44px. This leaves the box alone and extends only
+   * what a finger has to hit, which is the part that was ever the problem.
+   *
+   * Only use it where the control has room around it. The reach is invisible
+   * and will happily swallow a tap meant for a neighbour 8px away.
+   *
+   * Off above `sm`, like the other two: a pointer aims, a thumb approximates.
+   */
+  .tap-reach {
+    position: relative;
+  }
+  .tap-reach::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+  }
+  @media (min-width: 640px) {
+    .tap-reach::before {
+      content: none;
     }
   }
 

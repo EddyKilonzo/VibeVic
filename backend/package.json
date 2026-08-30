@@ -2,9 +2,10 @@
   "name": "vibevic-backend",
   "version": "0.0.1",
   "private": true,
-  "description": "VibeVic API — public content plus the private newsroom record store.",
+  "description": "VibeVic API \u2014 public content plus the private newsroom record store.",
   "license": "UNLICENSED",
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -65,5 +66,8 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "testEnvironment": "node"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

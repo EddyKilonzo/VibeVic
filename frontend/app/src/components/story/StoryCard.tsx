@@ -10,6 +10,7 @@ import { stripInline } from "@/lib/inline";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { ImageReveal, Reveal } from "@/components/motion";
 import { BookmarkButton } from "./BookmarkButton";
+import { ShareButton } from "./ShareButton";
 import { ReadProgress } from "./ReadProgress";
 
 export interface StoryCardProps {
@@ -206,9 +207,21 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
         </div>
       </Link>
 
-      {/* Outside the <a> so saving never navigates. */}
-      <div className="absolute right-3 top-3 opacity-0 transition-opacity duration-normal focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
+      {/* Outside the <a> so neither control ever navigates.
+
+          Both are hidden until hover on a pointer device and permanently
+          visible below `md` — a touch device has no hover to reveal them
+          with, and a control you have to guess at is not a control. Save
+          first, because it is the one aimed at the reader's own future; share
+          second, because it is aimed at somebody else. */}
+      <div className="absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-normal focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
         <BookmarkButton itemId={story.slug} title={story.title} variant="floating" />
+        <ShareButton
+          title={story.title}
+          text={stripInline(story.dek)}
+          path={`/stories/${story.slug}`}
+          variant="floating"
+        />
       </div>
     </Reveal>
   );

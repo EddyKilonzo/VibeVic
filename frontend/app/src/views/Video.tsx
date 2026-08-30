@@ -20,13 +20,30 @@ import { DockedPlayer } from "@/components/video/DockedPlayer";
 import { VideoCard, publishedLabel } from "@/components/video/VideoCard";
 import { BookmarkButton } from "@/components/story/BookmarkButton";
 import { ShareSheet } from "@/components/story/ShareSheet";
+import { useShare } from "@/hooks/useShare";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/States";
 import { SectionHeading } from "@/components/SectionHeading";
 
 export default function Video({ id }: { id: string }) {
   const video = videoById(id);
-  const [shareOpen, setShareOpen] = useState(false);
+  /*
+   * Reports go through the same route articles do. This opened our own sheet
+   * directly and never asked the platform, so on a phone sharing a report
+   * gave you four networks in a web panel while sharing an article gave you
+   * every app on the device. One hook, one behaviour.
+   */
+  const {
+    share,
+    sheetOpen: shareOpen,
+    closeSheet: closeShare,
+  } = useShare({
+    // Called before the "no such report" branch below, because a hook cannot
+    // be. The fallbacks are never shared from — that branch returns an error
+    // state with no share control on it.
+    title: video?.title ?? "",
+    path: video ? `/videos/${video.id}` : "/videos",
+  });
   const [playing, setPlaying] = useState(false);
 
   if (!video) {
@@ -111,7 +128,7 @@ export default function Video({ id }: { id: string }) {
 
             <button
               type="button"
-              onClick={() => setShareOpen(true)}
+              onClick={share}
               className="focus-ring press inline-flex h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-semibold transition-colors duration-normal hover:border-primary hover:text-primary"
             >
               <Share2 className="h-4 w-4" aria-hidden />
@@ -190,7 +207,7 @@ export default function Video({ id }: { id: string }) {
         title={video.title}
         path={`/videos/${video.id}`}
         open={shareOpen}
-        onClose={() => setShareOpen(false)}
+        onClose={closeShare}
       />
     </div>
   );

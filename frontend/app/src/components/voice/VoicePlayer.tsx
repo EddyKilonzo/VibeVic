@@ -183,7 +183,11 @@ export function VoicePlayer({
                 seekToSegment(Math.max(0, segmentIndex - 1));
               }
             }}
-            className="focus-ring group relative mt-2.5 h-6 cursor-pointer"
+            // Taller on a phone, where this is dragged with a thumb. The bar
+            // inside is absolutely centred, so it does not move — only the
+            // area you can grab it by changes. 24px was a seek target you
+            // missed and then had to find your place again.
+            className="focus-ring group relative mt-2.5 h-11 cursor-pointer sm:h-6"
           >
             <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 overflow-hidden rounded-full bg-border">
               <motion.div

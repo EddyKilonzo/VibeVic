@@ -99,7 +99,7 @@ export function QuoteSelection({ story, target }: { story: Story; target: RefObj
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={take}
-            className="frost focus-ring press flex h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold shadow-primary"
+            className="frost focus-ring press tap flex h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold shadow-primary"
           >
             {copied ? (
               <Check className="h-3.5 w-3.5 text-accent" aria-hidden />

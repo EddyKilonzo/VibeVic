@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { BadRequestException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import type { MailService } from '../mail/mail.service';
 import type { PrismaService } from '../../prisma/prisma.service';
+import type { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { fakeConfig, withClock } from '../../testing/doubles';
 import { PasswordResetService } from './password-reset.service';
 import type { PasswordService } from './password.service';
@@ -49,6 +50,8 @@ function build(options: {
   reset?: ResetRow | null;
   appUrl?: string;
   ttlMinutes?: number;
+  /** What the limiter says: `false` is "this address has had its three". */
+  allowed?: boolean;
 } = {}) {
   const userFindUnique = jest.fn().mockResolvedValue(
     options.user === undefined
@@ -92,6 +95,9 @@ function build(options: {
   const hash = jest.fn().mockResolvedValue('$argon2id$new-hash');
   const passwords = { hash } as unknown as PasswordService;
 
+  const hit = jest.fn().mockResolvedValue(options.allowed ?? true);
+  const limiter = { hit, clear: jest.fn() } as unknown as RateLimitService;
+
   const service = new PasswordResetService(
     fakeConfig({
       PASSWORD_RESET_TTL_MINUTES: options.ttlMinutes ?? 30,
@@ -100,6 +106,7 @@ function build(options: {
     prisma,
     mail,
     passwords,
+    limiter,
   );
 
   return {
@@ -113,6 +120,7 @@ function build(options: {
     deleteOne,
     send,
     hash,
+    hit,
   };
 }
 
@@ -249,52 +257,50 @@ describe('PasswordResetService.request', () => {
 });
 
 describe('PasswordResetService request throttling', () => {
-  it('sends three links per address and then quietly stops', async () => {
-    const { service, send } = build();
+  it('counts the request under the normalised address', async () => {
+    const { service, hit } = build();
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await service.request('vic@example.com', null);
-      send.mockClear();
-    }
+    await service.request('  VIC@Example.COM ', null);
 
-    // The fourth resolves like the others — a visible refusal here would be
-    // the one reply that distinguishes an address worth throttling.
+    expect(hit).toHaveBeenCalledWith('auth:reset-request', 'vic@example.com', {
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+  });
+
+  it('counts under a different scope from the sign-in limiter', async () => {
+    const { service, hit } = build();
+
+    await service.request('vic@example.com', null);
+
+    // One shared key would let somebody lock themselves out of signing in by
+    // asking for reset links, and vice versa.
+    const [scope] = hit.mock.calls[0] as [string];
+    expect(scope).toBe('auth:reset-request');
+    expect(scope).not.toBe('auth:sign-in');
+  });
+
+  it('sends nothing once the limiter says no, and says so to nobody', async () => {
+    const { service, send, create } = build({ allowed: false });
+
+    // Resolves like every other call in this flow. A visible refusal here
+    // would be the one reply that distinguishes an address worth asking about.
     await expect(service.request('vic@example.com', null)).resolves.toBeUndefined();
+
     expect(send).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
-  it('counts per address', async () => {
-    const { service, send } = build();
+  it('is checked after the mailer, so an unconfigured server still says so', async () => {
+    const { service, hit } = build({ mailConfigured: false });
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await service.request('vic@example.com', null);
-    }
-    send.mockClear();
+    await expect(service.request('vic@example.com', null)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
 
-    await service.request('someone@example.com', null);
-    expect(send).toHaveBeenCalledTimes(1);
-  });
-
-  it('forgets the count once the window has passed', async () => {
-    const clock = withClock(NOW);
-    try {
-      const { service, send } = build();
-
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        await service.request('vic@example.com', null);
-      }
-      send.mockClear();
-
-      await service.request('vic@example.com', null);
-      expect(send).not.toHaveBeenCalled();
-
-      clock.advance(15 * 60 * 1000 + 1);
-
-      await service.request('vic@example.com', null);
-      expect(send).toHaveBeenCalledTimes(1);
-    } finally {
-      clock.restore();
-    }
+    // The 503 is about the deployment, not the address, so it must not be
+    // reachable only while somebody has allowance left.
+    expect(hit).not.toHaveBeenCalled();
   });
 });
 

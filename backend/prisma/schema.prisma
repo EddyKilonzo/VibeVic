@@ -834,3 +834,44 @@ model TimelineEventEvidence {
   @@id([timelineEventId, evidenceId])
   @@map("timeline_event_evidence")
 }
+
+/// A counter, shared by every instance of this API.
+///
+/// ── Why this is a table and not a Map ────────────────────────────────────
+/// Both throttles used to live in their own process's memory, and both said
+/// so: a deployment behind two instances handed out two full allowances, and
+/// a restart cleared the count. That is a speed bump described as a control.
+/// A row is the smallest thing that every instance can see and that a restart
+/// does not forget.
+///
+/// ── Why the subject is hashed into the key ───────────────────────────────
+/// The natural key is "the address someone tried to sign in as", and a table
+/// of those is a list of addresses worth attacking — including, for a
+/// newsroom, addresses that turn out to have accounts. The key is a SHA-256
+/// of "<scope>:<subject>", so the table can count without holding the list.
+/// Safe as a plain digest for the same reason `PasswordReset.tokenHash` is
+/// not: this one is not a credential, it is an opaque bucket name, and it
+/// never needs to be reversed.
+///
+/// ── Why there is no relation to User ─────────────────────────────────────
+/// Most keys are not accounts. An address with no account has to be counted
+/// exactly like one that has, or the difference between "throttled" and "not
+/// throttled" becomes the enumeration oracle that every message in the auth
+/// module is written to avoid.
+model RateLimit {
+  /// sha256("<scope>:<subject>"). Opaque on purpose — see above.
+  key String @id
+
+  /// Attempts inside the current window, including the one being counted.
+  count Int
+
+  /// When the current window opened. A hit after `windowAt + window` starts
+  /// a new one rather than extending this.
+  windowAt DateTime
+
+  /// Last touched, for the sweep that clears rows nobody will read again.
+  updatedAt DateTime
+
+  @@index([updatedAt])
+  @@map("rate_limits")
+}

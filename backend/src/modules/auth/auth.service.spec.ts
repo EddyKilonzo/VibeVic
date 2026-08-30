@@ -2,6 +2,7 @@ import { Logger, NotImplementedException, UnauthorizedException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
+import type { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { TEST_SECRET, fakeConfig, withClock } from '../../testing/doubles';
 import { AuthService, normaliseEmail } from './auth.service';
 import type { PasswordService } from './password.service';
@@ -73,6 +74,8 @@ function build(options: {
   secret?: string | undefined;
   devToken?: string;
   devConfidential?: boolean;
+  /** What the limiter says: `false` is "this address has had its eight". */
+  allowed?: boolean;
 }) {
   const findUnique = jest.fn().mockResolvedValue(options.user ?? null);
   const update = jest.fn().mockResolvedValue(undefined);
@@ -87,6 +90,10 @@ function build(options: {
 
   const jwt = new JwtService({});
 
+  const hit = jest.fn().mockResolvedValue(options.allowed ?? true);
+  const clear = jest.fn().mockResolvedValue(undefined);
+  const limiter = { hit, clear } as unknown as RateLimitService;
+
   const service = new AuthService(
     fakeConfig({
       AUTH_MODE: options.mode ?? 'jwt',
@@ -99,9 +106,10 @@ function build(options: {
     jwt,
     prisma,
     passwords,
+    limiter,
   );
 
-  return { service, jwt, findUnique, update, verify, verifyDummy };
+  return { service, jwt, findUnique, update, verify, verifyDummy, hit, clear };
 }
 
 /** A token signed the way `issueToken` signs one, with the claims a test wants. */
@@ -262,78 +270,83 @@ describe('AuthService.issueToken', () => {
 });
 
 describe('AuthService sign-in throttling', () => {
-  it('stops reading the database once an address has burned its allowance', async () => {
-    const { service, findUnique } = build({ user: userRow(), passwordCorrect: false });
-    const credentials = { email: 'vic@example.com', password: 'guess' };
+  /*
+   * The counting itself moved to `RateLimitService` and Postgres, and is
+   * tested there. What is still this service's decision is the shape of the
+   * conversation with it: which key it counts under, that it counts before it
+   * reads anything, that a refusal is indistinguishable from a wrong
+   * password, and that a success forgets the count.
+   */
 
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await expect(service.issueToken(credentials)).rejects.toBeInstanceOf(UnauthorizedException);
-    }
-    expect(findUnique).toHaveBeenCalledTimes(8);
-
-    await expect(service.issueToken(credentials)).rejects.toBeInstanceOf(UnauthorizedException);
-    // The ninth was refused without a lookup — and with the same sentence, so
-    // being throttled is not itself a signal that the address is worth having.
-    expect(findUnique).toHaveBeenCalledTimes(8);
-  });
-
-  it('keys the count on the address, so one account’s failures do not lock another out', async () => {
-    const { service, findUnique } = build({ user: userRow(), passwordCorrect: false });
-
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await expect(
-        service.issueToken({ email: 'vic@example.com', password: 'guess' }),
-      ).rejects.toThrow();
-    }
+  it('counts the attempt under the normalised address, before any lookup', async () => {
+    const { service, hit, findUnique } = build({ user: userRow(), passwordCorrect: false });
 
     await expect(
-      service.issueToken({ email: 'someone@example.com', password: 'guess' }),
+      service.issueToken({ email: '  VIC@Example.com ', password: 'guess' }),
     ).rejects.toThrow();
 
-    expect(findUnique).toHaveBeenCalledTimes(9);
+    expect(hit).toHaveBeenCalledWith('auth:sign-in', 'vic@example.com', {
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
+    });
+    expect(hit.mock.invocationCallOrder[0]).toBeLessThan(
+      findUnique.mock.invocationCallOrder[0] as number,
+    );
   });
 
-  it('forgets the failures once the window has passed', async () => {
-    const clock = withClock(Date.parse('2026-06-01T12:00:00.000Z'));
-    try {
-      const { service, findUnique } = build({ user: userRow(), passwordCorrect: false });
-      const credentials = { email: 'vic@example.com', password: 'guess' };
+  it('stops reading the database once the limiter says no', async () => {
+    const { service, findUnique, verifyDummy } = build({
+      user: userRow(),
+      passwordCorrect: false,
+      allowed: false,
+    });
 
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        await expect(service.issueToken(credentials)).rejects.toThrow();
-      }
-      await expect(service.issueToken(credentials)).rejects.toThrow();
-      expect(findUnique).toHaveBeenCalledTimes(8);
+    await expect(
+      service.issueToken({ email: 'vic@example.com', password: 'guess' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
 
-      clock.advance(10 * 60 * 1000 + 1);
-
-      await expect(service.issueToken(credentials)).rejects.toThrow();
-      expect(findUnique).toHaveBeenCalledTimes(9);
-    } finally {
-      clock.restore();
-    }
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(verifyDummy).not.toHaveBeenCalled();
   });
 
-  it('clears the count on a successful sign-in', async () => {
-    const { service, verify, findUnique } = build({ user: userRow() });
-    const credentials = { email: 'vic@example.com', password: 'guess' };
+  it('refuses a throttled attempt with the same sentence as a wrong password', async () => {
+    const throttled = build({ user: userRow(), allowed: false });
+    const wrong = build({ user: userRow(), passwordCorrect: false });
 
-    verify.mockResolvedValue(false);
-    for (let attempt = 0; attempt < 7; attempt += 1) {
-      await expect(service.issueToken(credentials)).rejects.toThrow();
-    }
+    const messages = await Promise.all(
+      [throttled, wrong].map(async ({ service }) => {
+        try {
+          await service.issueToken({ email: 'vic@example.com', password: 'guess' });
+          throw new Error('expected the sign-in to be refused');
+        } catch (error) {
+          return (error as UnauthorizedException).message;
+        }
+      }),
+    );
 
-    verify.mockResolvedValue(true);
-    await service.issueToken(credentials);
+    // A distinct "too many attempts" reply confirms the address is worth
+    // attacking, which is the thing the limiter is protecting.
+    expect(new Set(messages).size).toBe(1);
+  });
 
-    // Seven failures, one success, then eight more failures: all eight reach
-    // the database, which they could not if the earlier seven still counted.
-    verify.mockResolvedValue(false);
-    findUnique.mockClear();
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await expect(service.issueToken(credentials)).rejects.toThrow();
-    }
-    expect(findUnique).toHaveBeenCalledTimes(8);
+  it('forgets the count when the sign-in works', async () => {
+    const { service, clear } = build({ user: userRow(), passwordCorrect: true });
+
+    await service.issueToken({ email: 'vic@example.com', password: 'right' });
+
+    // Otherwise the failures somebody built up getting their own password
+    // wrong follow them into the evening.
+    expect(clear).toHaveBeenCalledWith('auth:sign-in', 'vic@example.com');
+  });
+
+  it('leaves the count alone when the sign-in fails', async () => {
+    const { service, clear } = build({ user: userRow(), passwordCorrect: false });
+
+    await expect(
+      service.issueToken({ email: 'vic@example.com', password: 'guess' }),
+    ).rejects.toThrow();
+
+    expect(clear).not.toHaveBeenCalled();
   });
 });
 

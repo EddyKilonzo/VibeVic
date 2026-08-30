@@ -10,6 +10,7 @@ import type { Env } from '../../config/env';
 import { MailService } from '../mail/mail.service';
 import { passwordResetEmail } from '../mail/templates/password-reset';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { normaliseEmail } from './auth.service';
 import { PasswordService } from './password.service';
 
@@ -46,6 +47,7 @@ export class PasswordResetService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly passwords: PasswordService,
+    private readonly limiter: RateLimitService,
   ) {}
 
   /**
@@ -70,11 +72,13 @@ export class PasswordResetService {
 
     const address = normaliseEmail(email);
 
-    if (this.throttled(address)) {
+    if (!(await this.limiter.hit(RESET_SCOPE, address, RESET_LIMIT))) {
+      // Returns rather than raising, and says nothing different to the
+      // caller: a visible "too many requests" here would be the one reply in
+      // this flow that distinguishes an address worth asking about.
       this.logger.warn(`Reset requests throttled for ${address}.`);
       return;
     }
-    this.record(address);
 
     const user = await this.prisma.user.findUnique({
       where: { email: address },
@@ -218,35 +222,20 @@ export class PasswordResetService {
   }
 
   /* ── Request throttling ─────────────────────────────────────────────────
-   * Three links per address per fifteen minutes. Low, because there is no
-   * legitimate reason to need a fourth — and because each one is an email
-   * this newsroom pays for and somebody's inbox receives. Same in-memory,
-   * per-instance caveats as the login throttle in AuthService.
+   * Three links per address per fifteen minutes, counted in Postgres by
+   * `RateLimitService`. Low, because there is no legitimate reason to need a
+   * fourth — and because each one is an email this newsroom pays for and
+   * somebody's inbox receives.
+   *
+   * The Map that used to be here was per instance, which for this throttle
+   * was worse than for the sign-in one: the thing being rationed is outbound
+   * email, and a second instance meant a second allowance to send it with.
    */
-  private readonly requests = new Map<string, { count: number; first: number }>();
-  private static readonly WINDOW_MS = 15 * 60 * 1000;
-  private static readonly MAX_REQUESTS = 3;
-
-  private throttled(email: string): boolean {
-    const seen = this.requests.get(email);
-    if (!seen) return false;
-    if (Date.now() - seen.first > PasswordResetService.WINDOW_MS) {
-      this.requests.delete(email);
-      return false;
-    }
-    return seen.count >= PasswordResetService.MAX_REQUESTS;
-  }
-
-  private record(email: string): void {
-    const now = Date.now();
-    const seen = this.requests.get(email);
-    if (!seen || now - seen.first > PasswordResetService.WINDOW_MS) {
-      this.requests.set(email, { count: 1, first: now });
-      return;
-    }
-    seen.count += 1;
-  }
 }
+
+/** The limiter's namespace for reset requests, and its allowance. */
+const RESET_SCOPE = 'auth:reset-request';
+const RESET_LIMIT = { limit: 3, windowMs: 15 * 60 * 1000 };
 
 /**
  * SHA-256, hex. The lookup column is unique, so this doubles as the index

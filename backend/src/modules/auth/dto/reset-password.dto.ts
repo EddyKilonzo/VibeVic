@@ -1,4 +1,4 @@
-import { IsString, Length, MinLength } from 'class-validator';
+import { IsString, Length, MaxLength, MinLength } from 'class-validator';
 
 /**
  * The token comes back in the body rather than staying in the query string it
@@ -22,5 +22,8 @@ export class ResetPasswordDto {
    */
   @IsString()
   @MinLength(12)
+  // The same ceiling as LoginDto, for the same reason: argon2 is about to run
+  // on this.
+  @MaxLength(200)
   password!: string;
 }

@@ -31,7 +31,27 @@
 
 const ENCODER = new TextEncoder();
 
-export const SESSION_COOKIE = "vv_newsroom";
+/**
+ * The session cookie's name, which is a security control in production.
+ *
+ * `__Host-` is not decoration: a browser refuses to accept a cookie by that
+ * name unless it is `Secure`, has `Path=/`, and carries no `Domain`. The
+ * consequence is the one worth having — no other host can set it. Without the
+ * prefix, anything that can write cookies for a sibling subdomain (a staging
+ * app, a marketing page, a service on a shared apex) can plant a session
+ * cookie that this app will read as its own, which is session fixation with
+ * no bug on our side required.
+ *
+ * Dropped in development because the prefix implies `Secure` and the dev
+ * server is plain HTTP. The three attributes it stands for are set explicitly
+ * in `signInAction` either way; the prefix is what makes the browser enforce
+ * them instead of trusting us to.
+ *
+ * Renaming this invalidates every session that exists. That happens once, on
+ * the deploy that introduces it, and it costs one sign-in.
+ */
+export const SESSION_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Host-vv_newsroom" : "vv_newsroom";
 
 /** Mirrors `Role` in the API's schema. Two roles, and no third by accident. */
 export type NewsroomRole = "WRITER" | "DEV";

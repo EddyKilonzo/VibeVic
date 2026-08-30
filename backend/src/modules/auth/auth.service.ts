@@ -13,6 +13,7 @@ import type { Env } from '../../config/env';
 import { type Principal, type Scope } from '../../common/authz/principal';
 import type { TokenVerifier } from '../../common/authz/token-verifier';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import type { LoginDto } from './dto/login.dto';
 import { PasswordService } from './password.service';
 import { scopesFor } from './roles';
@@ -68,6 +69,7 @@ export class AuthService implements TokenVerifier, OnModuleInit {
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    private readonly limiter: RateLimitService,
   ) {}
 
   onModuleInit(): void {
@@ -131,7 +133,7 @@ export class AuthService implements TokenVerifier, OnModuleInit {
 
     const email = normaliseEmail(credentials.email);
 
-    if (this.throttled(email)) {
+    if (!(await this.limiter.hit(SIGN_IN_SCOPE, email, SIGN_IN_LIMIT))) {
       // 401 rather than 429, and deliberately the same sentence as a wrong
       // password: a distinct "too many attempts" reply confirms the address
       // is worth attacking, which is the thing being protected.
@@ -146,11 +148,13 @@ export class AuthService implements TokenVerifier, OnModuleInit {
       : await this.passwords.verifyDummy(credentials.password);
 
     if (!ok || !user) {
-      this.recordFailure(email);
+      // Nothing to record: the limiter counted this attempt on the way in,
+      // which is also what makes a refused-because-throttled attempt keep the
+      // window alive instead of letting it drain under a steady stream.
       throw new UnauthorizedException(SIGN_IN_REFUSED);
     }
 
-    this.attempts.delete(email);
+    await this.limiter.clear(SIGN_IN_SCOPE, email);
 
     /*
      * `lastLoginAt` is written before the token is returned, not after the
@@ -285,43 +289,23 @@ export class AuthService implements TokenVerifier, OnModuleInit {
 
   /* ── Failure throttling ─────────────────────────────────────────────────
    *
-   * What this is: a speed bump, in this process's memory, keyed on the
-   * address that was tried. What it is not: an access control. Nothing here
-   * is shared between instances, so a deployment behind more than one of them
-   * hands out a fresh allowance per instance, and a restart clears the lot.
+   * Eight failures per address per ten minutes, counted in Postgres by
+   * `RateLimitService` rather than in this process's memory. The Map that
+   * used to live here said in its own comment that a second instance handed
+   * out a second allowance and a restart cleared the count; that was true,
+   * and it is the property that made this a speed bump rather than a control.
    *
-   * The same honest accounting as the sign-in form in the frontend, and the
-   * same conclusion: it makes the obvious attack — a script and a wordlist
-   * against one account — stop being free, and the real answer is a rate rule
-   * at the edge or a shared store. Neither is a reason to have nothing.
+   * Keyed on the address rather than the caller, which has not changed and is
+   * the half worth keeping: this protects an account, and an attacker who
+   * rotates IP addresses does not rotate the account they want. An IP-keyed
+   * limit protects the server, and that job belongs to something in front of
+   * this that can see all the traffic.
    *
-   * Keyed on email rather than IP on purpose. This is the half that protects
-   * an account; an IP-keyed limit protects the server, and that job belongs
-   * to something in front of it that can see all the traffic.
+   * Counted identically for addresses that have accounts and addresses that
+   * do not — see the note on the `RateLimit` model. A throttle that only
+   * applied to real accounts would be an enumeration oracle wearing a
+   * different hat.
    */
-  private readonly attempts = new Map<string, { count: number; first: number }>();
-  private static readonly WINDOW_MS = 10 * 60 * 1000;
-  private static readonly MAX_ATTEMPTS = 8;
-
-  private throttled(email: string): boolean {
-    const seen = this.attempts.get(email);
-    if (!seen) return false;
-    if (Date.now() - seen.first > AuthService.WINDOW_MS) {
-      this.attempts.delete(email);
-      return false;
-    }
-    return seen.count >= AuthService.MAX_ATTEMPTS;
-  }
-
-  private recordFailure(email: string): void {
-    const now = Date.now();
-    const seen = this.attempts.get(email);
-    if (!seen || now - seen.first > AuthService.WINDOW_MS) {
-      this.attempts.set(email, { count: 1, first: now });
-      return;
-    }
-    seen.count += 1;
-  }
 }
 
 /**
@@ -332,6 +316,10 @@ export class AuthService implements TokenVerifier, OnModuleInit {
  * exists to prevent.
  */
 const SIGN_IN_REFUSED = 'That email and password were not recognised.';
+
+/** The limiter's namespace for sign-in failures, and its allowance. */
+const SIGN_IN_SCOPE = 'auth:sign-in';
+const SIGN_IN_LIMIT = { limit: 8, windowMs: 10 * 60 * 1000 };
 
 /** Addresses are compared lowercased; `User.email` is stored the same way. */
 export function normaliseEmail(email: string): string {

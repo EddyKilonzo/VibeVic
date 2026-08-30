@@ -25,6 +25,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PageTransition } from "@/components/motion";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
+import { AccountMenu, type SessionSummary } from "@/components/admin/AccountMenu";
 import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
 
 /**
@@ -60,7 +61,14 @@ const NAV = [
  * exactly the kind of layout animation the performance rules warn about, and
  * this is the one place it is worth it, on a single element, at 320ms.
  */
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  /** Verified in the route layout above; see the note there on what is passed. */
+  session: SessionSummary;
+}) {
   const [collapsed, setCollapsed] = useLocalStorage("vv:admin-sidebar-collapsed", false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -222,10 +230,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ConnectionState className="hidden sm:inline-flex" />
             <Link
               href="/"
-              className="focus-ring underline-grow tap inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
+              className="focus-ring underline-grow tap hidden items-center text-sm text-muted-foreground transition-colors hover:text-primary sm:inline-flex"
             >
               View site
             </Link>
+            {/* Last in the row, which is where a person looks for it, and the
+                one control here that stays at every width — on a phone the
+                escape hatch to the public site drops away before the answer
+                to "whose session is this". */}
+            <AccountMenu session={session} />
           </div>
         </header>
 

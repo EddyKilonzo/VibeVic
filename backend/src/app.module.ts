@@ -13,6 +13,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { NewsroomModule } from './modules/newsroom/newsroom.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 
 /**
  * The root module, and the place the two safety mechanisms are switched on.
@@ -42,6 +43,7 @@ import { PrismaModule } from './prisma/prisma.module';
       cache: true,
     }),
     PrismaModule,
+    RateLimitModule,
     AuthModule,
     HealthModule,
     StoriesModule,

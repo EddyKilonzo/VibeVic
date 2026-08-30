@@ -1,9 +1,25 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Pinned, and load-bearing.
+    //
+    // Without it TypeScript infers the root from whatever files are included,
+    // so the day a compiled file appeared outside src/ the whole output moved
+    // down a level: dist/main.js became dist/src/main.js and the server would
+    // not start, with a build that had reported success. `prisma/accounts.ts`
+    // was that file. Stating the root means a stray include is a build error
+    // naming the file, instead of a silent change of shape.
+    "rootDir": "src"
+  },
   "exclude": [
     "node_modules",
     "dist",
-    "prisma/seed.ts",
+    // The whole directory, not one file by name. These are operator scripts
+    // run through ts-node — `npm run db:seed`, `npm run account` — and are
+    // never loaded from dist. Excluding `prisma/seed.ts` alone was the
+    // original rule, and it held only while seed.ts was the only TypeScript
+    // in there.
+    "prisma/**",
     "**/*.spec.ts",
     // Test doubles. Typechecked by tsconfig.json with the rest of src,
     // and kept out of the build for the same reason the specs are: the

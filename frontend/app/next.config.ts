@@ -171,6 +171,13 @@ function contentSecurityPolicy(): string {
     "media-src": ["'self'", "blob:", "https://res.cloudinary.com"],
     "connect-src": [
       "'self'",
+      // `blob:` is not optional here. The press-pass on the About page is a
+      // GLTF model, and three.js loads the textures packed inside it by
+      // handing the decoder a blob URL — a fetch, so `connect-src` governs
+      // it, not `img-src`. Without this the model loads and renders untextured
+      // while the console fills with "couldn't load texture".
+      "blob:",
+      "data:",
       api,
       // The media library uploads straight from the browser against a
       // signature this app mints.
@@ -180,6 +187,9 @@ function contentSecurityPolicy(): string {
     ],
     // Reports are embedded, and only from the no-cookie host.
     "frame-src": ["https://www.youtube-nocookie.com", "https://www.youtube.com"],
+    // Decoders that three.js may run off the main thread. Same blob URL
+    // mechanism, different directive.
+    "worker-src": ["'self'", "blob:"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],

@@ -44,6 +44,12 @@ import { RateLimitModule } from './common/rate-limit/rate-limit.module';
     }),
     PrismaModule,
     RateLimitModule,
+    // Global, and still has to be listed: a @Global() module is only global
+    // once something registers it. This was imported at the top of the file
+    // and never added here, so `MailService` did not exist in any injector
+    // and the server refused to start the moment PasswordResetService asked
+    // for it — which is a boot failure that only appears when you boot.
+    MailModule,
     AuthModule,
     HealthModule,
     StoriesModule,

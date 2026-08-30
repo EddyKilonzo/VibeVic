@@ -162,7 +162,7 @@ const schema = z
 export type Env = z.infer<typeof schema>;
 
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const parsed = schema.safeParse(raw);
+  const parsed = schema.safeParse(withoutBlanks(raw));
   if (!parsed.success) {
     const detail = parsed.error.issues
       .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
@@ -170,6 +170,41 @@ export function validateEnv(raw: Record<string, unknown>): Env {
     throw new Error(`Invalid environment configuration:\n${detail}`);
   }
   return parsed.data;
+}
+
+/**
+ * An empty variable is an unset variable.
+ *
+ * ── The failure this fixes ───────────────────────────────────────────────
+ * A `.env` written the way people write them —
+ *
+ *     # Optional. Where a reply should go, if not the from address.
+ *     MAIL_REPLY_TO=
+ *
+ * — hands this schema an empty string, not `undefined`. So `.optional()` does
+ * not apply, `.email()` runs on "", and the server refuses to boot with
+ * "MAIL_REPLY_TO: Invalid email" about a variable whose whole point is that
+ * it does not have to be set. The same trap was waiting on APP_URL's `.url()`
+ * and on every optional field added after them.
+ *
+ * Stripping blanks before parsing makes the file mean what it looks like it
+ * means: a key with nothing after the `=` is a key nobody filled in, which is
+ * how dotenv files are actually used and how a commented-out line behaves.
+ *
+ * Whitespace counts as blank too — a trailing space after `=` is invisible in
+ * an editor and would otherwise be a value.
+ *
+ * This only ever turns a value into no value, so nothing it does can make a
+ * required variable pass: `DATABASE_URL=` still fails, and now it fails
+ * saying it is required rather than that it is not a URL.
+ */
+function withoutBlanks(raw: Record<string, unknown>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string' && value.trim() === '') continue;
+    kept[key] = value;
+  }
+  return kept;
 }
 
 /**

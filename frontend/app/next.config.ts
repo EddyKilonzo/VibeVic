@@ -158,10 +158,22 @@ function contentSecurityPolicy(): string {
   const api = originOf(process.env.NEXT_PUBLIC_API_URL) ?? "http://localhost:4000";
 
   if (isProduction && api.includes("localhost")) {
+    // Both are named, and both are printed as the build actually sees them.
+    // The first version of this said "is not set" in every case, which was a
+    // lie half the time — a variable pasted over from .env.local still holds
+    // a localhost URL, and a log that misreports which of the two states it
+    // is in sends you to the wrong settings page. Neither value is a secret:
+    // one is public by construction and the other is an address.
+    const publicUrl = process.env.NEXT_PUBLIC_API_URL;
+    const serverUrl = process.env.API_URL;
+
     console.warn("");
-    console.warn("  WARNING: NEXT_PUBLIC_API_URL is not set for this production build.");
-    console.warn("  The Content-Security-Policy will only allow connections to localhost,");
+    console.warn("  WARNING: this production build points at localhost.");
+    console.warn("    NEXT_PUBLIC_API_URL = " + (publicUrl ?? "(not set)"));
+    console.warn("    API_URL             = " + (serverUrl ?? "(not set)"));
+    console.warn("  The Content-Security-Policy allows connections to " + api + " only,");
     console.warn("  so every API call from the deployed site will be blocked by the browser.");
+    console.warn("  Set NEXT_PUBLIC_API_URL to the deployed API, including its /api path.");
     console.warn("");
   }
 

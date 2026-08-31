@@ -9,7 +9,23 @@
     // not start, with a build that had reported success. `prisma/accounts.ts`
     // was that file. Stating the root means a stray include is a build error
     // naming the file, instead of a silent change of shape.
-    "rootDir": "src"
+    "rootDir": "src",
+
+    // Inside the output directory, and that is the whole point.
+    //
+    // `nest build` deletes `dist/` before compiling (`deleteOutDir`). The
+    // incremental cache defaulted to the project root, so it survived that
+    // delete — and on the next build TypeScript compared its record against
+    // sources that had not changed, concluded there was nothing to do, and
+    // emitted nothing. `tsc` exited 0, `npm run build` reported success, and
+    // `dist/` did not exist. Render then failed with MODULE_NOT_FOUND on
+    // `dist/main.js` after a green build, which is the same silent shape the
+    // rootDir pin above was added to prevent.
+    //
+    // Keeping the record inside `dist/` makes the two atomic: whatever
+    // removes the output removes the memory of having produced it, so
+    // "up to date" can never mean "up to date with files that are gone".
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
   },
   "exclude": [
     "node_modules",

@@ -40,6 +40,103 @@ const BASE = (CONFIGURED_BASE ?? "http://localhost:4000/api").replace(/\/+$/, ""
  */
 const REVALIDATE_SECONDS = 60;
 
+/**
+ * Whether this process is a build server rather than somebody's machine.
+ *
+ * Vercel sets `VERCEL` on every build and every function invocation; `CI` is
+ * the generic equivalent. Used for one decision only: whether a localhost API
+ * address is a plausible setup or a certain misconfiguration.
+ */
+const ON_A_BUILD_SERVER = Boolean(process.env.VERCEL ?? process.env.CI);
+
+/** Whether a URL points back at the machine making the request. */
+function isLoopback(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]" ||
+      hostname.endsWith(".localhost")
+    );
+  } catch {
+    // Not a URL at all. The fetch below will fail with its own message, which
+    // will be about the actual value rather than about this guess at it.
+    return false;
+  }
+}
+
+/**
+ * The retry budget for the two reads a build cannot proceed without.
+ *
+ * The API sleeps when idle — that is what a Render free instance does — and a
+ * deploy is precisely when nothing has been talking to it. A cold start takes
+ * appreciably longer than a served request, so the first attempt from a build
+ * is the one most likely in the whole system to time out, and the cost of that
+ * is a failed deploy of a frontend that has nothing wrong with it.
+ *
+ * Four attempts across roughly two minutes, and both numbers appear in the
+ * error message so a genuine outage still reads as one rather than as an
+ * impatient build. Only the page-list reads spend this: `read()` above degrades
+ * to empty and is called during ordinary renders, where waiting two minutes
+ * would be a far worse answer than an empty section.
+ */
+const PARAM_FETCH_ATTEMPTS = 4;
+const PARAM_FETCH_TIMEOUT_MS = 20_000;
+/** Waited *between* attempts; one shorter than the number of attempts. */
+const PARAM_FETCH_BACKOFF_MS = [5_000, 15_000, 30_000];
+const PARAM_FETCH_BUDGET_SECONDS = Math.round(
+  (PARAM_FETCH_ATTEMPTS * PARAM_FETCH_TIMEOUT_MS +
+    PARAM_FETCH_BACKOFF_MS.reduce((total, wait) => total + wait, 0)) /
+    1000,
+);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * One fetch, retried while the far end looks like it is still waking up.
+ *
+ * Retries a thrown fetch (refused, reset, timed out) and a 5xx, because both
+ * are what a booting server looks like from here. A 4xx is not retried: it is
+ * an answer, and asking again more slowly will not change it.
+ */
+async function fetchWithWakeUp(url: string): Promise<Response> {
+  let lastCause: unknown;
+
+  for (let attempt = 0; attempt < PARAM_FETCH_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) {
+      const wait = PARAM_FETCH_BACKOFF_MS[attempt - 1] ?? 30_000;
+      console.warn(
+        `[data/server] ${url} did not answer (attempt ${attempt} of ${PARAM_FETCH_ATTEMPTS}); ` +
+          `retrying in ${wait / 1000}s in case the API is starting up.`,
+      );
+      await sleep(wait);
+    }
+
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        next: { revalidate: REVALIDATE_SECONDS },
+        signal: AbortSignal.timeout(PARAM_FETCH_TIMEOUT_MS),
+      });
+
+      // Server-side failure: worth another go. Anything else — including a
+      // 404 — is the caller's to interpret.
+      if (response.status >= 500 && attempt < PARAM_FETCH_ATTEMPTS - 1) {
+        lastCause = new Error(`${url} returned ${response.status}`);
+        continue;
+      }
+
+      return response;
+    } catch (cause) {
+      lastCause = cause;
+    }
+  }
+
+  throw lastCause;
+}
+
 async function read<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${BASE}${path}`, {
@@ -97,28 +194,36 @@ async function readOrThrow<T>(path: string): Promise<T> {
    * "Failed to collect page data for /beats/[slug]" — a route, a port and no
    * cause, which sends whoever reads it looking for a bug in the beats page.
    *
-   * The test is whether the variable was *set*, not whether it points at
-   * localhost. Pointing a production build at a local API is a legitimate thing
-   * to do — it is what `next build` does on a developer's machine — and
-   * refusing it would break the one command most likely to catch this class of
-   * problem before a deploy does.
+   * Two states, not one, and the second is why this was rewritten. The
+   * original test was only whether a variable had been *set*, on the reasoning
+   * that pointing a production build at a local API is legitimate — it is what
+   * `next build` does on a developer's machine. That reasoning is still right,
+   * and it is still not the whole rule: a variable holding a localhost URL is
+   * set, so the guard passed, the fetch went to 127.0.0.1 and the deploy died
+   * with the exact ECONNREFUSED this block exists to replace. An `API_URL`
+   * copied over from `.env.local` is the ordinary way to arrive there.
+   *
+   * So the localhost half of the test asks where the build is running rather
+   * than refusing localhost outright. On Vercel or in CI there is no local API
+   * and never will be; on a workstation there usually is, and a build step that
+   * refuses to run there gets worked around rather than fixed.
    */
-  if (process.env.NODE_ENV === "production" && !CONFIGURED_BASE) {
+  if (process.env.NODE_ENV === "production" && (!CONFIGURED_BASE || (ON_A_BUILD_SERVER && isLoopback(BASE)))) {
     throw new Error(
-      `Cannot build the page list: neither API_URL nor NEXT_PUBLIC_API_URL is set, so the ` +
-        `build fell back to ${BASE}. Set one to the deployed API — and set ` +
-        "NEXT_PUBLIC_API_URL regardless, since the reader-facing views call it from the " +
-        "browser and cannot read a server-only variable.",
+      `Cannot build the page list: the build is reading the archive from ${BASE}, ` +
+        "which is not an API this build can reach.\n" +
+        `  API_URL             = ${process.env.API_URL ?? "(not set)"}\n` +
+        `  NEXT_PUBLIC_API_URL = ${process.env.NEXT_PUBLIC_API_URL ?? "(not set)"}\n` +
+        "Set NEXT_PUBLIC_API_URL to the deployed API including its /api path — the " +
+        "reader-facing views call it from the browser and cannot read a server-only " +
+        "variable, and next.config.ts names it in the Content-Security-Policy. Set " +
+        "API_URL only to override that for server-side reads.",
     );
   }
 
   let response: Response;
   try {
-    response = await fetch(`${BASE}${path}`, {
-      headers: { Accept: "application/json" },
-      next: { revalidate: REVALIDATE_SECONDS },
-      signal: AbortSignal.timeout(15_000),
-    });
+    response = await fetchWithWakeUp(`${BASE}${path}`);
   } catch (cause) {
     // A build that dies on a bare TypeError leaves the address it tried out of
     // the message, which is the one fact needed to fix it.
@@ -126,6 +231,7 @@ async function readOrThrow<T>(path: string): Promise<T> {
     throw new Error(
       `Cannot build the page list: ${BASE}${path} ` +
         (timedOut ? "did not answer in time." : "could not be reached.") +
+        ` Gave up after ${PARAM_FETCH_ATTEMPTS} attempts over about ${PARAM_FETCH_BUDGET_SECONDS}s.` +
         " The API must be running and reachable from the build for the archive to be generated.",
       { cause },
     );

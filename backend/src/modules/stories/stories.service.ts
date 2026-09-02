@@ -20,6 +20,15 @@ import type {
 } from './dto/story.dto';
 
 /**
+ * At most one revision per story per this long — unless the piece is live, in
+ * which case every edit is a correction and gets its own. See `snapshot`.
+ */
+const REVISION_INTERVAL_MS = 10 * 60 * 1000;
+
+/** How many revisions a story keeps. See `prune` for why it is a count. */
+const REVISION_LIMIT = 50;
+
+/**
  * Published articles and the admin surface behind them.
  *
  * Every public read goes through `publishedWhere`. It is a single exported
@@ -200,13 +209,146 @@ export class StoriesService {
     }
     if (publishedAt !== undefined) data.publishedAt = new Date(publishedAt);
 
-    return updateWithOptimisticLock(
+    // Read before the write, so the *previous* copy is the one kept. Cheap —
+    // three columns by primary key — and only used if the write below turns
+    // out to have happened.
+    const before = await this.prisma.story.findUnique({
+      where: { id },
+      select: { title: true, dek: true, body: true, status: true },
+    });
+
+    const updated = await updateWithOptimisticLock(
       this.prisma.story,
       id,
       expectedUpdatedAt,
       data,
       'Story not found.',
     );
+
+    // After the lock, never before it. A revision written for a write that
+    // was then refused as stale would be a history entry for something that
+    // never happened — and it would be the entry a writer reached for.
+    if (before) await this.snapshot(id, before);
+
+    return updated;
+  }
+
+  /* ── History ─────────────────────────────────────────────────────────── */
+
+  /**
+   * Keeps the copy as it stood before an edit, so a paragraph can be got back.
+   *
+   * ── The problem this has to solve ────────────────────────────────────────
+   * The editor autosaves. A revision per save would be a revision every few
+   * seconds while somebody is writing a paragraph, which is not a history —
+   * it is a keystroke log with a thousand entries between "before lunch" and
+   * "after lunch", and the one a writer wants is unfindable in it.
+   *
+   * ── The rule ─────────────────────────────────────────────────────────────
+   * At most one revision per story per ten minutes, except that a published
+   * piece always gets one. Two different reasons:
+   *
+   *   * Ten minutes is roughly the granularity of "what did this look like
+   *     earlier". Finer than that and the list is noise; coarser and an
+   *     afternoon of work has two entries in it.
+   *
+   *   * A live piece is different in kind. Editing something readers can
+   *     already see is a correction, and what the piece said before a
+   *     correction is a fact about the published record — not a convenience.
+   *     Those are never collapsed into a ten-minute bucket.
+   *
+   * Nothing is written when the words did not change. A save that only moved
+   * the beat or the cover would otherwise produce a revision identical to the
+   * one before it, and a history of identical entries is a history nobody
+   * reads twice.
+   *
+   * ── Best effort ──────────────────────────────────────────────────────────
+   * A failure here is swallowed. The edit itself has already committed; a
+   * writer whose save succeeded should not be told it failed because the
+   * history could not be appended to, and the alternative — failing the
+   * request — would lose the words to protect a copy of them.
+   */
+  private async snapshot(
+    storyId: string,
+    before: { title: string; dek: string; body: Prisma.JsonValue; status: StoryStatus },
+  ): Promise<void> {
+    try {
+      const latest = await this.prisma.storyRevision.findFirst({
+        where: { storyId },
+        orderBy: { createdAt: 'desc' },
+        select: { title: true, dek: true, body: true, createdAt: true },
+      });
+
+      if (latest) {
+        const unchanged =
+          latest.title === before.title &&
+          latest.dek === before.dek &&
+          JSON.stringify(latest.body) === JSON.stringify(before.body);
+        if (unchanged) return;
+
+        const recent = Date.now() - latest.createdAt.getTime() < REVISION_INTERVAL_MS;
+        if (recent && before.status !== StoryStatus.PUBLISHED) return;
+      }
+
+      await this.prisma.storyRevision.create({
+        data: {
+          storyId,
+          title: before.title,
+          dek: before.dek,
+          // `Story.body` is non-nullable and every write goes through
+          // `parseBlocks`, so a JSON null cannot legitimately be in there.
+          // Read as an empty body rather than passed through, because that is
+          // what an empty body is everywhere else in this codebase.
+          body: (before.body ?? []) as Prisma.InputJsonValue,
+        },
+      });
+
+      await this.prune(storyId);
+    } catch (cause) {
+      // Deliberately quiet in the response, loud in the log: this is the one
+      // place a failure is invisible to the caller, so it must not be
+      // invisible to whoever maintains the deployment.
+      console.error(`[stories] Could not write a revision for ${storyId}:`, cause);
+    }
+  }
+
+  /**
+   * Keeps the newest `REVISION_LIMIT` and deletes the rest.
+   *
+   * A cap rather than an age, because what makes a history expensive is a
+   * story being edited a great deal, not a story being old — and the piece
+   * somebody is still working on years later is exactly the one whose history
+   * should not have been swept up by a date.
+   */
+  private async prune(storyId: string): Promise<void> {
+    const keep = await this.prisma.storyRevision.findMany({
+      where: { storyId },
+      orderBy: { createdAt: 'desc' },
+      take: REVISION_LIMIT,
+      select: { id: true },
+    });
+
+    await this.prisma.storyRevision.deleteMany({
+      where: { storyId, id: { notIn: keep.map((row) => row.id) } },
+    });
+  }
+
+  /**
+   * The history of one story, newest first.
+   *
+   * Bodies included. A list of dates with no content is a list nobody can
+   * choose from — "the version from Tuesday" means nothing until you can read
+   * it — and the cap above bounds how much this can ever be.
+   */
+  async revisions(principal: Principal | undefined, id: string) {
+    this.policy.requireScope(principal, 'stories:write');
+    const story = await this.prisma.story.findUnique({ where: { id }, select: { id: true } });
+    if (!story) throw new NotFoundException('Story not found.');
+
+    return this.prisma.storyRevision.findMany({
+      where: { storyId: id },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   /**

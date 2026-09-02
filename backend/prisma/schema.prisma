@@ -258,6 +258,7 @@ model Story {
   pitches   Pitch[]
   notes     Note[]
   deadlines Deadline[]
+  revisions StoryRevision[]
 
   sources     StorySource[]
   quotes      StoryQuote[]
@@ -269,6 +270,45 @@ model Story {
   @@index([status, publishedAt])
   @@index([genreSlug])
   @@map("stories")
+}
+
+/// An earlier version of a story, kept so a paragraph can be got back.
+///
+/// ── What is stored, and what deliberately is not ─────────────────────────
+/// The three fields a writer can lose work in: the headline, the standfirst
+/// and the body. Not the beat, the tags, the cover or the slug — those are
+/// filing rather than writing, they are changed deliberately rather than by
+/// accident, and copying them in would mean restoring an old draft silently
+/// re-filed the piece under an old beat.
+///
+/// ── Why a table and not a JSON column on Story ───────────────────────────
+/// A history is a list, and a list in a column is a list that has to be read
+/// and rewritten whole on every append — on a table whose row is already the
+/// hot path for the editor. Rows also let the pruning below be one DELETE
+/// rather than a read-modify-write race between two tabs.
+///
+/// ── There is no author column ────────────────────────────────────────────
+/// There would be nothing honest to put in it. Two accounts can edit a draft
+/// and the API knows which principal made the request, but the existing rows
+/// predate this table and would have to be attributed to somebody. A column
+/// that is right for new rows and a guess for old ones is worse than no
+/// column: it reads as a fact.
+model StoryRevision {
+  id      String @id @default(cuid())
+  storyId String
+
+  title String
+  dek   String
+  body  Json
+
+  /// The moment this version was *replaced*, which is what a reader of the
+  /// list is looking for: "the copy as it stood until then".
+  createdAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId, createdAt])
+  @@map("story_revisions")
 }
 
 /// Split from Story so a public read never has to select around it, and so

@@ -50,6 +50,7 @@ import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
+import { StoryHistory } from "@/components/admin/StoryHistory";
 import { StoryRecords } from "@/components/admin/StoryRecords";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { newsroomPath } from "@/lib/newsroom-path";
@@ -810,6 +811,14 @@ export default function StoryWorkspace({
           evidence, the timeline, notes and what is due. Below the draft
           rather than in front of it: see `StoryRecords`. */}
       <StoryRecords storyId={filedId} />
+
+      {/* Earlier versions, and a way back to one. Restoring loads the older
+          copy into the editor unsaved — see `StoryHistory` for why it does
+          not write on its own. */}
+      <StoryHistory
+        storyId={filedId}
+        onRestore={(copy) => setDraft((d) => ({ ...d, ...copy }))}
+      />
 
       <StoryChecks draft={draft} />
     </div>

@@ -145,6 +145,22 @@ export class StoriesAdminController {
    * editor bug. None of that is a reason to be able to publish.
    */
   /**
+   * What this piece said before. Newest first, bodies included.
+   *
+   * `stories:write` and no more: the history is the draft, and anybody who
+   * can open the editor can already read every word in it. Gating it behind
+   * `stories:publish` would mean a developer fixing an editor bug could not
+   * see the state the bug produced.
+   */
+  @Get(':id/revisions')
+  revisions(
+    @CurrentPrincipal() principal: Principal | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.stories.revisions(principal, id);
+  }
+
+  /**
    * Three verbs on one route: publish now, schedule for later, take it down.
    * The body is optional and an empty one means publish — so the call the
    * editor has always made keeps working and keeps meaning the obvious thing.

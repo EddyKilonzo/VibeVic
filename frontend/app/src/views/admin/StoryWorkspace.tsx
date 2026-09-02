@@ -50,6 +50,7 @@ import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
+import { StoryRecords } from "@/components/admin/StoryRecords";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { newsroomPath } from "@/lib/newsroom-path";
 
@@ -191,6 +192,25 @@ export default function StoryWorkspace({
   const version = useRef<string | null>(existing?.updatedAt ?? null);
 
   /**
+   * The same id again, as state, because two children now render from it.
+   *
+   * The ref above is right for what it does: `save` is memoised with no
+   * dependencies so the debounce is not restarted on every keystroke, and it
+   * needs the current id at the moment it fires rather than the one captured
+   * when it was created. But a ref is not readable during render — React says
+   * so and the linter enforces it — and a component handed `recordId.current`
+   * would not re-render when a first save gave the piece an id. The publish
+   * control would stay disabled and the record tabs would keep saying the
+   * piece has not been filed, both of which had just stopped being true.
+   *
+   * So the id is kept twice, deliberately, and the two are set together in the
+   * two places it can change. The duplication is small and the alternative is
+   * a screen that is quietly wrong for as long as nothing else happens to
+   * re-render it.
+   */
+  const [filedId, setFiledId] = useState<string | null>(existing?.id ?? null);
+
+  /**
    * Whether a first save is allowed to create a record.
    *
    * Only when the absence of one is known rather than merely unobserved. A ref
@@ -215,6 +235,7 @@ export default function StoryWorkspace({
     // overwrite of the wrong article if you are not.
     recordId.current = existing.id;
     version.current = existing.updatedAt;
+    setFiledId(existing.id);
     setLanding(null);
     setLandingMessage(null);
   }
@@ -269,6 +290,7 @@ export default function StoryWorkspace({
     if (outcome.ok) {
       recordId.current = outcome.story.id;
       version.current = outcome.story.updatedAt;
+      setFiledId(outcome.story.id);
       setLanding("server");
 
       /**
@@ -512,7 +534,7 @@ export default function StoryWorkspace({
                 what the absence means, which a greyed-out control cannot. */}
             {canPublish ? (
               <PublishControls
-                storyId={recordId.current}
+                storyId={filedId}
                 status={draft.status}
                 publishedAt={draft.publishedAt}
                 onChanged={applyTransition}
@@ -784,6 +806,11 @@ export default function StoryWorkspace({
 
       {/* The deterministic checks, reading the live draft. Collapsed until
           asked for — see the note in the component. */}
+      {/* The reporting behind the piece — sources, quotes, interviews,
+          evidence, the timeline, notes and what is due. Below the draft
+          rather than in front of it: see `StoryRecords`. */}
+      <StoryRecords storyId={filedId} />
+
       <StoryChecks draft={draft} />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   BarChart3,
   FilePen,
   FileText,
+  FolderOpen,
   Image,
   LayoutDashboard,
   Lightbulb,
@@ -73,6 +74,10 @@ const NAV: {
   { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
   { href: newsroomPath("/drafts"), label: "Drafts", icon: FilePen },
   { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb, scope: "newsroom:ideas" },
+  // The reporting record. Not scoped: a DEV holds `newsroom:read` and
+  // `newsroom:write` so a bug can be reproduced against real shapes, and the
+  // confidential rows are filtered out of every response before they get here.
+  { href: newsroomPath("/records"), label: "Records", icon: FolderOpen },
   { href: newsroomPath("/media"), label: "Media", icon: Image },
   { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3 },
   { href: newsroomPath("/readers"), label: "Readers", icon: Users },

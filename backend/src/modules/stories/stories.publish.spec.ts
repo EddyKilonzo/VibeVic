@@ -83,7 +83,21 @@ function serviceFor(story: StoryRow | null, appUrl?: string) {
     fakeConfig(appUrl ? { APP_URL: appUrl } : {}),
   );
 
-  return { service, writes, last: () => writes[writes.length - 1] };
+  /**
+   * The last write, asserted rather than optional.
+   *
+   * Every caller of this has just awaited a publish that was supposed to
+   * write. If it did not, the useful failure is "no write was made" at the
+   * point of asking, not twelve `possibly undefined` complaints from the
+   * compiler about assertions that would never run.
+   */
+  const last = () => {
+    const write = writes[writes.length - 1];
+    if (!write) throw new Error("No write was made.");
+    return write;
+  };
+
+  return { service, writes, last };
 }
 
 describe('StoriesService.publish', () => {

@@ -24,6 +24,20 @@ import type { Principal } from '../../../common/authz/principal';
  * announce, to a principal who cannot see them, exactly how many there are.
  * "You have 12 sources" against a list showing 9 is a disclosure, and it is the
  * kind that a summary endpoint written carelessly makes by default.
+ *
+ * ── And they respect the notebook, for exactly the same reason ───────────
+ * `ideas` and `pitches` are omitted entirely for a principal without
+ * `newsroom:ideas`, rather than returned as counts of rows they cannot open.
+ * The argument is the one above, applied to a collection instead of a tier: a
+ * developer who cannot read a single idea has no business being told there are
+ * fourteen of them, because "how many unpublished stories is he working on" is
+ * itself the kind of thing the split exists to keep private.
+ *
+ * Omitted rather than zeroed. A zero is a claim — that the collection is empty
+ * — and it is a false one; an absent key says nothing, which is the honest
+ * answer to a question this principal did not get to ask. The client's
+ * `NewsroomCounts` is a `Partial` already, so an absent key is a shape it
+ * expects.
  */
 @Injectable()
 export class SummaryService {
@@ -40,9 +54,11 @@ export class SummaryService {
       in: this.policy.visibilityFilter(principal),
     };
 
+    // Asked once and used twice: to decide whether to count the notebook at
+    // all, and to decide whether to report it.
+    const notebook = this.policy.canSeeIdeas(principal);
+
     const [
-      ideas,
-      pitches,
       sources,
       quotes,
       interviews,
@@ -53,9 +69,6 @@ export class SummaryService {
       deadlines,
       collections,
     ] = await this.prisma.$transaction([
-      // Untiered: the whole collection is private, so every row counts.
-      this.prisma.idea.count(),
-      this.prisma.pitch.count(),
       // Tiered: filtered, for the reason in the class comment.
       this.prisma.source.count({ where: { visibility: visible } }),
       this.prisma.quote.count({ where: { visibility: visible } }),
@@ -69,9 +82,23 @@ export class SummaryService {
       this.prisma.collection.count(),
     ]);
 
+    /*
+     * The notebook, counted only if it may be read.
+     *
+     * A second round trip rather than two placeholder queries padding the
+     * transaction above: a query whose result has to be thrown away is a
+     * query somebody later forgets to throw away, and the counts here are not
+     * a set that has to be consistent with each other to a single instant.
+     */
+    const notebookCounts: Record<string, number> = notebook
+      ? {
+          ideas: await this.prisma.idea.count(),
+          pitches: await this.prisma.pitch.count(),
+        }
+      : {};
+
     return {
-      ideas,
-      pitches,
+      ...notebookCounts,
       sources,
       quotes,
       interviews,

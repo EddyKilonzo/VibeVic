@@ -45,6 +45,7 @@ export class PitchesService {
   } satisfies Prisma.PitchInclude;
 
   async list(principal: Principal | undefined) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:read');
     const rows = await this.prisma.pitch.findMany({
       include: PitchesService.WITH_SOURCES,
@@ -61,6 +62,7 @@ export class PitchesService {
   }
 
   async get(principal: Principal | undefined, id: string) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:read');
     const pitch = await this.prisma.pitch.findUnique({
       where: { id },
@@ -73,6 +75,7 @@ export class PitchesService {
   }
 
   async create(principal: Principal | undefined, dto: CreatePitchDto) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
     const sourceIds = await this.assertSourcesAreLinkable(principal, dto.sourceIds ?? []);
 
@@ -96,6 +99,7 @@ export class PitchesService {
   }
 
   async update(principal: Principal | undefined, id: string, dto: UpdatePitchDto) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
 
     const existing = await this.prisma.pitch.findUnique({
@@ -127,6 +131,7 @@ export class PitchesService {
   }
 
   async remove(principal: Principal | undefined, id: string) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
     const existing = await this.prisma.pitch.findUnique({ where: { id }, select: { id: true } });
     if (!existing) throw new NotFoundException(NOT_FOUND);

@@ -14,6 +14,8 @@ import {
 import { PROFILE } from "@/data/content";
 import { CHANNEL } from "@/data/videos";
 import { exportAll, forget, useNewsroom, useNewsroomCounts } from "@/data/newsroom/useNewsroom";
+import type { ListKey } from "@/data/newsroom/store";
+import { useCan } from "@/components/admin/SessionContext";
 import { listDrafts } from "@/lib/drafts";
 import { formatBytes, listMedia } from "@/lib/media";
 import { audioEvents, clearAudioAnalytics } from "@/lib/voice/analytics";
@@ -163,12 +165,21 @@ function StoredData() {
    * The export still needs the records themselves, so it names them.
    *
    * This is the one place that genuinely wants the material rather than a
-   * count, and it is honest about the cost: eleven requests, made because
-   * somebody asked for a backup.
+   * count, and it is honest about the cost: a request per collection, made
+   * because somebody asked for a backup.
+   *
+   * ── Why the notebook is asked for conditionally ──────────────────────────
+   * `ideas` and `pitches` need `newsroom:ideas`, which a developer account
+   * does not hold. Asking for them anyway would put two red 403s on a screen
+   * whose whole job is to reassure somebody that their work can be got out —
+   * and it would be asking for material this session has already been told is
+   * not its business. So the list is built from what this role can read, and
+   * the export below says what it therefore does not contain rather than
+   * quietly handing over a partial backup.
    */
+  const notebook = useCan("newsroom:ideas");
   const { newsroom } = useNewsroom(
-    "ideas",
-    "pitches",
+    ...((notebook ? ["ideas", "pitches"] : []) as ListKey[]),
     "sources",
     "quotes",
     "interviews",
@@ -250,7 +261,15 @@ function StoredData() {
     // browser, and an un-revoked object URL pins the blob for the life of the
     // document.
     URL.revokeObjectURL(url);
-    notify.success("Export downloaded", "Drafts and the newsroom records.");
+    notify.success(
+      "Export downloaded",
+      // Says what is missing rather than letting a partial backup pass for a
+      // whole one. A file somebody keeps for a year should not need them to
+      // remember which role downloaded it.
+      notebook
+        ? "Drafts and the newsroom records."
+        : "Drafts and the newsroom records. Ideas and pitches are not included — they are the writer's.",
+    );
   };
 
   /** Two presses, not a modal. The second press is the confirmation. */

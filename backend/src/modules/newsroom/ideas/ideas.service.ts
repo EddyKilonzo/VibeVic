@@ -38,11 +38,13 @@ export class IdeasService {
    * that knows the difference.
    */
   list(principal: Principal | undefined) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:read');
     return this.prisma.idea.findMany({ orderBy: { updatedAt: 'desc' } });
   }
 
   async get(principal: Principal | undefined, id: string) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:read');
     const idea = await this.prisma.idea.findUnique({ where: { id } });
     if (!idea) throw new NotFoundException(NOT_FOUND);
@@ -50,6 +52,7 @@ export class IdeasService {
   }
 
   create(principal: Principal | undefined, dto: CreateIdeaDto) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
 
     return this.prisma.idea.create({
@@ -68,6 +71,7 @@ export class IdeasService {
   }
 
   async update(principal: Principal | undefined, id: string, dto: UpdateIdeaDto) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
 
     const { expectedUpdatedAt, ...rest } = dto;
@@ -80,6 +84,7 @@ export class IdeasService {
   }
 
   async remove(principal: Principal | undefined, id: string) {
+    this.policy.requireScope(principal, 'newsroom:ideas');
     this.policy.requireScope(principal, 'newsroom:write');
 
     // Read first so a delete of something already gone is a 404 rather than a

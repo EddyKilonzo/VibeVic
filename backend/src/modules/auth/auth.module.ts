@@ -16,11 +16,18 @@ import { PasswordResetService } from './password-reset.service';
  * sign and per verify call from validated config, so there is no module-level
  * default that could quietly stand in for a missing one.
  *
- * PasswordService and PasswordResetService are providers but not exports.
- * Hashing a password and issuing a reset link are this module's work; a
- * feature module that found itself wanting either has taken a wrong turn, and
- * not exporting them is how that shows up as a compile error rather than as a
- * second place passwords are written.
+ * PasswordService is a provider and not an export. Hashing a password is this
+ * module's work; a feature module that found itself wanting it has taken a
+ * wrong turn, and not exporting it is how that shows up as a compile error
+ * rather than as a second place passwords are written.
+ *
+ * PasswordResetService is exported, which it was not, and the reason is worth
+ * stating rather than leaving as a widened list. Account administration
+ * (`SystemModule`) has to be able to send somebody their first setup link, and
+ * the alternative to exporting this was a second implementation of "mint a
+ * token, store its hash, email the link" — which is the exact thing both this
+ * service and the CLI already warn against. One implementation, reachable by
+ * the two callers that legitimately need it.
  */
 @Global()
 @Module({
@@ -33,6 +40,6 @@ import { PasswordResetService } from './password-reset.service';
     AccessPolicyService,
     { provide: TOKEN_VERIFIER, useExisting: AuthService },
   ],
-  exports: [AuthService, AccessPolicyService, TOKEN_VERIFIER],
+  exports: [AuthService, AccessPolicyService, PasswordResetService, TOKEN_VERIFIER],
 })
 export class AuthModule {}

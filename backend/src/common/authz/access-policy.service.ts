@@ -40,6 +40,20 @@ export class AccessPolicyService {
   }
 
   /**
+   * May this principal read the ideas notebook?
+   *
+   * A question rather than an assertion, because the summary endpoint needs to
+   * *branch* on it rather than refuse: a developer asking how much the
+   * newsroom holds gets an honest answer about the collections they can open
+   * and silence about the one they cannot. The controllers that serve ideas
+   * and pitches use `requireScope` instead, which throws — that is the right
+   * shape where the whole response is the notebook.
+   */
+  canSeeIdeas(principal: Principal | undefined): boolean {
+    return principal ? hasScope(principal, 'newsroom:ideas') : false;
+  }
+
+  /**
    * The visibility values this principal may load, for use in a `where` clause.
    *
    * Filtering in the query rather than after it is not an optimisation. A

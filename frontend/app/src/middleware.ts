@@ -28,6 +28,13 @@ import { SESSION_COOKIE, verifySession } from "@/lib/newsroom-session";
  * the sources screen still cannot read a protected identity, because the
  * screen is not what is holding the data back.
  *
+ * Some screens do now turn a role away at the door — the ideas notebook for a
+ * DEV, diagnostics and accounts for a WRITER — but that check lives in each
+ * page, not here. A matcher cannot know which scope a path needs without
+ * carrying a second copy of the permission table, and a second copy is the
+ * one that goes stale. Each page asks the question next to the thing it is
+ * protecting, and the API asks it again underneath.
+ *
  * ── The cookie ───────────────────────────────────────────────────────────
  * httpOnly, sameSite=lax, secure in production, so it is unreadable from
  * JavaScript and does not ride along on cross-site requests. It carries the

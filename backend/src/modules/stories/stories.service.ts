@@ -197,7 +197,21 @@ export class StoriesService {
    * advertises. Thrown synchronously it was neither: a caller who reached for
    * `.catch()` got an exception through the call itself.
    */
-  async publish(_principal: Principal | undefined, _id: string): Promise<never> {
+  async publish(principal: Principal | undefined, _id: string): Promise<never> {
+    /*
+     * The scope is checked before the not-implemented throw, and the order is
+     * deliberate.
+     *
+     * A 501 from an unauthorised caller answers the question "does this
+     * endpoint exist and would it work for me" — which is a question the
+     * caller has not earned an answer to. Checking first means a DEV pressing
+     * publish gets 403 (a policy, stated), and only a WRITER learns that the
+     * transition itself is still missing. It also means the check is already
+     * in place on the day the body below is replaced by real work, rather
+     * than being something the implementer has to remember to add.
+     */
+    this.policy.requireScope(principal, 'stories:publish');
+
     // Names the three missing pieces rather than citing a README section. The
     // message used to say `See README, "Stubbed"`; there is no README in this
     // package and no such heading anywhere in the repository, so the one

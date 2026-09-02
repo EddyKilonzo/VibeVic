@@ -13,7 +13,9 @@ import { CreatePitchDto, UpdatePitchDto } from './pitch.dto';
 import { PitchesService } from './pitches.service';
 
 /**
- * Pitches are private in whole, like ideas.
+ * Pitches are private in whole, like ideas — and gated the same way, on
+ * `newsroom:ideas` rather than on `newsroom:read`. A pitch is an idea that has
+ * been worked up; if the notebook is the writer's, so is this.
  *
  * The scopes on this controller look identical to the sources controller and do
  * not mean quite the same thing: `newsroom:confidential` is not required to
@@ -25,7 +27,7 @@ import { PitchesService } from './pitches.service';
  */
 @Controller('newsroom/pitches')
 @NewsroomOnly()
-@RequireScopes('newsroom:read')
+@RequireScopes('newsroom:read', 'newsroom:ideas')
 export class PitchesController {
   constructor(private readonly pitches: PitchesService) {}
 
@@ -43,7 +45,7 @@ export class PitchesController {
   }
 
   @Post()
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   create(
     @CurrentPrincipal() principal: Principal | undefined,
     @Body() dto: CreatePitchDto,
@@ -52,7 +54,7 @@ export class PitchesController {
   }
 
   @Patch(':id')
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   update(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,
@@ -62,7 +64,7 @@ export class PitchesController {
   }
 
   @Delete(':id')
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   remove(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,

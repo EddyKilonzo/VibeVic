@@ -12,10 +12,18 @@ import { NewsroomOnly, RequireScopes } from '../../../common/authz/surface.decor
 import { CreateIdeaDto, UpdateIdeaDto } from './idea.dto';
 import { IdeasService } from './ideas.service';
 
-/** Ideas are private in whole. Nothing here is, or can be, `@PublicRead`. */
+/**
+ * Ideas are private in whole. Nothing here is, or can be, `@PublicRead`.
+ *
+ * `newsroom:ideas` sits on the class, so it applies to reads as well as
+ * writes. That is the difference between this collection and every other one:
+ * elsewhere the question is what a principal may change, here it is whether
+ * they may look at all. An idea is the decision to write something, taken and
+ * not yet acted on, and it belongs to the person taking it.
+ */
 @Controller('newsroom/ideas')
 @NewsroomOnly()
-@RequireScopes('newsroom:read')
+@RequireScopes('newsroom:read', 'newsroom:ideas')
 export class IdeasController {
   constructor(private readonly ideas: IdeasService) {}
 
@@ -33,7 +41,7 @@ export class IdeasController {
   }
 
   @Post()
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   create(
     @CurrentPrincipal() principal: Principal | undefined,
     @Body() dto: CreateIdeaDto,
@@ -42,7 +50,7 @@ export class IdeasController {
   }
 
   @Patch(':id')
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   update(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,
@@ -52,7 +60,7 @@ export class IdeasController {
   }
 
   @Delete(':id')
-  @RequireScopes('newsroom:read', 'newsroom:write')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
   remove(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,

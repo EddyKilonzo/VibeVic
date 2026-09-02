@@ -97,6 +97,66 @@ export class PasswordResetService {
       return;
     }
 
+    await this.mintAndSend(user, requestedFrom);
+  }
+
+  /**
+   * Issue a link because an administrator asked, not because the owner did.
+   *
+   * ── Why this exists next to `request` rather than inside it ──────────────
+   * `request` is built around a stranger at a form: it says nothing about
+   * whether the address exists, and it is rationed three to a quarter of an
+   * hour because each attempt costs an email. Neither applies here. The
+   * caller holds `system:accounts`, has already been shown the account in a
+   * list, and is doing the one thing that gets a new person signed in for the
+   * first time — so silence would be a bug and a throttle would be a support
+   * request.
+   *
+   * ── Why it returns nothing, and why that is the security control ────────
+   * The token is emailed and is not handed back to the caller. That is what
+   * stops `system:accounts` being a way around every other scope: a DEV can
+   * create a WRITER account, but cannot mint a credential for it into their
+   * own hands without also holding that mailbox. Returning the URL here —
+   * which would be more convenient, and is what the CLI does — would make
+   * this endpoint a self-service promotion to `newsroom:confidential`.
+   *
+   * The honest caveat, stated rather than glossed: somebody with the
+   * production `DATABASE_URL` can already do all of this with SQL, and the
+   * CLI this replaces required exactly that access. What this removes is the
+   * need for a shell on production to add a colleague, not the trust placed
+   * in whoever has one.
+   */
+  async issueFor(userId: string, requestedFrom: string | null): Promise<void> {
+    if (!this.mail.configured) {
+      throw new ServiceUnavailableException(
+        'This newsroom cannot send email yet, so a setup link cannot be issued. Set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM and APP_URL, or use "npm run account -- link" on the server.',
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true },
+    });
+    // Says so plainly. The caller is an authenticated administrator looking
+    // at a list they were just served, so there is no account to conceal.
+    if (!user) throw new BadRequestException('No such account.');
+
+    await this.mintAndSend(user, requestedFrom);
+  }
+
+  /**
+   * One implementation of "put a live reset token in somebody's inbox".
+   *
+   * Both callers route through here for the reason the CLI's copy of it also
+   * gives: a second, subtly different implementation of a credential is how
+   * the two drift until one of them is wrong. The differences between the two
+   * callers — who may ask, whether they are told anything — are decided
+   * before this point, and none of them changes the token.
+   */
+  private async mintAndSend(
+    user: { id: string; email: string; name: string },
+    requestedFrom: string | null,
+  ): Promise<void> {
     const minutes = this.config.get('PASSWORD_RESET_TTL_MINUTES', { infer: true });
 
     /*

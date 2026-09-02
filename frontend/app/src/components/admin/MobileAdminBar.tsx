@@ -3,17 +3,35 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, FileText, LayoutDashboard, Lightbulb, Plus } from "lucide-react";
+import { Activity, BarChart3, FileText, LayoutDashboard, Lightbulb, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
+import { useCan } from "./SessionContext";
 
-const ITEMS = [
-  { href: newsroomPath(), label: "Home", icon: LayoutDashboard, end: true },
-  { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
-  // The centre slot is the compose action, inserted between these.
-  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb },
-  { href: newsroomPath("/analytics"), label: "Data", icon: BarChart3 },
-];
+/**
+ * Four slots, and the third one depends on who is signed in.
+ *
+ * The bar's shape is not negotiable — two destinations, the compose button,
+ * two more — so a role that cannot open the ideas notebook does not get a
+ * gap there, it gets the screen that is actually theirs. Diagnostics is the
+ * dev's most-reached-for page in the same way ideas is the writer's, so the
+ * swap keeps the bar useful rather than merely correct.
+ *
+ * Compose stays for both. A DEV holds `stories:write` and reproduces editor
+ * bugs by writing in the editor; what they cannot do is publish, and that
+ * button is not here.
+ */
+function itemsFor(notebook: boolean) {
+  return [
+    { href: newsroomPath(), label: "Home", icon: LayoutDashboard, end: true },
+    { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
+    // The centre slot is the compose action, inserted between these.
+    notebook
+      ? { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb }
+      : { href: newsroomPath("/diagnostics"), label: "Health", icon: Activity },
+    { href: newsroomPath("/analytics"), label: "Data", icon: BarChart3 },
+  ];
+}
 
 /**
  * The admin's bottom bar on phones.
@@ -35,6 +53,7 @@ export function MobileAdminBar() {
    * hydration is a router detail rather than a promise.
    */
   const pathname = newsroomSuffix(usePathname() ?? newsroomPath());
+  const items = itemsFor(useCan("newsroom:ideas"));
 
   const isActive = (href: string, end?: boolean) =>
     end
@@ -50,7 +69,7 @@ export function MobileAdminBar() {
       )}
     >
       <ul className="mx-auto flex max-w-[560px] items-stretch justify-around px-2">
-        {ITEMS.map((item, i) => (
+        {items.map((item, i) => (
           // The compose button is spliced into the middle of the list rather
           // than floated over it, so it takes part in the same layout and
           // cannot end up covering a destination on a narrow screen.

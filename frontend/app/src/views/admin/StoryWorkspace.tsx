@@ -43,6 +43,7 @@ import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { createStory, updateStory, type SaveOutcome } from "@/lib/story-save";
 import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { useCan } from "@/components/admin/SessionContext";
 import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
@@ -458,6 +459,16 @@ export default function StoryWorkspace({
    */
   const [publishing, setPublishing] = useState(false);
 
+  /*
+   * Whether to draw the publish button at all.
+   *
+   * Not a check — `useCan` says so itself. The route behind this refuses a
+   * DEV on its own, on their own token, and the API refuses it again; this
+   * only decides whether a control that would be refused is put in front of
+   * somebody.
+   */
+  const canPublish = useCan("stories:publish");
+
   const setStatus = (next: StoryStatus) => {
     setDraft((d) => ({ ...d, status: next }));
     notify.success(
@@ -545,9 +556,25 @@ export default function StoryWorkspace({
                 Mark ready
               </Button>
             )}
-            <Button size="sm" onClick={publish} disabled={publishing}>
-              {publishing ? "Publishing…" : "Publish"}
-            </Button>
+            {/* Publish belongs to the writer. A DEV holds `stories:write`,
+                so every control on this screen up to here is theirs — the
+                editor is where an editor bug gets reproduced — and this one
+                is not: deciding a piece is ready for readers is editorial
+                judgement, and maintaining the software never needs it.
+
+                Hidden rather than disabled. A disabled button is a promise
+                that it will work under some condition the person could meet,
+                and there is no condition here; the sentence underneath says
+                what the absence means, which a greyed-out control cannot. */}
+            {canPublish ? (
+              <Button size="sm" onClick={publish} disabled={publishing}>
+                {publishing ? "Publishing…" : "Publish"}
+              </Button>
+            ) : (
+              <p className="max-w-[24ch] text-[11px] leading-snug text-muted-foreground">
+                Publishing is the writer&rsquo;s. Mark it ready and it is theirs to take live.
+              </p>
+            )}
           </div>
         </div>
       </Reveal>

@@ -148,13 +148,19 @@ export function AccountMenu({ session }: { session: SessionSummary }) {
 /**
  * What this account can do, and the one thing it may not.
  *
- * ── Why the withheld row is shown rather than hidden ─────────────────────
+ * ── Why the withheld rows are shown rather than hidden ───────────────────
  * A list of only what you can do leaves you to discover the boundary by
  * hitting it — which for a DEV means opening a source record, seeing a
  * pseudonym, and not knowing whether that is the whole truth or a permission
  * they do not have. Naming it, with the reason, turns a confusing absence
  * into a stated rule. It is also not a secret from the person holding the
  * account: the API enforces it whatever this panel says.
+ *
+ * Both roles now have withheld rows, and that is the change worth noticing
+ * here. When DEV was WRITER minus one scope, this section read as a list of
+ * what the lesser account could not do. It reads as a division of labour
+ * instead: a writer is told they cannot open diagnostics in the same tone a
+ * dev is told they cannot publish, and neither sentence is about trust.
  *
  * The reason travels with the withheld line only. Four paragraphs of
  * justification under things you can already do is a panel nobody reads

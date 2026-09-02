@@ -6,6 +6,7 @@ import { NavLink } from "@/components/nav/NavLink";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
+  Activity,
   BarChart3,
   FilePen,
   FileText,
@@ -17,6 +18,7 @@ import {
   Settings,
   Tags,
   Trophy,
+  UserCog,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,10 +28,12 @@ import { PageTransition } from "@/components/motion";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
 import { AccountMenu, type SessionSummary } from "@/components/admin/AccountMenu";
+import { SessionProvider } from "@/components/admin/SessionContext";
 import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
+import { can, type Scope } from "@/lib/newsroom-scopes";
 
 /**
- * The ten sections, all of them built.
+ * The sections, all of them built — and no longer the same list for everybody.
  *
  * Each row used to be able to carry `soon`, and five of them did: the
  * sections were routed but landed on the same "isn't built yet" card, so the
@@ -38,17 +42,54 @@ import { newsroomPath, newsroomSuffix } from "@/lib/newsroom-path";
  * settings — so the flag has gone rather than lingering as a mark nothing
  * sets. A nav that can describe a state the product no longer has is a nav
  * that will eventually describe it wrongly.
+ *
+ * ── Why rows carry a scope ───────────────────────────────────────────────
+ * Three of these are not shared. Ideas is the writer's notebook; diagnostics
+ * and accounts are the dev's side of the machine. A rail that listed all
+ * twelve to both accounts would be offering each of them two or three links
+ * that answer 403 — which is a worse way to learn a boundary than never being
+ * shown it, because it looks like a bug rather than a rule. The account menu
+ * is where the boundary is *stated*; this is where it is simply not in the
+ * way.
+ *
+ * ── And why hiding a row is not the control ──────────────────────────────
+ * It is not one at all. Typing the URL still reaches the route, which is why
+ * each of those three pages checks the session's role server-side before it
+ * renders, and why the API re-checks the scope on every call behind them.
+ * This filter is about what a rail should offer, not about what a person can
+ * reach — the same argument the middleware's own header makes about hiding
+ * the admin link.
+ *
+ * A row with no `scope` is shared by both roles, which is most of them.
  */
-const NAV = [
+const NAV: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  end?: boolean;
+  scope?: Scope;
+}[] = [
   { href: newsroomPath(), label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
   { href: newsroomPath("/drafts"), label: "Drafts", icon: FilePen },
-  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb },
+  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb, scope: "newsroom:ideas" },
   { href: newsroomPath("/media"), label: "Media", icon: Image },
   { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3 },
   { href: newsroomPath("/readers"), label: "Readers", icon: Users },
   { href: newsroomPath("/genres"), label: "Beats", icon: Tags },
   { href: newsroomPath("/awards"), label: "Awards", icon: Trophy },
+  {
+    href: newsroomPath("/diagnostics"),
+    label: "Diagnostics",
+    icon: Activity,
+    scope: "system:diagnostics",
+  },
+  {
+    href: newsroomPath("/accounts"),
+    label: "Accounts",
+    icon: UserCog,
+    scope: "system:accounts",
+  },
   { href: newsroomPath("/settings"), label: "Settings", icon: Settings },
 ];
 
@@ -75,7 +116,22 @@ export default function AdminLayout({
   // Suffixes, for the reason given in MobileAdminBar.
   const pathname = newsroomSuffix(usePathname() ?? newsroomPath());
 
+  /*
+   * The rows this account is offered. Derived rather than stored, because the
+   * role comes from a session that can end mid-visit and a memoised copy of
+   * it would be the thing that went stale.
+   *
+   * The header title below still reads from the whole of `NAV`. If somebody
+   * types a path their role cannot use, the page itself sends them away —
+   * but for the frame it takes to do that, "Ideas" is a better thing to have
+   * in the header than "Admin".
+   */
+  const sections = NAV.filter((item) => !item.scope || can(session.role, item.scope));
+
   return (
+    /* The provider wraps the whole shell rather than only `main`, so the rail
+       and the header are asking the same question from the same answer. */
+    <SessionProvider session={session}>
     <div className="flex min-h-screen bg-muted/40">
       {/* Desktop sidebar.
 
@@ -128,9 +184,9 @@ export default function AdminLayout({
 
         <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-2">
           <ul className="space-y-0.5">
-            {NAV.map((item) => (
+            {sections.map((item) => (
               <li key={item.href}>
-                <SidebarLink item={item} collapsed={collapsed} scope="rail" />
+                <SidebarLink item={item} collapsed={collapsed} surface="rail" />
               </li>
             ))}
           </ul>
@@ -175,7 +231,7 @@ export default function AdminLayout({
             >
               <nav aria-label="Admin" className="mt-4">
                 <ul className="space-y-0.5">
-                  {NAV.map((item, i) => (
+                  {sections.map((item, i) => (
                     <motion.li
                       key={item.href}
                       initial={reduced ? false : { opacity: 0, x: -10 }}
@@ -185,7 +241,7 @@ export default function AdminLayout({
                               <SidebarLink
                         item={item}
                         collapsed={false}
-                        scope="drawer"
+                        surface="drawer"
                         onClick={() => setMobileOpen(false)}
                       />
                     </motion.li>
@@ -255,13 +311,14 @@ export default function AdminLayout({
 
       <MobileAdminBar />
     </div>
+    </SessionProvider>
   );
 }
 
 /**
- * `scope` keeps the two navigations' shared-layout animations apart.
+ * `surface` keeps the two navigations' shared-layout animations apart.
  *
- * The rail and the drawer render the same nine links, and the rail stays
+ * The rail and the drawer render the same links, and the rail stays
  * mounted at `display: none` on a phone. With one `layoutId` across both,
  * Motion pairs the drawer's active pill with a hidden element that measures
  * zero, and the pill animates out of the corner of the screen on open.
@@ -269,12 +326,12 @@ export default function AdminLayout({
 function SidebarLink({
   item,
   collapsed,
-  scope,
+  surface,
   onClick,
 }: {
   item: (typeof NAV)[number];
   collapsed: boolean;
-  scope: "rail" | "drawer";
+  surface: "rail" | "drawer";
   onClick?: () => void;
 }) {
   const Icon = item.icon;
@@ -299,7 +356,7 @@ function SidebarLink({
         <>
           {isActive && (
             <motion.span
-              layoutId={reduced ? undefined : `admin-nav-active-${scope}`}
+              layoutId={reduced ? undefined : `admin-nav-active-${surface}`}
               className="absolute inset-0 rounded-lg bg-sidebar-accent"
               transition={transitions.normal}
             />
@@ -309,7 +366,7 @@ function SidebarLink({
               survives a dim screen, and it does not rely on colour. */}
           {isActive && (
             <motion.span
-              layoutId={reduced ? undefined : `admin-nav-edge-${scope}`}
+              layoutId={reduced ? undefined : `admin-nav-edge-${surface}`}
               className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-white"
               transition={transitions.normal}
             />

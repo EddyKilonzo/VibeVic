@@ -221,7 +221,14 @@ describe('AuthService.issueToken', () => {
         email: 'vic@example.com',
         name: 'Victor',
         role: Role.WRITER,
-        scopes: ['newsroom:read', 'newsroom:write', 'newsroom:confidential', 'stories:write'],
+        scopes: [
+          'newsroom:read',
+          'newsroom:write',
+          'newsroom:confidential',
+          'newsroom:ideas',
+          'stories:write',
+          'stories:publish',
+        ],
       });
 
       // The frontend sets its cookie's max-age from this string, so a drift
@@ -244,7 +251,17 @@ describe('AuthService.issueToken', () => {
     }
   });
 
-  it('gives a DEV the DEV scopes, and never the confidential one', async () => {
+  /**
+   * The split runs both ways, so it is asserted both ways.
+   *
+   * A test that only checked DEV ⊆ WRITER would still pass if somebody
+   * quietly handed the dev account `stories:publish`, because that direction
+   * was the whole of the old rule. What is being protected now is that
+   * neither list contains the other: three scopes are the writer's alone and
+   * two are the dev's alone, and an edit to `roles.ts` that blurs either
+   * boundary has to come past this.
+   */
+  it('gives a DEV the DEV scopes, and none of the editorial ones', async () => {
     const { service } = build({
       user: userRow({ role: Role.DEV }),
       passwordCorrect: true,
@@ -252,8 +269,30 @@ describe('AuthService.issueToken', () => {
 
     const session = await service.issueToken({ email: 'vic@example.com', password: 'right' });
 
-    expect(session.user.scopes).toEqual(['newsroom:read', 'newsroom:write', 'stories:write']);
+    expect(session.user.scopes).toEqual([
+      'newsroom:read',
+      'newsroom:write',
+      'stories:write',
+      'system:diagnostics',
+      'system:accounts',
+    ]);
+    // Named one by one rather than by the array above, so the reason each is
+    // withheld survives a reshuffle of the table's order.
     expect(session.user.scopes).not.toContain('newsroom:confidential');
+    expect(session.user.scopes).not.toContain('newsroom:ideas');
+    expect(session.user.scopes).not.toContain('stories:publish');
+  });
+
+  it('gives a WRITER none of the system scopes', async () => {
+    const { service } = build({
+      user: userRow({ role: Role.WRITER }),
+      passwordCorrect: true,
+    });
+
+    const session = await service.issueToken({ email: 'vic@example.com', password: 'right' });
+
+    expect(session.user.scopes).not.toContain('system:diagnostics');
+    expect(session.user.scopes).not.toContain('system:accounts');
   });
 
   it('refuses when no signing secret is configured rather than signing with nothing', async () => {
@@ -408,7 +447,13 @@ describe('AuthService.verifyToken', () => {
       const principal = await service.verifyToken(forged);
 
       expect(principal.scopes).not.toContain('newsroom:confidential');
-      expect(principal.scopes).toEqual(['newsroom:read', 'newsroom:write', 'stories:write']);
+      expect(principal.scopes).toEqual([
+        'newsroom:read',
+        'newsroom:write',
+        'stories:write',
+        'system:diagnostics',
+        'system:accounts',
+      ]);
     });
 
     it('refuses a token signed with a different secret', async () => {

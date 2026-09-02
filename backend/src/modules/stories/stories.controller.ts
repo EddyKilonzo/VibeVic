@@ -130,7 +130,17 @@ export class StoriesAdminController {
     return this.stories.update(principal, id, dto);
   }
 
+  /**
+   * The one route on this controller a DEV may not reach.
+   *
+   * `stories:write` gets you the editor; `stories:publish` gets you the
+   * button that puts the result in front of readers. Everything else here is
+   * craft — creating a draft, fixing a typo, reshaping a section — and the
+   * account that maintains the software needs all of it to reproduce an
+   * editor bug. None of that is a reason to be able to publish.
+   */
   @Post(':id/publish')
+  @RequireScopes('stories:write', 'stories:publish')
   publish(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,

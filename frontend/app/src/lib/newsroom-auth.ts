@@ -6,6 +6,7 @@ import {
   verifySession,
   type SessionClaims,
 } from "./newsroom-session";
+import { can, type Scope } from "./newsroom-scopes";
 
 /**
  * Who is asking, on the server.
@@ -41,4 +42,30 @@ export async function sessionToken(): Promise<string | null> {
 /** Is this request coming from inside the newsroom? */
 export async function isUnlocked(): Promise<boolean> {
   return (await currentSession()) !== null;
+}
+
+/**
+ * Is this request coming from inside the newsroom *and* from a role that holds
+ * this scope?
+ *
+ * ── Why a route checks a scope when the API will ─────────────────────────
+ * The same two-lock argument as `isUnlocked`, one level in. The API is the
+ * party that decides, and it re-derives the role from the database on every
+ * call — so this is not the check that matters. What it buys is the shape of
+ * the refusal: a route that forwards a request it knows will be refused spends
+ * a round trip to turn a scope problem into whatever the proxy layer makes of
+ * a 403, and the pitch route in particular would spend money on a model call
+ * before anyone asked the API anything.
+ *
+ * Returns the outcome rather than throwing, because the three cases —
+ * signed out, wrong role, allowed — are three different status codes and a
+ * route handler has to pick one.
+ */
+export async function sessionWithScope(
+  scope: Scope,
+): Promise<{ ok: true; session: SessionClaims } | { ok: false; status: 401 | 403 }> {
+  const session = await currentSession();
+  if (!session) return { ok: false, status: 401 };
+  if (!can(session.role, scope)) return { ok: false, status: 403 };
+  return { ok: true, session };
 }

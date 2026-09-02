@@ -1,11 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
+import { Check, KeyRound, Minus } from "lucide-react";
 import { resetAction, type FormState } from "@/app/newsroom-access/actions";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { AccessCard, Field, Unconfigured } from "./AccessCard";
+
+/**
+ * The server's floor, repeated here so the screen can show it being met.
+ *
+ * `resetAction` checks the same number and the API checks it again in
+ * `ResetPasswordDto`. Three checks, one of which a person can see before they
+ * commit to anything — which is the one that stops the failure happening.
+ */
+const MIN_LENGTH = 12;
 
 /**
  * Choose a new password.
@@ -28,9 +38,28 @@ import { AccessCard, Field, Unconfigured } from "./AccessCard";
  * is handed a link to this page. Which means this flow is exercised every
  * time somebody joins, rather than only on the rare day somebody forgets —
  * and a path that is walked often is a path that still works.
+ *
+ * ── Why the rules are shown being met, not reported afterwards ───────────
+ * Both rules used to be enforced only on submit, and both failures cost the
+ * same thing: the form comes back, the two masked fields are empty again, and
+ * the sentence explaining why is below the button that was just pressed. For
+ * "twelve characters" that is a slow way to learn a number; the API's own
+ * wording for it — "password must be longer than or equal to 12 characters" —
+ * is what a person gets if they reach it from anywhere but this form.
+ *
+ * So both are answered while they are being typed. The server still decides:
+ * nothing here is disabled and nothing is blocked, because this form has to
+ * work for someone on a borrowed machine with JavaScript off, and a submit
+ * button that looks broken is worse than one that answers.
  */
 export function ResetForm({ token }: { token?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(resetAction, {});
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+
+  const longEnough = password.length >= MIN_LENGTH;
+  const matches = password.length > 0 && confirmation === password;
+  const typing = password.length > 0 || confirmation.length > 0;
 
   if (!token) {
     return (
@@ -74,7 +103,7 @@ export function ResetForm({ token }: { token?: string }) {
           label="New password"
           type="password"
           autoComplete="new-password"
-          hint="At least 12 characters."
+          onValueChange={setPassword}
           invalid={Boolean(state.error)}
           describedBy={state.error ? "reset-error" : undefined}
         />
@@ -85,12 +114,34 @@ export function ResetForm({ token }: { token?: string }) {
           label="And again"
           type="password"
           autoComplete="new-password"
+          onValueChange={setConfirmation}
           invalid={Boolean(state.error)}
           describedBy={state.error ? "reset-error" : undefined}
         />
 
+        {/*
+          Polite rather than assertive: this updates on almost every keystroke,
+          and an assertive region would interrupt a screen reader mid-word to
+          announce a character count. The list is the hint for both fields, so
+          it sits under the pair rather than under either one.
+        */}
+        <ul aria-live="polite" className="mt-4 space-y-1.5">
+          <Rule met={longEnough} idle={!typing}>
+            {longEnough
+              ? "Long enough"
+              : password.length === 0
+                ? `At least ${MIN_LENGTH} characters`
+                : `${MIN_LENGTH - password.length} more ${
+                    MIN_LENGTH - password.length === 1 ? "character" : "characters"
+                  }`}
+          </Rule>
+          <Rule met={matches} idle={confirmation.length === 0}>
+            {matches ? "Both match" : "Both entries match"}
+          </Rule>
+        </ul>
+
         {state.error ? (
-          <p id="reset-error" role="alert" className="mt-3 text-sm text-destructive">
+          <p id="reset-error" role="alert" className="mt-4 text-sm text-destructive">
             {state.error}
           </p>
         ) : null}
@@ -109,5 +160,39 @@ export function ResetForm({ token }: { token?: string }) {
         </p>
       </form>
     </AccessCard>
+  );
+}
+
+/**
+ * One line of the checklist.
+ *
+ * Three states, not two. `idle` is the field nobody has touched yet, and it
+ * reads as information rather than as a rule already broken — a red cross on
+ * an empty form is the screen telling somebody off for not having typed
+ * anything. Colour is never the only signal: the mark changes shape too.
+ */
+function Rule({
+  met,
+  idle,
+  children,
+}: {
+  met: boolean;
+  idle: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <li
+      className={cn(
+        "flex items-center gap-2 text-[12px] leading-relaxed transition-colors",
+        met ? "text-accent" : idle ? "text-muted-foreground" : "text-foreground",
+      )}
+    >
+      {met ? (
+        <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      ) : (
+        <Minus className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+      )}
+      <span>{children}</span>
+    </li>
   );
 }

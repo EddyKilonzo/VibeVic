@@ -1,6 +1,9 @@
-import type { ReactNode } from "react";
-import { ShieldAlert } from "lucide-react";
+"use client";
+
+import { useId, useState, type ReactNode } from "react";
+import { Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { Reveal } from "@/components/motion";
+import { cn } from "@/lib/utils";
 
 /**
  * The chrome around every screen at the door.
@@ -78,7 +81,24 @@ export function Unconfigured({ children }: { children: ReactNode }) {
   );
 }
 
-/** One labelled field, so the three forms cannot spell a label differently. */
+/**
+ * One labelled field, so the three forms cannot spell a label differently.
+ *
+ * ── The eye ──────────────────────────────────────────────────────────────
+ * A masked field on a door is a field somebody is typing a long phrase into
+ * with no way to check it, on a keyboard that may not be theirs. That is
+ * exactly where a typo is most likely and most expensive: on the reset screen
+ * the link is single-use, so a mistyped password that is confirmed with the
+ * same mistyped password locks the account out of a link already spent.
+ *
+ * `type="button"`, and the reason is worth writing down: a `<button>` inside
+ * a form with no explicit type is a submit button, so the obvious version of
+ * this posts the form the first time somebody wants to look at what they
+ * typed.
+ *
+ * Revealing is per field and never sticky — nothing is stored, so it cannot
+ * come back revealed on the next visit or on another screen.
+ */
 export function Field({
   id,
   name,
@@ -89,39 +109,70 @@ export function Field({
   invalid,
   describedBy,
   defaultValue,
+  onValueChange,
 }: {
   id: string;
   name: string;
   label: string;
   type?: string;
   autoComplete?: string;
-  hint?: string;
+  hint?: ReactNode;
   invalid?: boolean;
   describedBy?: string;
   defaultValue?: string;
+  /** Live value, for a form that shows whether a rule is met as it is typed. */
+  onValueChange?: (value: string) => void;
 }) {
-  const hintId = hint ? `${id}-hint` : undefined;
+  const [revealed, setRevealed] = useState(false);
+  const secret = type === "password";
+  const generatedHintId = useId();
+  const hintId = hint ? `${id}-hint-${generatedHintId}` : undefined;
 
   return (
     <div className="mt-4 first:mt-0">
       <label htmlFor={id} className="rule-label">
         {label}
       </label>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        autoComplete={autoComplete}
-        defaultValue={defaultValue}
-        required
-        aria-invalid={invalid || undefined}
-        aria-describedby={[describedBy, hintId].filter(Boolean).join(" ") || undefined}
-        className="focus-ring mt-2 h-11 w-full rounded-md border border-border bg-background px-3 text-[15px] outline-none transition-colors focus:border-accent"
-      />
+      <div className="relative mt-2">
+        <input
+          id={id}
+          name={name}
+          // The name stays `password` whatever the input is showing, so
+          // revealing changes what the person sees and nothing else.
+          type={secret && revealed ? "text" : type}
+          autoComplete={autoComplete}
+          defaultValue={defaultValue}
+          required
+          aria-invalid={invalid || undefined}
+          aria-describedby={[describedBy, hintId].filter(Boolean).join(" ") || undefined}
+          onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
+          className={cn(
+            "focus-ring h-11 w-full rounded-md border border-border bg-background px-3 text-[15px] outline-none transition-colors focus:border-accent",
+            secret && "pr-11",
+          )}
+        />
+        {secret ? (
+          <button
+            type="button"
+            onClick={() => setRevealed((shown) => !shown)}
+            aria-label={revealed ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+            aria-pressed={revealed}
+            aria-controls={id}
+            title={revealed ? "Hide" : "Show"}
+            className="focus-ring absolute inset-y-0 right-0 grid w-11 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {revealed ? (
+              <EyeOff className="h-4 w-4" aria-hidden />
+            ) : (
+              <Eye className="h-4 w-4" aria-hidden />
+            )}
+          </button>
+        ) : null}
+      </div>
       {hint ? (
-        <p id={hintId} className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        <div id={hintId} className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
           {hint}
-        </p>
+        </div>
       ) : null}
     </div>
   );

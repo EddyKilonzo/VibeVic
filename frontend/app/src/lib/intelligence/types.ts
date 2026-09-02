@@ -13,6 +13,7 @@
 export type FindingKind =
   | "repetition"
   | "terminology"
+  | "house-style"
   | "statistic"
   | "contradiction"
   | "structure"

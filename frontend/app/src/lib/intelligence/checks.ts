@@ -1,5 +1,5 @@
 import type { Block, Story } from "@/data/types";
-import type { Entity } from "@/data/newsroom/types";
+import type { Entity, Newsroom } from "@/data/newsroom/types";
 import type { ChecklistItem, Finding } from "./types";
 import { STOP_WORDS, sentences, textUnits, words } from "./text";
 
@@ -93,6 +93,67 @@ export function findTerminology(body: Block[], entities: Entity[]): Finding[] {
       blockIds: [...new Set([...used.values()].flat())],
     });
   }
+  return findings;
+}
+
+/* ── House style ─────────────────────────────────────────────── */
+
+/**
+ * Terms the journalist has decided against, found in the draft.
+ *
+ * ── Why this is the writer's list and not a built-in one ─────────────────
+ * `StyleGuideEntry` — preferred term, terms to avoid, and why — has been in
+ * the schema and served by the curation API since the newsroom was built, and
+ * nothing had ever read it. A shipped list of "bad words" would have been the
+ * wrong thing to build in its place: house style is a publication's own
+ * judgement, and half of what one newsroom bans another insists on. The list
+ * this reads is the one Victor wrote.
+ *
+ * ── Why it names the preferred term and stops there ──────────────────────
+ * The finding says which word was found, what the house prefers, and the
+ * reason if one was given. It does not rewrite the sentence, and it is a
+ * `note` rather than `attention`: style is a decision, and a check that told
+ * a journalist they were wrong about their own house style would be claiming
+ * an authority it got from a form.
+ *
+ * ── Word boundaries, and the one case they do not cover ──────────────────
+ * Matched with `\b` on both sides, so "cop" does not fire on "cope" and a
+ * banned acronym does not fire inside a longer one. A multi-word term works
+ * the same way. What this cannot catch is a term that only appears inflected —
+ * "activists" when the entry says "activist" — and it deliberately does not
+ * try to stem, because a stemmer would start matching words the journalist
+ * never listed and every false positive here is a sentence someone reads
+ * twice for nothing.
+ */
+export function findHouseStyle(
+  body: Block[],
+  styleGuide: Newsroom["styleGuide"] = [],
+): Finding[] {
+  const findings: Finding[] = [];
+  const units = textUnits(body);
+
+  for (const entry of styleGuide) {
+    for (const avoided of entry.avoid) {
+      if (!avoided.trim()) continue;
+
+      const pattern = new RegExp(`\\b${escapeRegExp(avoided)}\\b`, "i");
+      const hits = units.filter((unit) => pattern.test(unit.text));
+      if (hits.length === 0) continue;
+
+      findings.push({
+        id: id("style"),
+        kind: "house-style",
+        severity: "note",
+        title: `"${avoided}" — the house prefers "${entry.preferred}"`,
+        detail: entry.why ?? `Your style guide lists "${avoided}" as a term to avoid.`,
+        blockIds: [...new Set(hits.map((unit) => unit.blockId))],
+        // The first sentence it appears in, so the decision can be made
+        // against the actual phrasing rather than against the word alone.
+        evidence: sentences(hits[0]!.text).find((sentence) => pattern.test(sentence)),
+      });
+    }
+  }
+
   return findings;
 }
 
@@ -271,13 +332,18 @@ export function findSensitivity(body: Block[]): Finding[] {
 
 /* ── The whole pass ──────────────────────────────────────────── */
 
-export function reviewStory(story: Story, entities: Entity[] = []): Finding[] {
+export function reviewStory(
+  story: Story,
+  entities: Entity[] = [],
+  styleGuide: Newsroom["styleGuide"] = [],
+): Finding[] {
   counter = 0;
   return [
     ...findContradictions(story.body),
     ...findStatistics(story.body),
     ...findStructure(story),
     ...findTerminology(story.body, entities),
+    ...findHouseStyle(story.body, styleGuide),
     ...findRepetition(story.body),
     ...findSensitivity(story.body),
   ].sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "attention" ? -1 : 1));

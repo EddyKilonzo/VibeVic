@@ -12,6 +12,7 @@ import {
   FileText,
   FolderOpen,
   Image,
+  Layers,
   LayoutDashboard,
   Lightbulb,
   Menu,
@@ -78,6 +79,7 @@ const NAV: {
   // `newsroom:write` so a bug can be reproduced against real shapes, and the
   // confidential rows are filtered out of every response before they get here.
   { href: newsroomPath("/records"), label: "Records", icon: FolderOpen },
+  { href: newsroomPath("/curation"), label: "Curation", icon: Layers },
   { href: newsroomPath("/media"), label: "Media", icon: Image },
   { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3 },
   { href: newsroomPath("/readers"), label: "Readers", icon: Users },

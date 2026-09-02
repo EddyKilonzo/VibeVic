@@ -7,7 +7,7 @@ import type { Story } from "@/data/types";
 import { prePublicationChecklist, reviewStory } from "@/lib/intelligence/checks";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import type { ChecklistItem, Finding } from "@/lib/intelligence/types";
-import { useNewsroom } from "@/data/newsroom/useNewsroom";
+import { useCuration, useNewsroom } from "@/data/newsroom/useNewsroom";
 import { cn } from "@/lib/utils";
 import { transitions } from "@/lib/motion";
 
@@ -57,6 +57,22 @@ export function StoryChecks({ draft }: { draft: Story }) {
   } = useNewsroom("entities", "sources", "quotes");
 
   /**
+   * House style, which is not a collection and so cannot be named above.
+   *
+   * `StyleGuideEntry` — preferred term, terms to avoid, why — has been in the
+   * schema and on the curation route since the newsroom was built, and nothing
+   * had ever read one. It is read here because this is the only screen where
+   * a style rule can do any work: a guide nobody is shown while writing is a
+   * document, and a document is not a check.
+   *
+   * The loading state is not surfaced, for the same reason the counts above
+   * are not. An empty guide produces no findings, which is indistinguishable
+   * from a guide that has not arrived yet — and the honest difference is a
+   * moment, not a spinner.
+   */
+  const { styleGuide } = useCuration();
+
+  /**
    * The checks run on a settled draft, not on every keystroke.
    *
    * `findRepetition` walks every four-word window in the piece and
@@ -83,7 +99,10 @@ export function StoryChecks({ draft }: { draft: Story }) {
     [quotes, draft.id],
   );
 
-  const findings = useMemo(() => reviewStory(settled, entities), [settled, entities]);
+  const findings = useMemo(
+    () => reviewStory(settled, entities, styleGuide),
+    [settled, entities, styleGuide],
+  );
   const { genreLabel } = useTaxonomy();
   const checklist = useMemo(
     () =>

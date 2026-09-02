@@ -72,6 +72,12 @@ export function useLocalStorage<T>(key: string, initial: T) {
     loaded.current = false;
     try {
       const raw = window.localStorage.getItem(key);
+      // The extra render this causes is the entire point of the hook, and the
+      // reason the rule is suppressed rather than the code changed: the value
+      // cannot be read during render without contradicting the server's HTML,
+      // so it is read after the first paint and applied here. See the note on
+      // `useState(initial)` above for why that trade is the right way round.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw !== null) setValue(JSON.parse(raw) as T);
     } catch {
       // Private mode, disabled storage, malformed JSON: keep the fallback.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Pause, Play, RotateCcw, SkipBack, SkipForward, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,10 +49,18 @@ export function VoiceMiniPlayer() {
   const hasChapters = (article?.chapters.length ?? 0) > 1;
 
   /* A drawer left open on a bar that has gone away would spring back open on
-     the next article. */
-  useEffect(() => {
+     the next article.
+
+     Closing it during render rather than in an effect, which is what React
+     asks for when one piece of state has to follow another: the effect version
+     rendered the stale open drawer once and then re-rendered to close it, and
+     the bar is mounting at that moment anyway. Same pattern as the workspace
+     resetting its draft when a different story arrives. */
+  const [barWasUp, setBarWasUp] = useState(visible);
+  if (barWasUp !== visible) {
+    setBarWasUp(visible);
     if (!visible) setSettingsOpen(false);
-  }, [visible]);
+  }
 
   return (
     <AnimatePresence>

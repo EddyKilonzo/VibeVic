@@ -50,7 +50,17 @@ export function useNewsroom(...keys: ListKey[]): NewsroomView {
 
   // Stable across renders as long as the names are the same, so the effect
   // below does not re-run on every keystroke in the screen that uses it.
-  const wanted = useMemo(() => [...keys].sort(), [keys.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+  //
+  // The dependency is the joined string, and the memo rebuilds the list from
+  // it rather than from `keys`. The rest parameter is a new array on every
+  // call, so it cannot be the dependency; joining it inside the list made the
+  // dependency an expression the linter cannot track, which is what the
+  // suppression comment that used to sit here was hiding.
+  const named = keys.join("|");
+  const wanted = useMemo(
+    () => (named === "" ? [] : (named.split("|") as ListKey[]).sort()),
+    [named],
+  );
 
   useEffect(() => {
     for (const key of wanted) void ensureLoaded(key);

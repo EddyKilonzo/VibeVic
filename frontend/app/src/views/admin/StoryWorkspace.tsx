@@ -1477,6 +1477,17 @@ function LinkTool({
 }) {
   const [url, setUrl] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  /**
+   * Whether the captured range already sits inside a link — which decides
+   * between "Add link" and "Update", and whether Remove is offered.
+   *
+   * State rather than a value computed in the body, because the range it
+   * depends on is a ref: reading a ref during render tells you what was true
+   * at the last paint, not what is true now, and nothing re-renders when it
+   * changes. It is answered where the range is captured instead — the effect
+   * below, which already looks the link up to fill the field.
+   */
+  const [existing, setExisting] = useState(false);
   const range = useRef<[number, number] | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
@@ -1487,7 +1498,9 @@ function LinkTool({
   useEffect(() => {
     if (!open) return;
     if (!range.current) range.current = selectionAt();
-    setUrl(linkAt(value, range.current[0])?.href ?? "");
+    const found = linkAt(value, range.current[0]);
+    setExisting(found !== null);
+    setUrl(found?.href ?? "");
     setProblem(null);
     const id = window.setTimeout(() => field.current?.select(), 10);
     return () => window.clearTimeout(id);
@@ -1506,8 +1519,6 @@ function LinkTool({
       document.removeEventListener("keydown", key);
     };
   }, [open, onOpenChange]);
-
-  const existing = range.current ? linkAt(value, range.current[0]) : null;
 
   const submit = () => {
     if (applyLink(url, range.current ?? undefined)) {

@@ -23,6 +23,7 @@ import { Reveal } from "@/components/motion";
 import { StatCard } from "@/components/admin/StatCard";
 import { BeatShare } from "@/components/admin/BeatShare";
 import { ViewsTrend } from "@/components/admin/ViewsTrend";
+import { DueStrip } from "@/components/admin/DueStrip";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import { newsroomPath } from "@/lib/newsroom-path";
@@ -129,7 +130,23 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+      {/* What is due, above the charts.
+
+          A deadline set on a piece is only readable from that piece, which
+          makes it a reminder that reminds nobody: "what is due" is a question
+          asked across every piece at once, in the morning, before you have
+          decided which one you are working on. So it sits on the screen a
+          writer opens first, and above the analytics rather than beside them —
+          the charts describe work that is finished, and this is the only panel
+          here about work that is not.
+
+          See `DueStrip` for what it deliberately will not do: there is no
+          count of how many are late and no completion score. */}
+      <Reveal variant="fade-up" className="surface mt-6 p-5">
+        <DueStrip />
+      </Reveal>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:mt-5 lg:grid-cols-12 lg:gap-5">
         {/* Lead panel: the only chart with a time axis, given the widest span. */}
         <Reveal variant="fade-up" className="surface p-5 lg:col-span-7">
           <p className="rule-label">Views by publication month</p>

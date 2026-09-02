@@ -243,9 +243,28 @@ function withoutBlanks(raw: Record<string, unknown>): Record<string, unknown> {
  * Takes only the field it reads, so a caller holding a ConfigService can pass
  * that one value instead of reassembling a whole Env to ask a question about
  * one string.
+ *
+ * ── Why the trailing slash is stripped ───────────────────────────────────
+ * A browser's `Origin` header is a scheme, host and port and nothing else:
+ * `https://example.com`, never `https://example.com/`. The allowlist is
+ * compared to that header exactly, so a value copied out of an address bar —
+ * which is where anybody would copy it from, and which always ends in a slash
+ * — matches nothing.
+ *
+ * That is precisely how this failed in production. `CORS_ORIGINS` was set to
+ * `https://vibe-vic.vercel.app/`, the deployed frontend's real address, and
+ * every preflight came back 204 with no `Access-Control-Allow-Origin` at all.
+ * Nothing logs, nothing is misconfigured on the face of it, and the only
+ * symptom is that every call from the site fails in the browser while the
+ * same URL answers 200 from curl — which has no origin to send.
+ *
+ * `APP_URL` has stripped its trailing slash since it was introduced, in
+ * `PasswordResetService.appOrigin`. This is the same rule applied to the
+ * other variable holding the same kind of value, and it is applied here so
+ * that the one place that reads the setting is the one place that decides.
  */
 export function corsOrigins(env: Pick<Env, 'CORS_ORIGINS'>): string[] {
   return env.CORS_ORIGINS.split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter((origin) => origin.length > 0);
 }

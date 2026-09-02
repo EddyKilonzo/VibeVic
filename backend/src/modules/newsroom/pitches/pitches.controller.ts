@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { CurrentPrincipal, type Principal } from '../../../common/authz/principal';
 import { NewsroomOnly, RequireScopes } from '../../../common/authz/surface.decorator';
-import { CreatePitchDto, UpdatePitchDto } from './pitch.dto';
+import { CreatePitchDto, SendPitchDto, UpdatePitchDto } from './pitch.dto';
 import { PitchesService } from './pitches.service';
 
 /**
@@ -61,6 +61,23 @@ export class PitchesController {
     @Body() dto: UpdatePitchDto,
   ) {
     return this.pitches.update(principal, id, dto);
+  }
+
+  /**
+   * Puts the pitch in front of an editor.
+   *
+   * A POST rather than a PATCH with a `sentAt`, because nothing about the
+   * record changes — see `PitchesService.send` on why there is no such
+   * column. This is an action the server takes, not a field the client sets.
+   */
+  @Post(':id/send')
+  @RequireScopes('newsroom:read', 'newsroom:write', 'newsroom:ideas')
+  sendPitch(
+    @CurrentPrincipal() principal: Principal | undefined,
+    @Param('id') id: string,
+    @Body() dto: SendPitchDto,
+  ) {
+    return this.pitches.send(principal, id, dto);
   }
 
   @Delete(':id')

@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsEmail,
   IsISO8601,
   IsOptional,
   IsString,
@@ -119,4 +120,27 @@ export class UpdatePitchDto extends VersionedUpdateDto {
   @IsString()
   @IsOptional()
   storyId?: string | null;
+}
+
+/**
+ * Putting a pitch in front of an editor.
+ *
+ * The address is not read off `targetPublication`, and that is deliberate.
+ * That column holds a masthead — "The Continent", "Nation" — which is a note
+ * to self, not a mailbox, and deriving an address from it would mean guessing.
+ * The person sending types where it goes, every time, and sees it before they
+ * press send.
+ */
+export class SendPitchDto {
+  @IsEmail()
+  to!: string;
+
+  /**
+   * The covering line. Optional, and genuinely so: a pitch that reads well
+   * needs no preamble, and a mandatory one produces "Hi, hope you're well".
+   */
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  note?: string;
 }

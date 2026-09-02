@@ -1,4 +1,7 @@
+import type { ComponentType } from "react";
+import { SendPitch } from "@/components/admin/SendPitch";
 import type { ListKey } from "@/data/newsroom/store";
+import type { Scope } from "@/lib/newsroom-scopes";
 
 /**
  * What each newsroom record is made of, said once.
@@ -26,10 +29,28 @@ import type { ListKey } from "@/data/newsroom/store";
  * produces a 400 — which is a bug, but never a hole.
  */
 
-/** Collections this schema covers. Ideas and pitches have their own screen. */
+/**
+ * Collections this schema covers.
+ *
+ * Ideas are the one collection left out, and deliberately: `AdminIdeas` is a
+ * screen built around what an idea is — stage, priority typed by hand, the
+ * desk that works one up — and flattening that into a generic form would lose
+ * every part of it that was decided on purpose.
+ *
+ * Pitches are in, because they never had a screen at all. The desk produced
+ * them and nothing could store, edit or send one.
+ */
 export type RecordKey = Extract<
   ListKey,
-  "sources" | "quotes" | "interviews" | "entities" | "evidence" | "timeline" | "notes" | "deadlines"
+  | "pitches"
+  | "sources"
+  | "quotes"
+  | "interviews"
+  | "entities"
+  | "evidence"
+  | "timeline"
+  | "notes"
+  | "deadlines"
 >;
 
 /** A record being edited, before it is anything more specific. */
@@ -73,6 +94,26 @@ export interface RecordSchema {
   /** One line on what the collection is for, shown when it is empty. */
   blurb: string;
   fields: readonly Field[];
+  /**
+   * A scope beyond `newsroom:read` that this collection needs.
+   *
+   * Only pitches have one. Like every other scope check on the client, this
+   * decides what to *draw* — the API refuses the request on its own — and the
+   * point of drawing it correctly is that a dev opening the records screen
+   * should see the collections that are theirs rather than a tab that answers
+   * 403 when pressed.
+   */
+  scope?: Scope;
+  /**
+   * A control that belongs to this collection and to no other.
+   *
+   * One field, one user: sending a pitch. It is not a field, it is not an
+   * edit, and it is the only thing in the newsroom that leaves the building —
+   * so it could not be described by the schema and did not deserve a second
+   * panel. Anything that turns out to want a second one of these is probably
+   * asking for its own screen.
+   */
+  extra?: ComponentType<{ record: Draft }>;
   /** A new record, with the same defaults the API would apply. */
   blank: () => Draft;
   /** The line that identifies a row in the list. */
@@ -138,6 +179,67 @@ function readableDate(value: unknown): string {
 /* ── The eight ───────────────────────────────────────────────── */
 
 export const RECORD_SCHEMAS: Readonly<Record<RecordKey, RecordSchema>> = {
+  pitches: {
+    key: "pitches",
+    singular: "pitch",
+    plural: "Pitches",
+    blurb:
+      "An idea worked up far enough to put to an editor. The angle is the specific claim, not the subject area — a pitch without one is a subject.",
+    storyLink: "one",
+    scope: "newsroom:ideas",
+    extra: SendPitch,
+    title: (d) => str(d, "title") || "Untitled pitch",
+    subtitle: (d) =>
+      [str(d, "targetPublication"), readableDate(d.deadline)].filter(Boolean).join(" · ") ||
+      str(d, "angle"),
+    blank: () => ({
+      title: "",
+      angle: "",
+      whyItMatters: "",
+      whatIsKnown: "",
+      whatIsUnknown: "",
+      targetPublication: "",
+      deadline: "",
+      sourceIds: [],
+    }),
+    fields: [
+      { name: "title", label: "Title", kind: "text", required: true },
+      {
+        name: "targetPublication",
+        label: "Where you would send it",
+        kind: "text",
+        help: "A masthead, not an address. The address is typed when you send, and shown to you first.",
+      },
+      {
+        name: "angle",
+        label: "The angle",
+        kind: "textarea",
+        wide: true,
+        required: true,
+        help: "The specific claim being made, not the subject area.",
+      },
+      { name: "whyItMatters", label: "Why it matters", kind: "textarea", wide: true },
+      { name: "whatIsKnown", label: "What is known", kind: "textarea", wide: true },
+      {
+        name: "whatIsUnknown",
+        label: "What is still open",
+        kind: "textarea",
+        wide: true,
+        help: "An empty answer here is a pitch that is not ready.",
+      },
+      { name: "deadline", label: "Filing by", kind: "date" },
+      {
+        name: "sourceIds",
+        label: "Sources lined up",
+        kind: "refs",
+        from: "sources",
+        wide: true,
+        help:
+          "References, never copies. A sent pitch carries the count and not the people — an email is a poor place to be responsible for a source.",
+      },
+    ],
+  },
+
   sources: {
     key: "sources",
     singular: "source",
@@ -437,6 +539,7 @@ export const RECORD_SCHEMAS: Readonly<Record<RecordKey, RecordSchema>> = {
 
 /** The order the tabs and the records screen use. */
 export const RECORD_ORDER: readonly RecordKey[] = [
+  "pitches",
   "sources",
   "quotes",
   "interviews",

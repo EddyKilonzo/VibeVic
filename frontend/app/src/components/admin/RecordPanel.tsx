@@ -67,6 +67,7 @@ export function RecordPanel({
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const reduced = useReducedMotion();
+  const Extra = schema.extra;
 
   const rows = useMemo(() => {
     const all = (newsroom[collection] as unknown as Draft[]) ?? [];
@@ -238,6 +239,9 @@ export function RecordPanel({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
+                    {/* The one control a collection can have that the schema
+                        cannot describe — see `RecordSchema.extra`. */}
+                    {Extra && <Extra record={row} />}
                     <IconButton label="Edit" onClick={() => setEditing(id)}>
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </IconButton>

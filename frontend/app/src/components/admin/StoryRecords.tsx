@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCan } from "@/components/admin/SessionContext";
 import { useNewsroom } from "@/data/newsroom/useNewsroom";
 import type { ListKey } from "@/data/newsroom/store";
 import { RecordPanel } from "@/components/admin/RecordPanel";
@@ -43,7 +44,27 @@ import {
  * is that a superscript on a tab should mean there is something to find there.
  */
 export function StoryRecords({ storyId }: { storyId: string | null }) {
-  const [active, setActive] = useState<RecordKey>(STORY_RECORD_ORDER[0]!);
+  /*
+   * Only the collections this account can actually open.
+   *
+   * Pitches are the one with a scope of its own — the notebook is the
+   * writer's — so a dev sees six tabs where a writer sees seven. Drawing a tab
+   * that answers 403 when pressed would be worse than not drawing it: it tells
+   * them something exists that they are then refused, which is exactly what
+   * `newsroom:ideas` was split off to avoid.
+   */
+  const canIdeas = useCan("newsroom:ideas");
+  const shown = useMemo(
+    () =>
+      STORY_RECORD_ORDER.filter(
+        (key) => RECORD_SCHEMAS[key].scope !== "newsroom:ideas" || canIdeas,
+      ),
+    [canIdeas],
+  );
+
+  // The first tab this account can actually open — `shown`, not the full
+  // order, or a dev would land on the pitches tab that was just filtered out.
+  const [active, setActive] = useState<RecordKey>(shown[0]!);
 
   /*
    * Every story-linked collection, loaded here so the strip can count.
@@ -53,13 +74,13 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
    * serves the cache afterwards, so these names are a subscription rather than
    * a second round of requests.
    */
-  const { newsroom } = useNewsroom(...(STORY_RECORD_ORDER as unknown as ListKey[]));
+  const { newsroom } = useNewsroom(...(shown as unknown as ListKey[]));
 
   const counts = useMemo(() => {
     const out: Partial<Record<RecordKey, number>> = {};
     if (!storyId) return out;
 
-    for (const key of STORY_RECORD_ORDER) {
+    for (const key of shown) {
       const rows = (newsroom[key] as unknown as Draft[]) ?? [];
       const link = RECORD_SCHEMAS[key].storyLink;
       out[key] = rows.filter((row) =>
@@ -69,7 +90,7 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
       ).length;
     }
     return out;
-  }, [newsroom, storyId]);
+  }, [newsroom, storyId, shown]);
 
   /*
    * A piece with no record yet has nothing to attach anything to.
@@ -102,7 +123,7 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
 
       <div className="mt-4">
         <WorkspaceTabs
-          tabs={STORY_RECORD_ORDER.map((key) => ({
+          tabs={shown.map((key) => ({
             id: key,
             label: RECORD_SCHEMAS[key].plural,
             count: counts[key] || undefined,

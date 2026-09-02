@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FolderOpen } from "lucide-react";
+import { useCan } from "@/components/admin/SessionContext";
 import { Reveal } from "@/components/motion";
 import { RecordPanel } from "@/components/admin/RecordPanel";
 import { WorkspaceTabs } from "@/components/admin/WorkspaceTabs";
@@ -33,12 +34,20 @@ import { RECORD_ORDER, RECORD_SCHEMAS, type RecordKey } from "@/lib/newsroom-sch
  * where the question "is this about that story" can actually be answered.
  */
 export default function AdminRecords() {
-  const [active, setActive] = useState<RecordKey>(RECORD_ORDER[0]!);
+  // Pitches are the notebook's, so a dev is not shown a tab that would refuse
+  // them — see the same filter in `StoryRecords`.
+  const canIdeas = useCan("newsroom:ideas");
+  const shown = useMemo(
+    () => RECORD_ORDER.filter((key) => RECORD_SCHEMAS[key].scope !== "newsroom:ideas" || canIdeas),
+    [canIdeas],
+  );
+
+  const [active, setActive] = useState<RecordKey>(shown[0]!);
 
   // Named for the counts on the strip. The panel loads what it needs itself;
   // `ensureLoaded` holds one promise per collection, so this is a subscription
   // rather than a second set of requests.
-  const { newsroom } = useNewsroom(...(RECORD_ORDER as unknown as ListKey[]));
+  const { newsroom } = useNewsroom(...(shown as unknown as ListKey[]));
 
   return (
     <div className="pb-24">
@@ -63,7 +72,7 @@ export default function AdminRecords() {
       <Reveal variant="fade-up" delay={40}>
         <div className="mt-7">
           <WorkspaceTabs
-            tabs={RECORD_ORDER.map((key) => ({
+            tabs={shown.map((key) => ({
               id: key,
               label: RECORD_SCHEMAS[key].plural,
               count: (newsroom[key] as unknown[] | undefined)?.length || undefined,

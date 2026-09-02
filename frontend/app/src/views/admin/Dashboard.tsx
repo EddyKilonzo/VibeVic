@@ -24,6 +24,7 @@ import { StatCard } from "@/components/admin/StatCard";
 import { BeatShare } from "@/components/admin/BeatShare";
 import { ViewsTrend } from "@/components/admin/ViewsTrend";
 import { DueStrip } from "@/components/admin/DueStrip";
+import { StreakCard } from "@/components/admin/StreakCard";
 import { EmptyState } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import { newsroomPath } from "@/lib/newsroom-path";
@@ -142,7 +143,19 @@ export default function Dashboard() {
 
           See `DueStrip` for what it deliberately will not do: there is no
           count of how many are late and no completion score. */}
+      {/* Showing up, and what is due — the two things about work in
+          progress, above the four cards about work that is finished.
+
+          The streak is above the deadlines because it is the smaller claim:
+          it says only that the newsroom was opened, whereas the strip below
+          is a list of promises. See `StreakCard` for the line it refuses to
+          cross — there is no target here, and nothing is ever described as
+          broken. */}
       <Reveal variant="fade-up" className="surface mt-6 p-5">
+        <StreakCard />
+      </Reveal>
+
+      <Reveal variant="fade-up" delay={40} className="surface mt-4 p-5">
         <DueStrip />
       </Reveal>
 

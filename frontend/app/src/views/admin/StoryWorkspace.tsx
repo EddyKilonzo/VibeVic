@@ -51,6 +51,7 @@ import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
 import { StoryHistory } from "@/components/admin/StoryHistory";
+import { WritingCoach } from "@/components/admin/WritingCoach";
 import { StoryRecords } from "@/components/admin/StoryRecords";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { newsroomPath } from "@/lib/newsroom-path";
@@ -821,6 +822,10 @@ export default function StoryWorkspace({
       />
 
       <StoryChecks draft={draft} />
+
+      {/* Advice about the writing rather than about the reporting. Two halves,
+          measured and modelled, never mixed — see `WritingCoach`. */}
+      <WritingCoach draft={draft} />
     </div>
   );
 }

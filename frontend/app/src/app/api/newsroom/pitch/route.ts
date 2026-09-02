@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { APICallError, generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { getGenres } from "@/data/server";
-import { isUnlocked } from "@/lib/newsroom-auth";
+import { sessionWithScope } from "@/lib/newsroom-auth";
 
 /**
  * The pitch desk.
@@ -28,6 +28,45 @@ import { isUnlocked } from "@/lib/newsroom-auth";
  * Node, which is the default and what this needs. There is no reason to reach
  * for the edge here: the work is one model call, the payload is small, and
  * `node:crypto` is what the newsroom check runs on.
+ */
+/*
+ * ── The two clocks, and why there have to be two ─────────────────────────
+ * `maxDuration` is what the platform allows before it kills the function.
+ * `budgetMs` below is what this route allows before it gives up on its own.
+ * They are not the same number and the second must be smaller, because what
+ * happens when each expires is completely different.
+ *
+ * When the platform's clock wins, the function is destroyed mid-call. There
+ * is no handler, no JSON, and no message — the browser receives a gateway
+ * error page, `response.json()` throws on the HTML, and the catch in
+ * `PitchDesk` reports "the request never left the browser", which is the one
+ * explanation that is definitely false.
+ *
+ * That is the failure this route was actually producing. The free tier stalls
+ * — during one such stall the same trivial call was measured at 216 seconds,
+ * and at 3.6 seconds an hour later — so the model is not slow, it is
+ * occasionally queued for minutes. A route with no clock of its own turns
+ * that occasional stall into an error message that sends the writer to check
+ * their wifi, and the stall is invisible in the logs because the handler
+ * never got to write one.
+ *
+ * When this route's own clock wins, an `AbortError` lands in the catch below
+ * and comes back as a sentence naming what to change.
+ *
+ * ── Why this is 60 and not 300 ───────────────────────────────────────────
+ * Because this project deploys on Vercel's Hobby plan, where 60 seconds is
+ * the ceiling and asking for more is not clamped — it fails the deployment.
+ * A number that reads better in a diff is not worth a build that does not
+ * ship, so the ceiling is written as what it actually is, with the way to
+ * raise it named rather than assumed: on a plan that allows longer functions
+ * this becomes 300, and `PITCH_TIMEOUT_MS` becomes the number that matters.
+ *
+ * The consequence is worth stating plainly rather than hiding behind the
+ * constant. A stalled free-tier queue can outlast sixty seconds by minutes,
+ * so on this plan the honest outcome of one is a clear refusal at 55 seconds
+ * rather than an answer. That is a real limit and not a bug to be fixed here:
+ * the pitch arrives in a few seconds when the queue is clear, which is most
+ * of the time, and the error text says what to do when it is not.
  */
 export const maxDuration = 60;
 
@@ -59,11 +98,42 @@ export const maxDuration = 60;
  */
 const DEFAULT_MODEL = "gemini-3.7-flash";
 
+/**
+ * How long this route waits before giving up and saying so.
+ *
+ * ── Why the default is 55 seconds and not 290 ────────────────────────────
+ * Because it has to be under the *platform's* ceiling, and this code does not
+ * know what that ceiling is. `maxDuration = 300` is a request; a plan that
+ * caps functions at sixty seconds silently clamps it, and a budget of 290 on
+ * such a plan would never be reached — the function would be killed first and
+ * the whole point of having a budget would be lost. 55 is under the smallest
+ * cap this app can be deployed onto, so the route answers for itself
+ * everywhere.
+ *
+ * ── And why it is an environment variable ────────────────────────────────
+ * Because 55 seconds is the right answer to this plan and not to every plan.
+ * On one that allows five minutes it would refuse work that was about to
+ * succeed — the stalls are long but they do end — and raising it there should
+ * not require a code change. Lowering it is the right move if a minute of
+ * waiting is worse than no pitch at all, which on a phone it usually is.
+ */
+function budgetMs(): number {
+  const configured = Number(process.env.PITCH_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : 55_000;
+}
+
 function pitchModel(): { model: LanguageModel; keyName: string } {
   return {
     // Overridable because free-tier model availability moves, and the fix for
     // "this model is not on your tier" should be an env var rather than a
-    // deploy. `gemini-2.5-flash` is the conservative fallback.
+    // deploy.
+    //
+    // The fallback named here used to be `gemini-2.5-flash`, and it had
+    // already stopped being one: that model answers 404 for keys created
+    // after it was retired — "no longer available to new users. Please
+    // update your code to use models/gemini-3.6-flash" — so the documented
+    // escape hatch was itself broken, which is the worst state for an escape
+    // hatch to be in. `gemini-3.6-flash` is the current conservative choice.
     model: google(process.env.PITCH_MODEL ?? DEFAULT_MODEL),
     keyName: "GOOGLE_GENERATIVE_AI_API_KEY",
   };
@@ -117,8 +187,27 @@ Return angles, sources and questions — the shape of the reporting. Follow thes
 - Plain British English. No hype, no headline language, no "explosive" or "shocking".`;
 
 export async function POST(request: Request) {
-  if (!(await isUnlocked())) {
-    return Response.json({ error: "Not signed in to the newsroom." }, { status: 401 });
+  /*
+   * The notebook's scope, not merely a session.
+   *
+   * This desk works up an unpublished story idea, which is the writer's own
+   * thinking rather than material for a piece that has been decided on — the
+   * same argument `newsroom:ideas` exists to make on the API. Checking it
+   * here rather than leaving it to the API matters more than usual: there is
+   * no API call in this handler to be refused. The model call happens
+   * locally, and an unscoped request would spend it before anybody said no.
+   */
+  const gate = await sessionWithScope("newsroom:ideas");
+  if (!gate.ok) {
+    return Response.json(
+      {
+        error:
+          gate.status === 401
+            ? "Not signed in to the newsroom."
+            : "The pitch desk is the writer's. Working up an idea is reporting, not maintenance.",
+      },
+      { status: gate.status },
+    );
   }
 
   // Checked here rather than left to the SDK, which fails at call time with a
@@ -166,6 +255,10 @@ export async function POST(request: Request) {
     const { output } = await generateText({
       model,
       system: SYSTEM,
+      // The route's own clock. Without it the only limit is the platform's,
+      // and the platform's limit is not a failure this handler can describe —
+      // see the note on `maxDuration`.
+      abortSignal: AbortSignal.timeout(budgetMs()),
       output: Output.object({ schema: Pitch }),
       prompt: [
         `The idea: ${idea}`,
@@ -230,10 +323,39 @@ function badKey(error: APICallError): boolean {
   );
 }
 
+/**
+ * The route's own clock ran out.
+ *
+ * `AbortSignal.timeout` rejects with a `TimeoutError`; an abort from
+ * somewhere else — the client hanging up — arrives as `AbortError`. Both mean
+ * the same thing to this handler, and the SDK may hand either one back
+ * wrapped, so the check reads the name off the cause chain rather than
+ * matching on one class.
+ */
+function timedOut(cause: unknown): boolean {
+  for (let error: unknown = cause, depth = 0; error && depth < 4; depth += 1) {
+    const name = (error as { name?: unknown }).name;
+    if (name === "TimeoutError" || name === "AbortError") return true;
+    error = (error as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 function explain(cause: unknown): string {
+  if (timedOut(cause)) {
+    /*
+     * "Try again" is honest here, and it is put first, because it is usually
+     * right: these stalls are the free tier queueing rather than anything
+     * being broken, and they clear. The two settings that change the outcome
+     * for a stall that does not clear are named after it, in the order
+     * somebody would reach for them.
+     */
+    return `The model did not answer within ${Math.round(budgetMs() / 1000)} seconds, so the request was dropped. Nothing was saved. The free tier queues in bursts and usually clears — try again in a few minutes. If it keeps happening, set PITCH_MODEL to a lighter model such as gemini-3.1-flash-lite.`;
+  }
+
   if (APICallError.isInstance(cause)) {
     if (badKey(cause)) {
-      return "The model provider refused the API key. Check GOOGLE_GENERATIVE_AI_API_KEY — retrying with the same key will not work.";
+      return `The model provider refused the API key. Check ${pitchModel().keyName} — retrying with the same key will not work.`;
     }
     if (exhausted(cause)) {
       // Phrased for the free tier, which is what this runs on: the daily cap
@@ -255,6 +377,10 @@ function explain(cause: unknown): string {
  * answering 503 is the shape the caller has been handling all along.
  */
 function statusFor(cause: unknown): number {
+  // 504, and it is the accurate one: an upstream that did not answer in time.
+  // Not 502 — nothing refused us and nothing was unreachable — and not 429,
+  // which would say the allowance is spent when it is not.
+  if (timedOut(cause)) return 504;
   if (APICallError.isInstance(cause)) {
     if (badKey(cause)) return 503;
     if (exhausted(cause) || cause.statusCode === 429) return 429;

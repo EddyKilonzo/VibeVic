@@ -30,7 +30,7 @@ import {
   Trash2,
   Type,
 } from "lucide-react";
-import type { Block, BlockType, Story, StoryStatus } from "@/data/types";
+import type { Block, BlockType, Story } from "@/data/types";
 import { DEFAULT_BEAT } from "@/data/content";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ import { readDraft, writeDraft, type StoredDraft } from "@/lib/drafts";
 import { createStory, updateStory, type SaveOutcome } from "@/lib/story-save";
 import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { PublishControls } from "@/components/admin/PublishControls";
 import { useCan } from "@/components/admin/SessionContext";
 import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
@@ -442,83 +443,33 @@ export default function StoryWorkspace({
       }),
     }));
 
-  /**
-   * Marks the draft ready. It still does not publish anything, and now there is
-   * a route it could ask.
-   *
-   * The toast used to read "Story published", which was false in the way that
-   * matters most: the site had not changed, no request had been made, and the
-   * writer had every reason to believe their piece was live. That got fixed by
-   * changing the words. This is the version that asks the server.
-   *
-   * `status` is kept out of every write in `story-records.ts` — the editor
-   * satisfying `publishedWhere` with a column write would be publishing through
-   * a path the API has deliberately not finished. So the transition goes to
-   * `/publish`, which today answers 501 and names what is missing, and the
-   * writer is told that rather than shown a button that shrugs.
-   */
-  const [publishing, setPublishing] = useState(false);
-
   /*
-   * Whether to draw the publish button at all.
+   * Whether to draw the publish control at all.
    *
-   * Not a check — `useCan` says so itself. The route behind this refuses a
-   * DEV on its own, on their own token, and the API refuses it again; this
-   * only decides whether a control that would be refused is put in front of
-   * somebody.
+   * Not a check — `useCan` says so itself. The route behind it refuses a DEV
+   * on their own token and the API refuses it again; this only decides whether
+   * a control that would be refused is put in front of somebody.
    */
   const canPublish = useCan("stories:publish");
 
-  const setStatus = (next: StoryStatus) => {
-    setDraft((d) => ({ ...d, status: next }));
-    notify.success(
-      next === "published"
-        ? "Marked ready to publish"
-        : next === "scheduled"
-          ? "Marked as scheduled"
-          : "Moved back to drafts",
-      "Recorded on the draft. Publishing is a separate step.",
-    );
-  };
-
-  const publish = async () => {
-    const id = recordId.current;
-    if (!id) {
-      notify.error(
-        "This piece has no record yet",
-        "Give it a headline and let it save once; publishing needs something to point at.",
-      );
-      return;
-    }
-
-    setPublishing(true);
-    try {
-      const response = await fetch(
-        `/api/newsroom/stories/${encodeURIComponent(id)}/publish`,
-        { method: "POST", headers: { Accept: "application/json" }, cache: "no-store" },
-      );
-
-      if (response.ok) {
-        const live = (await response.json()) as Story;
-        version.current = live.updatedAt;
-        setDraft((d) => ({ ...d, status: live.status, publishedAt: live.publishedAt }));
-        notify.success("Published", "The piece is on the site.");
-        return;
-      }
-
-      // The API's own sentence, forwarded. A 501 here names the three things
-      // publishing still needs, which is the useful thing to read; inventing
-      // "something went wrong" over the top of it would help nobody.
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      notify.error(
-        response.status === 501 ? "Publishing is not wired up yet" : "The piece was not published",
-        body?.error ?? `The newsroom returned ${response.status}.`,
-      );
-    } catch {
-      notify.error("The piece was not published", "Could not reach the newsroom. Nothing changed.");
-    } finally {
-      setPublishing(false);
-    }
+  /**
+   * What the server said the piece's state now is.
+   *
+   * Only three fields are taken from the response, and `body` deliberately is
+   * not. Publishing does not change the words, and the writer may well have
+   * typed some since the last save — copying a whole story object over the
+   * draft would silently discard them. The version token moves because the row
+   * did, so the next autosave carries a token the API will accept instead of a
+   * 409 the writer would have to reload past.
+   */
+  const applyTransition = (live: Story) => {
+    version.current = live.updatedAt;
+    setDraft((d) => ({
+      ...d,
+      status: live.status,
+      publishedAt: live.publishedAt,
+      updatedAt: live.updatedAt,
+    }));
   };
 
   return (
@@ -542,37 +493,34 @@ export default function StoryWorkspace({
 
           <div className="ml-auto flex items-center gap-2">
             <NarrationPreview draft={draft} />
-            {/* Two separate acts, and two separate buttons, because they are
-                not the same thing and never were. "Mark ready" is the writer's
-                own note that the piece is finished. "Publish" is a request to
-                the server, which is the only thing that can put it on the
-                site — and which currently answers that it cannot yet. */}
-            {draft.status === "published" ? (
-              <Button size="sm" variant="outline" onClick={() => setStatus("draft")}>
-                Move to drafts
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setStatus("published")}>
-                Mark ready
-              </Button>
-            )}
-            {/* Publish belongs to the writer. A DEV holds `stories:write`,
+            {/* One control, three shapes — see `PublishControls`. A pair used
+                to stand here, "Mark ready" beside "Publish", because only one
+                of them did anything: the server answered 501, so the screen
+                offered a local note about readiness in place of the act. The
+                transition is real now, and a note about it would be a second
+                answer to a question the site already answers.
+
+                Publishing belongs to the writer. A DEV holds `stories:write`,
                 so every control on this screen up to here is theirs — the
-                editor is where an editor bug gets reproduced — and this one
-                is not: deciding a piece is ready for readers is editorial
+                editor is where an editor bug gets reproduced — and this one is
+                not: deciding a piece is ready for readers is editorial
                 judgement, and maintaining the software never needs it.
 
                 Hidden rather than disabled. A disabled button is a promise
                 that it will work under some condition the person could meet,
-                and there is no condition here; the sentence underneath says
+                and there is no condition here; the sentence in its place says
                 what the absence means, which a greyed-out control cannot. */}
             {canPublish ? (
-              <Button size="sm" onClick={publish} disabled={publishing}>
-                {publishing ? "Publishing…" : "Publish"}
-              </Button>
+              <PublishControls
+                storyId={recordId.current}
+                status={draft.status}
+                publishedAt={draft.publishedAt}
+                onChanged={applyTransition}
+              />
             ) : (
               <p className="max-w-[24ch] text-[11px] leading-snug text-muted-foreground">
-                Publishing is the writer&rsquo;s. Mark it ready and it is theirs to take live.
+                Publishing is the writer&rsquo;s. The draft is saved and waiting; taking it
+                live is theirs.
               </p>
             )}
           </div>

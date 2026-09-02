@@ -124,7 +124,8 @@ export default function AdminStories() {
    * saved and search engines hold; quotes, evidence and timeline events carry
    * `storyIds` pointing at it. Removing the row is the easy part of a decision
    * that also has to answer what those links become and what the old URL says —
-   * the same shape of argument the API makes for not implementing `publish`.
+   * the same shape of argument the API made for holding `publish` back until
+   * all three of its parts could land together.
    *
    * So the control does what it can honestly do: it takes a piece out of the
    * writer's way for this session. The label says "Hide", the toast says where

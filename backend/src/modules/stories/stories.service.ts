@@ -1,16 +1,23 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  NotImplementedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma, StoryStatus } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AccessPolicyService } from '../../common/authz/access-policy.service';
 import type { Principal } from '../../common/authz/principal';
 import { parseBlocks } from '../../common/content/story-block';
 import { updateWithOptimisticLock } from '../../common/concurrency/optimistic-concurrency';
 import type { StoryWithStats } from '../../common/serialization/views';
-import type { CreateStoryDto, UpdateStoryDto } from './dto/story.dto';
+import type { Env } from '../../config/env';
+import type {
+  CreateStoryDto,
+  PublishStoryDto,
+  UpdateStoryDto,
+} from './dto/story.dto';
 
 /**
  * Published articles and the admin surface behind them.
@@ -26,12 +33,28 @@ export class StoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly policy: AccessPolicyService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
-  /** Scheduled pieces are not public until their moment arrives. */
+  /**
+   * What "public" means, in one clause — and where the scheduled transition
+   * actually happens.
+   *
+   * Two columns decide it: a date that has arrived, and a status that is not
+   * DRAFT. A SCHEDULED row whose `publishedAt` has passed is public *here*,
+   * without waiting for anything to flip the column, which is why an embargo
+   * is honoured to the second and why no background job can fail and quietly
+   * keep a piece off the site. `StoriesService.promoteDueScheduled` tidies the
+   * column afterwards for the admin list's benefit; it is not what makes the
+   * piece readable. See the long note on `publish`.
+   *
+   * DRAFT stays out on the status, not on the date, and that is the
+   * un-publishing rule seen from the reader's side: a pulled piece keeps the
+   * date it originally ran, so it would satisfy a date-only test forever.
+   */
   private publishedWhere(): Prisma.StoryWhereInput {
     return {
-      status: StoryStatus.PUBLISHED,
+      status: { in: [StoryStatus.PUBLISHED, StoryStatus.SCHEDULED] },
       publishedAt: { not: null, lte: new Date() },
     };
   }
@@ -104,8 +127,11 @@ export class StoriesService {
    * well as in the guard. The guard protects the route; this protects the
    * method, which is what a future internal caller will reach for.
    */
-  listAll(principal: Principal | undefined): Promise<StoryWithStats[]> {
+  async listAll(principal: Principal | undefined): Promise<StoryWithStats[]> {
     this.policy.requireScope(principal, 'stories:write');
+    // Before the read, so the list never shows "scheduled" against a piece the
+    // public can already read. Bookkeeping only — see `promoteDueScheduled`.
+    await this.promoteDueScheduled();
     return this.prisma.story.findMany({
       include: { stats: true },
       orderBy: { updatedAt: 'desc' },
@@ -184,42 +210,239 @@ export class StoriesService {
   }
 
   /**
-   * Not implemented, and the one stub left in this service.
+   * Putting a story in front of readers, taking it back down, or setting it to
+   * appear later. The three-in-one the stub said had to land together.
    *
-   * Publishing is not a status column write: it needs the scheduled-transition
-   * job, a canonical URL check, and a decision about what happens to a story
-   * that was public and is being pulled. Writing the easy third of that would
-   * make the other two look done — which is why `story-records.ts` on the
-   * frontend keeps `status` out of every ordinary write and routes the
-   * transition here instead.
+   * ── Why the scheduled transition is not a job ────────────────────────────
+   * The obvious shape is a sweeper: a timer that wakes up, finds every
+   * SCHEDULED story whose moment has passed, and flips it to PUBLISHED. This
+   * service does not have one, and the omission is the design rather than the
+   * part still missing.
    *
-   * `async`, so the rejection arrives as the `Promise<never>` the signature
-   * advertises. Thrown synchronously it was neither: a caller who reached for
-   * `.catch()` got an exception through the call itself.
+   * A sweeper makes the moment a piece becomes public depend on a background
+   * process being alive. If it dies, or the container is recycled, or the
+   * deployment runs two instances and both try, then "goes live at 6am" means
+   * "goes live at 6am if the timer fired" — and the failure is silent, because
+   * the writer finds out when a reader does not. Worse, the interval is the
+   * error bar: a sweep every five minutes cannot honour a 6:00 embargo.
+   *
+   * So the clock does it instead. `publishedWhere` counts a SCHEDULED story
+   * whose `publishedAt` has passed as public, which means the transition
+   * happens at the instant, inside the query, with nothing to keep running and
+   * no skew between two clocks. `promoteDueScheduled` below then tidies the
+   * column so the admin list does not label a piece "scheduled" that readers
+   * can already read — but it is bookkeeping, not the mechanism, and the site
+   * is correct whether or not it has ever run.
+   *
+   * ── The date rule ────────────────────────────────────────────────────────
+   * First publication sets `publishedAt`; every publication after it keeps
+   * what is there. The date a piece ran is a fact about the piece, and a
+   * re-publish after a correction is not a new piece. The alternative — stamp
+   * `now()` on every transition — quietly re-dates work each time it is
+   * touched, which on a journalism site is a false claim about when something
+   * was reported.
+   *
+   * ── The un-publishing rule ───────────────────────────────────────────────
+   * Status goes back to DRAFT and `publishedAt` is left exactly where it is,
+   * for the reason above: pulling a piece is a statement about whether readers
+   * may see it, not about when it ran. Putting it back later restores the
+   * original date rather than inventing a second one.
+   *
+   * DRAFT rather than a fourth status. There is no `WITHDRAWN`, because
+   * nothing in the product would treat one differently from a draft, and a
+   * status nobody branches on is a column that drifts out of meaning.
    */
-  async publish(principal: Principal | undefined, _id: string): Promise<never> {
-    /*
-     * The scope is checked before the not-implemented throw, and the order is
-     * deliberate.
-     *
-     * A 501 from an unauthorised caller answers the question "does this
-     * endpoint exist and would it work for me" — which is a question the
-     * caller has not earned an answer to. Checking first means a DEV pressing
-     * publish gets 403 (a policy, stated), and only a WRITER learns that the
-     * transition itself is still missing. It also means the check is already
-     * in place on the day the body below is replaced by real work, rather
-     * than being something the implementer has to remember to add.
-     */
+  async publish(
+    principal: Principal | undefined,
+    id: string,
+    dto: PublishStoryDto = {},
+  ): Promise<StoryWithStats> {
     this.policy.requireScope(principal, 'stories:publish');
 
-    // Names the three missing pieces rather than citing a README section. The
-    // message used to say `See README, "Stubbed"`; there is no README in this
-    // package and no such heading anywhere in the repository, so the one
-    // sentence a writer saw sent them looking for a document that never
-    // existed.
-    throw new NotImplementedException(
-      'Publishing transitions are not implemented: the scheduled-transition job, ' +
-        'the canonical URL check and the un-publishing rule all have to land together.',
-    );
+    const action = dto.action ?? 'publish';
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story) throw new NotFoundException('Story not found.');
+
+    if (action === 'unpublish') {
+      if (dto.publishAt !== undefined) {
+        throw new BadRequestException(
+          'publishAt has no meaning when un-publishing. Send it with action "schedule".',
+        );
+      }
+      if (story.status === StoryStatus.DRAFT) {
+        throw new BadRequestException('This piece is already a draft. There is nothing to take down.');
+      }
+      return this.transition(id, {
+        // publishedAt deliberately untouched — see the un-publishing rule above.
+        status: StoryStatus.DRAFT,
+      });
+    }
+
+    // Both remaining verbs put the piece in front of readers, now or later, so
+    // both are held to the same checks. A scheduled piece that fails them at
+    // 6am fails with nobody watching, which is the worst time to find out.
+    this.assertPublishable(story);
+
+    if (action === 'schedule') {
+      const when = this.futureInstant(dto.publishAt);
+      return this.transition(id, { status: StoryStatus.SCHEDULED, publishedAt: when });
+    }
+
+    if (dto.publishAt !== undefined) {
+      throw new BadRequestException(
+        'publishAt has no meaning when publishing now. Send action "schedule" to set a date.',
+      );
+    }
+
+    const now = new Date();
+    return this.transition(id, {
+      status: StoryStatus.PUBLISHED,
+      // Kept when the piece already has a date in the past; set when it does
+      // not. A `publishedAt` in the future belongs to a schedule the writer is
+      // overriding by publishing now, so it is replaced rather than honoured —
+      // otherwise "publish" would put a piece live with tomorrow's date on it
+      // and `publishedWhere` would immediately hide it again.
+      publishedAt: story.publishedAt && story.publishedAt <= now ? story.publishedAt : now,
+    });
+  }
+
+  /**
+   * The canonical check, written as refusals with the fix inside the sentence.
+   *
+   * Each one is wrong in a way a reader would see, and in a way that later
+   * editing does not make retrospectively fine — a placeholder that ran for an
+   * hour was still published template text. They are refusals rather than
+   * warnings for exactly that reason: a warning on a publish button is a thing
+   * people click past.
+   *
+   * What is deliberately *not* checked: slug collisions, because `Story.slug`
+   * is unique in the database and a duplicate cannot exist to be caught; and
+   * whether the genre exists, because the foreign key already guarantees it. A
+   * check that cannot fail is documentation wearing a control's clothes.
+   */
+  private assertPublishable(story: {
+    title: string;
+    dek: string;
+    body: Prisma.JsonValue;
+    placeholder: boolean;
+    sourceUrl: string | null;
+  }): void {
+    if (story.placeholder) {
+      throw new UnprocessableEntityException(
+        'This piece is still marked as placeholder — template text that shipped with the site. ' +
+          'Clear the placeholder flag once it is real reporting, then publish.',
+      );
+    }
+
+    if (!story.title.trim() || !story.dek.trim()) {
+      throw new UnprocessableEntityException(
+        'A published piece needs a headline and a standfirst. They are what a reader sees before they open it.',
+      );
+    }
+
+    if (!Array.isArray(story.body) || story.body.length === 0) {
+      throw new UnprocessableEntityException('There is nothing in the body to publish yet.');
+    }
+
+    /*
+     * A syndicated piece points at the version its author maintains. If that
+     * address is on this site, the copy is claiming to be its own original — a
+     * canonical loop, which tells a search engine that two URLs are each the
+     * authority for the other and leaves it to pick one.
+     *
+     * Checked only when APP_URL is configured. Without it there is no way to
+     * know which origin is ours, and a guess would refuse a legitimate
+     * syndication link on a deployment that was never told its own address.
+     */
+    const own = this.ownOrigin();
+    if (own && story.sourceUrl && sameOrigin(story.sourceUrl, own)) {
+      throw new UnprocessableEntityException(
+        'The original-source URL points back at this site, which would make the piece its own canonical. ' +
+          'Point it at where the piece first ran, or clear it.',
+      );
+    }
+  }
+
+  /** A `publishAt` that is present, real, and actually still ahead of us. */
+  private futureInstant(value: string | undefined): Date {
+    if (!value) {
+      throw new BadRequestException('Scheduling needs a publishAt date.');
+    }
+    const when = new Date(value);
+    if (Number.isNaN(when.getTime())) {
+      throw new BadRequestException('publishAt must be an ISO 8601 timestamp.');
+    }
+    if (when <= new Date()) {
+      throw new BadRequestException(
+        'That moment has already passed. Schedule a future date, or publish now.',
+      );
+    }
+    return when;
+  }
+
+  /**
+   * The write itself, and the one place `status` is allowed to move.
+   *
+   * No `expectedUpdatedAt`, and that is a departure from every other write in
+   * this service worth stating. The optimistic lock exists because two windows
+   * editing the same paragraph is a real and destructive race. This is not an
+   * edit: it sets two columns nothing else writes, from a button that already
+   * reflects the state it is acting on. Requiring a version token would mean a
+   * writer who left the tab open over lunch gets a 409 on "publish" and has to
+   * reload in order to press the same button to the same effect. The lock
+   * protects words; there are no words here.
+   */
+  private transition(
+    id: string,
+    data: { status: StoryStatus; publishedAt?: Date },
+  ): Promise<StoryWithStats> {
+    return this.prisma.story.update({
+      where: { id },
+      data,
+      include: { stats: true },
+    });
+  }
+
+  /**
+   * Bookkeeping: flips SCHEDULED rows whose moment has passed to PUBLISHED, so
+   * the admin list stops calling a piece "scheduled" that readers can read.
+   *
+   * Safe to run from a read path because it is one narrow `updateMany` that
+   * matches nothing on the overwhelming majority of calls, touches no column a
+   * writer is editing, and is idempotent — two instances running it at once
+   * arrive at the same state. Nothing depends on it having run; see the note
+   * on `publish`.
+   */
+  async promoteDueScheduled(): Promise<number> {
+    const { count } = await this.prisma.story.updateMany({
+      where: { status: StoryStatus.SCHEDULED, publishedAt: { not: null, lte: new Date() } },
+      data: { status: StoryStatus.PUBLISHED },
+    });
+    return count;
+  }
+
+  /** APP_URL without its trailing slash, or empty when it is not configured. */
+  private ownOrigin(): string {
+    return (this.config.get('APP_URL', { infer: true }) ?? '').replace(/\/+$/, '');
+  }
+}
+
+/**
+ * Whether a URL lives on the given origin.
+ *
+ * Parsed rather than compared as a prefix. `startsWith` would call
+ * `https://vibevic.example.com.somewhere-else.test/x` our own site, and — the
+ * direction that actually matters here — would miss `http://` against an
+ * `https://` origin, letting a canonical loop through on the scheme alone.
+ *
+ * An unparseable URL is not ours. It cannot be, and `@IsUrl()` on the DTO
+ * means it should not have reached the database at all; returning false leaves
+ * the complaint to the validator that has something useful to say about it.
+ */
+function sameOrigin(url: string, origin: string): boolean {
+  try {
+    return new URL(url).origin === new URL(origin).origin;
+  } catch {
+    return false;
   }
 }

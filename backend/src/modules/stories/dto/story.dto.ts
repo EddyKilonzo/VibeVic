@@ -180,3 +180,38 @@ export class SearchQueryDto {
   @MaxLength(120)
   q!: string;
 }
+
+/**
+ * What the publish route is being asked to do.
+ *
+ * One route with three verbs rather than three routes, because all three are
+ * the same decision — where this piece sits relative to the public — and
+ * splitting them would mean three places that have to agree about the
+ * canonical check and the date rule.
+ *
+ * The body is optional, and an absent one means `publish`. That keeps the
+ * call the editor already makes working unchanged: it posts to `/publish`
+ * with nothing in it and means the obvious thing.
+ */
+export const PUBLISH_ACTIONS = ['publish', 'schedule', 'unpublish'] as const;
+export type PublishAction = (typeof PUBLISH_ACTIONS)[number];
+
+export class PublishStoryDto {
+  @IsEnum(PUBLISH_ACTIONS)
+  @IsOptional()
+  action?: PublishAction;
+
+  /**
+   * When a scheduled piece should appear. Required by `schedule` and refused
+   * by the other two — a date on an un-publish would be a instruction nobody
+   * could act on, and silently ignoring it is how a writer ends up believing
+   * they scheduled something.
+   *
+   * Validated as a real instant here and as a *future* instant in the service,
+   * because "is this in the future" is a question about the clock at the
+   * moment of the write, not about the shape of the string.
+   */
+  @IsISO8601()
+  @IsOptional()
+  publishAt?: string;
+}

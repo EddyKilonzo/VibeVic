@@ -20,7 +20,12 @@ import {
   StoryPublicView,
   StorySummaryPublicView,
 } from '../../common/serialization/views';
-import { CreateStoryDto, SearchQueryDto, UpdateStoryDto } from './dto/story.dto';
+import {
+  CreateStoryDto,
+  PublishStoryDto,
+  SearchQueryDto,
+  UpdateStoryDto,
+} from './dto/story.dto';
 import { StoriesService } from './stories.service';
 
 /**
@@ -139,12 +144,18 @@ export class StoriesAdminController {
    * account that maintains the software needs all of it to reproduce an
    * editor bug. None of that is a reason to be able to publish.
    */
+  /**
+   * Three verbs on one route: publish now, schedule for later, take it down.
+   * The body is optional and an empty one means publish — so the call the
+   * editor has always made keeps working and keeps meaning the obvious thing.
+   */
   @Post(':id/publish')
   @RequireScopes('stories:write', 'stories:publish')
   publish(
     @CurrentPrincipal() principal: Principal | undefined,
     @Param('id') id: string,
+    @Body() dto: PublishStoryDto,
   ) {
-    return this.stories.publish(principal, id);
+    return this.stories.publish(principal, id, dto);
   }
 }

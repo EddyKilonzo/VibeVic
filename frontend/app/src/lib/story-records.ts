@@ -178,19 +178,19 @@ export function toApiCreate(story: Story, slug: string): ApiStoryWrite {
  * a reader has already saved and every canonical URL already in an index.
  *
  * ── No status either, and this one is a deliberate refusal ──────────────
- * `StoriesService.publish` throws `NotImplementedException`, and the reason it
- * gives is worth taking seriously: "Publishing is not a status column write: it
- * needs the scheduled-transition job, a canonical URL check, and a decision
- * about what happens to a story that was public and is being pulled. Writing
- * the easy third of that would make the other two look done."
- *
  * A PATCH carrying `status: "PUBLISHED"` alongside a `publishedAt` in the past
- * satisfies `publishedWhere` exactly. It is the easy third, reachable from the
- * editor's autosave, and taking it would put a piece on the public site through
- * a code path nobody decided was ready. So the editor writes what a writer
- * writes — words, pictures, the beat it is filed under — and a transition goes
- * through `/admin/stories/:id/publish`, which answers honestly that it cannot
- * do it yet.
+ * satisfies the API's `publishedWhere` exactly. That is the whole of what it
+ * takes to make a piece public — which is precisely why it must not be
+ * reachable from the editor's autosave, where it would happen as a side effect
+ * of typing.
+ *
+ * The route this used to defer to could not publish at all, and the refusal
+ * stands unchanged now that it can. `/admin/stories/:id/publish` runs the
+ * canonical check, applies the date rule and is the one place `status` moves;
+ * a second path to the same two columns would be a second way to put something
+ * in front of readers, and only one of them would have the checks. So the
+ * editor writes what a writer writes — words, pictures, the beat it is filed
+ * under — and the decision goes through the route that decides.
  *
  * `expectedUpdatedAt` is mandatory here. The API compares it inside a
  * conditional UPDATE and answers 409 when it has moved on, which is the whole

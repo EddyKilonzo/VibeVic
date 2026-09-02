@@ -130,6 +130,40 @@ export async function newsroomFetch<T>(
         403,
       );
     }
+    /*
+     * A 404 is two completely different facts wearing one status code.
+     *
+     * Usually it is a record: `assertCanRead` answers 404 for a row that does
+     * not exist — and, deliberately, for a confidential one the caller may not
+     * know exists — and the sentence it sends ("Source not found.") is written
+     * for a journalist and worth forwarding as it stands.
+     *
+     * Occasionally it is the *route* that is missing, and that means something
+     * else entirely: this app has asked for an endpoint the API it is talking
+     * to does not have, which happens when the two are deployed separately and
+     * one of them is behind. It is not a missing record, nothing is wrong with
+     * the request, and there is nothing the person at the keyboard can do to
+     * the form in front of them to fix it.
+     *
+     * The two are told apart by the shape of the message. Nest has no route to
+     * dispatch to, so Express's default handler produces `Cannot GET /api/...`
+     * — a string no service in this codebase would ever write, because our own
+     * 404s name the thing that was not found rather than the verb that was
+     * used. Matching it is narrow enough to be safe and specific enough to be
+     * worth doing.
+     *
+     * Written after an afternoon spent reading "Cannot GET
+     * /api/newsroom/accounts" as a bug in a screen that was in fact correct
+     * and simply newer than the API it was calling.
+     */
+    if (response.status === 404 && detail && /^Cannot [A-Z]+ \//.test(detail)) {
+      console.error(`[newsroom-api] the API has no route for ${init.method ?? "GET"} ${path}`);
+      throw new NewsroomApiError(
+        "This app is asking the API for something it does not have. The two are deployed separately, so the API is probably older than this app — redeploy it and try again.",
+        404,
+      );
+    }
+
     if (response.status >= 400 && response.status < 500) {
       throw new NewsroomApiError(detail ?? "The API refused that request.", response.status);
     }

@@ -1,9 +1,14 @@
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
- * Shape only. Nothing consumes this yet — `AuthService.issueToken` throws — and
- * the DTO exists so the contract is reviewable before the implementation makes
- * it dangerous to get wrong.
+ * What `POST /auth/token` accepts, and what `AuthService.issueToken` reads.
+ *
+ * This said "shape only, nothing consumes this yet" for as long as
+ * `issueToken` was a stub. It is not one: it normalises the address, verifies
+ * an argon2id digest, burns the same time when there is no account to check
+ * against, and counts failures against a throttle. The only throw left in it
+ * is the refusal to issue a token no route would accept when `AUTH_MODE` is
+ * not `jwt`, which is a configuration answer rather than a missing feature.
  */
 export class LoginDto {
   @IsEmail()

@@ -20,6 +20,16 @@ import type { Message } from '../mail.service';
  *
  * No tracking pixel, no click wrapper, no remote image. A message about a
  * credential should not also be a request to a third party.
+ *
+ * ── The address is in the button, and only in the button ─────────────────
+ * The HTML part shows a labelled button and no visible URL. A reset link is
+ * 64 hex characters on the end of a path; printed in full it wraps across
+ * three lines, and a wrapped credential is one somebody copies wrongly.
+ *
+ * The plain-text part still prints it, because there it is the only way to
+ * follow the link at all — and that part is what a reader whose client cannot
+ * render the button will be shown, which is the fallback the HTML no longer
+ * needs to carry itself.
  */
 export function passwordResetEmail(options: {
   to: string;
@@ -58,7 +68,7 @@ export function passwordResetEmail(options: {
     `<p style="margin:0 0 20px">Hello ${safeName},</p>`,
     '<p style="margin:0 0 20px">Someone asked for a way back into the VibeVic newsroom with this address.</p>',
     `<p style="margin:0 0 24px"><a href="${safeUrl}" style="display:inline-block;background:#1c1c1a;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:600">Choose a new password</a></p>`,
-    `<p style="margin:0 0 20px;color:#6b6b64;font-size:13px">The link works once and expires in ${minutes} minutes. If the button does not work, copy this address:<br><span style="word-break:break-all;color:#1c1c1a">${safeUrl}</span></p>`,
+    `<p style="margin:0 0 20px;color:#6b6b64;font-size:13px">The button works once and expires in ${minutes} minutes.</p>`,
     '<p style="margin:0;padding-top:20px;border-top:1px solid #e4e4e0;color:#6b6b64;font-size:13px">If this was not you, nothing has happened yet — no password has changed and you do not need to do anything. It is worth knowing that somebody tried, though.</p>',
     '</td></tr>',
     '</table>',

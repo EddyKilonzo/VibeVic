@@ -1,0 +1,136 @@
+# The sign-in and password-reset flow, end to end.
+#
+# Open in VS Code with the REST Client extension (humao.rest-client) or in the
+# JetBrains HTTP client; both read this format. Send requests with the "Send
+# Request" link that appears above each one.
+#
+# ── There is no "create an account" request in here ──────────────────────────
+# Not an omission. The API has no route that creates a user, on purpose: an
+# unauthenticated one would let anybody into the newsroom, and an authenticated
+# one still puts account creation behind whoever happens to hold a token.
+# Accounts are made by a person at a terminal, with the database in front of
+# them:
+#
+#   cd backend
+#   npm run account -- add --email someone@example.com --name "Their Name" --role writer
+#   npm run account -- add --email someone@example.com --name "Their Name" --role dev
+#   npm run account -- list
+#
+# `add` creates the account with no password at all and prints a single-use
+# setup link. The person whose account it is chooses the password in a browser,
+# and nobody else ever holds it. That link is the same mechanism as "I forgot my
+# password" — which is why the flow below is worth running: it is exercised on
+# every new account, not only on the rare occasion somebody forgets.
+#
+# `npm run account -- add` builds its link from APP_URL, so run it with APP_URL
+# set to the environment you mean:
+#
+#   APP_URL=https://vibe-vic.vercel.app npm run account -- add --email … --role dev
+#
+# ── The two accounts this file assumes ───────────────────────────────────────
+#   eddymax3715@gmail.com    DEV     — Eddy Kilonzo
+#   vickiplimo901@gmail.com  WRITER  — Victor Kiplimo
+#
+# ── The one rule that fails requests silently if you miss it ─────────────────
+# Passwords are a minimum of TWELVE characters (ResetPasswordDto, LoginDto). A
+# shorter one comes back 400 from validation, before anything is hashed. There
+# is no character-class rule — a long ordinary phrase is the intended shape.
+
+@api = https://vibevic.onrender.com/api
+# @api = http://localhost:4000/api
+
+@dev = eddymax3715@gmail.com
+@writer = vickiplimo901@gmail.com
+
+
+### 1 · Is this API reachable at all
+# No auth, no origin, nothing clever. On Render's free tier the first request
+# after an idle period takes 30-60s while the instance wakes; that is the
+# expected slow one, not a failure.
+GET {{api}}/genres
+
+
+### 2 · Ask for a reset link — the DEV account
+# Always 202, whatever happens next: the server is saying it accepted the
+# request, not that an email went out. That is deliberate, and it is why this
+# request cannot tell you whether an address has an account.
+#
+# What a 202 does NOT rule out:
+#   · no account for the address        → nothing sent, logged as such
+#   · the throttle already spent        → 3 requests per address per 15 minutes
+#
+# A 503 here is the one visible failure, and it means the server has no mailer:
+# SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM and APP_URL are what it wants.
+POST {{api}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{dev}}"
+}
+
+
+### 3 · Ask for a reset link — the WRITER account
+POST {{api}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{writer}}"
+}
+
+
+### 4 · Spend the link and set a password
+# Take the token from the `?token=` in the emailed URL — 64 hex characters. It
+# is posted in the body rather than left in the query string it arrived on,
+# because a URL ends up in browser history, in a Referer header and in every
+# proxy log in between.
+#
+# One outstanding link per account: asking again in step 2 kills the previous
+# token immediately, so use the newest email. Setting the password ends every
+# session the account currently holds.
+#
+# Twelve characters minimum. Replace the placeholder below — it is a shape, not
+# a suggestion.
+POST {{api}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "PASTE-THE-64-HEX-CHARACTERS-FROM-THE-EMAIL-LINK-HERE-000000000000",
+  "password": "choose a long ordinary phrase"
+}
+
+
+### 5 · Sign in
+# Every failure is one 401 with the same body, whether the address is unknown or
+# the password is wrong. Eight attempts per address per 10 minutes.
+# Copy `token` out of the response for step 6.
+POST {{api}}/auth/token
+Content-Type: application/json
+
+{
+  "email": "{{dev}}",
+  "password": "the password set in step 4"
+}
+
+
+### 6 · What the server believes about the caller
+# Confirms the token works and shows the scopes the role carries — this is where
+# the DEV/WRITER split becomes visible.
+@token = PASTE-THE-TOKEN-FROM-STEP-5
+
+GET {{api}}/auth/me
+Authorization: Bearer {{token}}
+
+
+### 7 · The preflight the deployed site actually sends
+# Not part of the flow — a check on configuration. A browser on the deployed
+# frontend sends this before any POST, and it must come back with an
+# `access-control-allow-origin` naming the origin. If that header is absent the
+# request is 204 and still blocked, and every call from the site fails while
+# curl without an Origin keeps answering 200.
+#
+# The value in CORS_ORIGINS must have no trailing slash: an `Origin` header is a
+# scheme, host and port and nothing else.
+OPTIONS {{api}}/auth/forgot-password
+Origin: https://vibe-vic.vercel.app
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: content-type

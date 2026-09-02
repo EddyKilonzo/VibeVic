@@ -184,23 +184,28 @@ export class StoriesService {
   }
 
   /**
-   * Not implemented. Publishing is not a status column write: it needs the
-   * scheduled-transition job, a canonical URL check, and a decision about what
-   * happens to a story that was public and is being pulled. Writing the easy
-   * third of that would make the other two look done.
+   * Not implemented, and the one stub left in this service.
+   *
+   * Publishing is not a status column write: it needs the scheduled-transition
+   * job, a canonical URL check, and a decision about what happens to a story
+   * that was public and is being pulled. Writing the easy third of that would
+   * make the other two look done — which is why `story-records.ts` on the
+   * frontend keeps `status` out of every ordinary write and routes the
+   * transition here instead.
+   *
+   * `async`, so the rejection arrives as the `Promise<never>` the signature
+   * advertises. Thrown synchronously it was neither: a caller who reached for
+   * `.catch()` got an exception through the call itself.
    */
-  publish(_principal: Principal | undefined, _id: string): Promise<never> {
+  async publish(_principal: Principal | undefined, _id: string): Promise<never> {
+    // Names the three missing pieces rather than citing a README section. The
+    // message used to say `See README, "Stubbed"`; there is no README in this
+    // package and no such heading anywhere in the repository, so the one
+    // sentence a writer saw sent them looking for a document that never
+    // existed.
     throw new NotImplementedException(
-      'Publishing transitions are not implemented. See README, "Stubbed".',
+      'Publishing transitions are not implemented: the scheduled-transition job, ' +
+        'the canonical URL check and the un-publishing rule all have to land together.',
     );
-  }
-
-  /**
-   * Not implemented. Counters need de-duplication, bot filtering and a write
-   * path that does not lock the article row on every page view; an increment
-   * here would produce numbers nobody should quote.
-   */
-  recordView(_slug: string): Promise<never> {
-    throw new NotImplementedException('Analytics collection is not implemented.');
   }
 }

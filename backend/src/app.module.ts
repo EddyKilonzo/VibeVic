@@ -11,6 +11,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { MailModule } from './modules/mail/mail.module';
 import { NewsroomModule } from './modules/newsroom/newsroom.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { SystemModule } from './modules/system/system.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -57,6 +58,11 @@ import { RateLimitModule } from './common/rate-limit/rate-limit.module';
     NewsroomModule,
     CatalogModule,
     AnalyticsModule,
+    // The mail nobody asked for: deadlines that are due, and a note when the
+    // newsroom has gone quiet. Driven by a scheduler holding CRON_SECRET
+    // rather than by a timer in this process — see RemindersService for why
+    // that distinction is the whole design.
+    RemindersModule,
     // Diagnostics and account administration: the DEV half of the role split.
     SystemModule,
   ],

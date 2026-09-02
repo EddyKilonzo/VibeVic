@@ -82,6 +82,17 @@ const schema = z
      */
     APP_URL: z.string().url().optional(),
 
+    /**
+     * The shared secret a scheduler presents to run the reminder pass.
+     *
+     * Optional, and its absence closes the route rather than opening it — see
+     * `NewsroomGuard.admitScheduler`. Thirty-two characters for the same
+     * reason `AUTH_JWT_SECRET` has a floor: this is the only credential in the
+     * system that guards an endpoint anybody may call as often as they like,
+     * so it has to be long enough that calling it often gets nobody anywhere.
+     */
+    CRON_SECRET: z.string().min(32, 'CRON_SECRET must be at least 32 characters').optional(),
+
     /* ── Email: SMTP ────────────────────────────────────────────────────
      * Optional as a group. With none of it set the server runs and refuses
      * password resets with a 503 that names what is missing, which is the

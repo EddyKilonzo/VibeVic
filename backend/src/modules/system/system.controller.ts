@@ -4,6 +4,7 @@ import { CurrentPrincipal, type Principal } from '../../common/authz/principal';
 import { NewsroomOnly, RequireScopes } from '../../common/authz/surface.decorator';
 import { CreateAccountDto } from './account.dto';
 import { AccountsService } from './accounts.service';
+import { ActivityService } from './activity.service';
 import { DiagnosticsService } from './diagnostics.service';
 
 /**
@@ -77,4 +78,40 @@ function callerAddress(request: Request): string | null {
   const forwarded = request.headers['x-forwarded-for'];
   const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0];
   return first?.trim() || request.ip || null;
+}
+
+/**
+ * Days the newsroom was opened, and the streak they make.
+ *
+ * ── Why this is not gated on a scope of its own ──────────────────────────
+ * `newsroom:read`, which every account has. A scope exists to keep one
+ * account out of another's business, and there is no business here to keep
+ * anybody out of: both routes are about the *calling* principal and neither
+ * can name another one. `ActivityService` takes the id from the principal
+ * rather than from a parameter, so there is no shape of request that asks
+ * about somebody else — which is a stronger guarantee than a scope, because a
+ * scope can be granted and this cannot.
+ */
+@Controller('newsroom/activity')
+@NewsroomOnly()
+@RequireScopes('newsroom:read')
+export class ActivityController {
+  constructor(private readonly activity: ActivityService) {}
+
+  @Get()
+  streak(@CurrentPrincipal() principal: Principal | undefined) {
+    return this.activity.streak(principal);
+  }
+
+  /**
+   * "I am here today."
+   *
+   * A POST because it writes, and idempotent because the row it writes is
+   * keyed by (account, day) — so the shell can call it on every mount without
+   * having to remember whether it already has.
+   */
+  @Post()
+  record(@CurrentPrincipal() principal: Principal | undefined) {
+    return this.activity.record(principal);
+  }
 }

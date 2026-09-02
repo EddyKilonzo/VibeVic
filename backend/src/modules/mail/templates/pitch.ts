@@ -1,4 +1,5 @@
 import type { Message } from '../mail.service';
+import { chip, panel, paragraph, renderEmail, subheading } from '../render';
 
 /**
  * A pitch, as an editor receives it.
@@ -82,6 +83,30 @@ export function pitchEmail(options: {
     fromName,
   ].join('\n');
 
+  const html = renderEmail({
+    subject: title,
+    // The angle, not the word "pitch". The preheader is the second line an
+    // editor reads on a phone, and it should carry the argument rather than
+    // the genre — they can already see that this is a pitch.
+    preheader: angle.slice(0, 140),
+    heading: title,
+    body: [
+      ...(note?.trim() ? [paragraph(note.trim())] : []),
+      panel(angle),
+      ...htmlSection('Why it matters', whyItMatters),
+      ...htmlSection('What is known', whatIsKnown),
+      ...htmlSection('What is still open', whatIsUnknown),
+      ...(deadline ? [paragraph(`Filing by ${deadline}.`, 'muted')] : []),
+      ...(sourceCount > 0
+        ? [
+            chip(`${sourceCount} source${sourceCount === 1 ? '' : 's'} lined up`),
+            paragraph('Happy to talk about who, but not in an email.', 'muted'),
+          ]
+        : []),
+    ].join(''),
+    footnote: `Sent by ${fromName} from the VibeVic newsroom. Reply to this message to reach them.`,
+  });
+
   return {
     to,
     // The angle in the subject, not the word "pitch". An editor scanning a
@@ -89,5 +114,17 @@ export function pitchEmail(options: {
     // most valuable part of it saying something they can already see.
     subject: title,
     text,
+    html,
   };
+}
+
+/**
+ * A heading and its paragraph, or nothing at all.
+ *
+ * The same rule as the text version and for the same reason: a heading with
+ * nothing under it reads as an answer, and "What is still open:" followed by
+ * silence says the reporter has not thought about it.
+ */
+function htmlSection(heading: string, body?: string): string[] {
+  return body?.trim() ? [subheading(heading), paragraph(body.trim())] : [];
 }

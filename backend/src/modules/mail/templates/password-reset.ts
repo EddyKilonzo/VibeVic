@@ -1,13 +1,19 @@
 import type { Message } from '../mail.service';
+import { button, paragraph, renderEmail } from '../render';
 
 /**
  * The one email this server sends, written out in full.
  *
- * ── Why the copy is here and not in a template engine ────────────────────
- * There is one message. A templating layer would be four files and a build
- * step to produce what a function already produces, and the words in a
- * security email deserve to be read in review rather than assembled at
- * runtime out of fragments.
+ * ── The copy is here; the shell is not ───────────────────────────────────
+ * This used to argue against a template engine on the grounds that there was
+ * one message. There are four now, and the argument has aged the way that
+ * kind of argument does: the layout was copied into each of them, and the two
+ * copies had already drifted into slightly different greys.
+ *
+ * So the words stay here, in a function, where a security email's copy can be
+ * read in review — and the shell they sit in comes from `views/layout.ejs`,
+ * where the brand palette, the client's dark mode and the phone breakpoint
+ * are decided once. What is templated is the frame, not the sentences.
  *
  * ── What the words are doing ─────────────────────────────────────────────
  * Two facts have to survive being skimmed: how long the link lasts, and what
@@ -56,25 +62,20 @@ export function passwordResetEmail(options: {
     '— The VibeVic newsroom',
   ].join('\n');
 
-  const safeName = escapeHtml(name);
-  const safeUrl = escapeHtml(url);
-
-  const html = [
-    '<!doctype html>',
-    '<html lang="en">',
-    '<body style="margin:0;background:#f6f6f4;padding:32px 16px;font:15px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;color:#1c1c1a">',
-    '<table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e0;border-radius:10px">',
-    '<tr><td style="padding:32px">',
-    `<p style="margin:0 0 20px">Hello ${safeName},</p>`,
-    '<p style="margin:0 0 20px">Someone asked for a way back into the VibeVic newsroom with this address.</p>',
-    `<p style="margin:0 0 24px"><a href="${safeUrl}" style="display:inline-block;background:#1c1c1a;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:600">Choose a new password</a></p>`,
-    `<p style="margin:0 0 20px;color:#6b6b64;font-size:13px">The button works once and expires in ${minutes} minutes.</p>`,
-    '<p style="margin:0;padding-top:20px;border-top:1px solid #e4e4e0;color:#6b6b64;font-size:13px">If this was not you, nothing has happened yet — no password has changed and you do not need to do anything. It is worth knowing that somebody tried, though.</p>',
-    '</td></tr>',
-    '</table>',
-    '</body>',
-    '</html>',
-  ].join('\n');
+  const html = renderEmail({
+    subject: 'A way back into the VibeVic newsroom',
+    preheader: `The link works once and lasts ${minutes} minutes.`,
+    heading: 'A way back in',
+    body: [
+      paragraph(`Hello ${name},`),
+      paragraph('Someone asked for a way back into the VibeVic newsroom with this address.'),
+      button('Choose a new password', url),
+      paragraph(`The button works once and expires in ${minutes} minutes.`, 'muted'),
+    ].join(''),
+    footnote:
+      'If this was not you, nothing has happened yet — no password has changed and you do not ' +
+      'need to do anything. It is worth knowing that somebody tried, though.',
+  });
 
   return {
     to,
@@ -86,16 +87,11 @@ export function passwordResetEmail(options: {
   };
 }
 
-/**
- * The name comes from the database and the URL is built from configuration, so
- * neither is attacker-controlled today. Escaped anyway: the day someone lets a
- * person edit their own display name, this file should already be right rather
- * than be the thing that was forgotten.
+/*
+ * The escaping that used to live here now lives in `render.ts`, applied by
+ * every block rather than by each template remembering to call it. The reason
+ * it was here is unchanged and worth keeping: the name comes from the database
+ * and the URL from configuration, so neither is attacker-controlled today —
+ * and the day somebody lets a person edit their own display name, this should
+ * already be right rather than be the thing that was forgotten.
  */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}

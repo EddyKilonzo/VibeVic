@@ -1,4 +1,5 @@
 import type { Message } from '../mail.service';
+import { button, fallbackLink, paragraph, renderEmail } from '../render';
 
 /**
  * "Your password was changed."
@@ -53,27 +54,30 @@ export function passwordChangedEmail(options: {
     '— The VibeVic newsroom',
   ].join('\n');
 
-  const safeName = escapeHtml(name);
-  const safeAt = escapeHtml(at);
-  const safeUrl = escapeHtml(resetUrl);
-
-  const html = [
-    '<!doctype html>',
-    '<html lang="en">',
-    '<body style="margin:0;background:#f6f6f4;padding:32px 16px;font:15px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;color:#1c1c1a">',
-    '<table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e0;border-radius:10px">',
-    '<tr><td style="padding:32px">',
-    `<p style="margin:0 0 20px">Hello ${safeName},</p>`,
-    `<p style="margin:0 0 20px">The password on your VibeVic newsroom account was changed on <strong>${safeAt}</strong>.</p>`,
-    '<p style="margin:0 0 20px">Every session that was signed in before that has been ended, on every device, so you will be asked to sign in again.</p>',
-    '<p style="margin:0 0 20px">If that was you, there is nothing to do.</p>',
-    `<p style="margin:0 0 24px">If it was not, somebody else has reached this mailbox and used it to take the account. <a href="${safeUrl}" style="color:#1c1c1a">Ask for a new password link</a> straight away — that cancels whatever they have and ends their session too.</p>`,
-    `<p style="margin:0;padding-top:20px;border-top:1px solid #e4e4e0;color:#6b6b64;font-size:13px;word-break:break-all">${safeUrl}</p>`,
-    '</td></tr>',
-    '</table>',
-    '</body>',
-    '</html>',
-  ].join('\n');
+  const html = renderEmail({
+    subject: 'Your newsroom password was changed',
+    preheader: `Changed on ${at}. Every signed-in session has been ended.`,
+    heading: 'Your password was changed',
+    body: [
+      paragraph(`Hello ${name},`),
+      paragraph(`The password on your VibeVic newsroom account was changed on ${at}.`),
+      paragraph(
+        'Every session that was signed in before that has been ended, on every device, so you ' +
+          'will be asked to sign in again.',
+      ),
+      paragraph('If that was you, there is nothing to do.'),
+      paragraph(
+        'If it was not, somebody else has reached this mailbox and used it to take the ' +
+          'account. Ask for a new password link straight away — that cancels whatever they ' +
+          'have and ends their session too.',
+      ),
+      button('Ask for a new link', resetUrl),
+      fallbackLink(resetUrl),
+    ].join(''),
+    footnote:
+      'This message contains no link that changes anything on its own, and no token. It is ' +
+      'safe to keep.',
+  });
 
   return {
     to,
@@ -83,12 +87,4 @@ export function passwordChangedEmail(options: {
     text,
     html,
   };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

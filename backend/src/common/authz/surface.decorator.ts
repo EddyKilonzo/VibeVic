@@ -15,6 +15,22 @@ export enum Surface {
   Public = 'public',
   /** Authenticated journalist traffic. Newsroom records may be returned. */
   Newsroom = 'newsroom',
+  /**
+   * A scheduler, holding a shared secret rather than a session.
+   *
+   * A third surface rather than a bearer token for a service account, and the
+   * difference is what it cannot do. A service account is a principal: it has
+   * scopes, it can be widened by editing a role table, and a stolen token for
+   * one is a stolen token for a newsroom login. This is not a principal at
+   * all — the guard never builds one, so a route on this surface has nobody to
+   * ask "may I", which means it can only ever do work that needs no
+   * permission. The reminder pass is exactly that shape: it reads rows the
+   * writer already owns and sends them to the writer's own address.
+   *
+   * It is also why this cannot be reached by forgetting a decorator. The
+   * default is still Newsroom; this surface has to be typed out.
+   */
+  Machine = 'machine',
 }
 
 export const SURFACE_KEY = 'vv:surface';
@@ -43,6 +59,18 @@ export function PublicRead<TIn, TOut>(
  */
 export const NewsroomOnly = (): MethodDecorator & ClassDecorator =>
   SetMetadata(SURFACE_KEY, Surface.Newsroom);
+
+/**
+ * Marks a route as one a scheduler calls, authenticated by `CRON_SECRET`.
+ *
+ * Not a way in. There is no principal, so nothing behind this can read a
+ * confidential record or act as anybody — see `Surface.Machine`. If the
+ * secret is not configured the guard refuses the route entirely rather than
+ * opening it, which is the same rule `AUTH_MODE` follows: an unconfigured
+ * control is a closed door, never an absent one.
+ */
+export const MachineOnly = (): MethodDecorator & ClassDecorator =>
+  SetMetadata(SURFACE_KEY, Surface.Machine);
 
 /** Requires a scope in addition to authentication. */
 export const RequireScopes = (...scopes: string[]): MethodDecorator & ClassDecorator =>

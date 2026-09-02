@@ -171,8 +171,57 @@ model User {
   updatedAt   DateTime  @updatedAt
 
   passwordResets PasswordReset[]
+  activeDays     WriterDay[]
+
+  /// When we last told this account it had been away.
+  ///
+  /// One column rather than a table of notices, because only the most recent
+  /// one is ever consulted: the question is "have we already said this
+  /// recently", and a history of having said it answers a question nobody
+  /// asks. Null means never, which is also the state of every account that
+  /// existed before this column did — and null reading as "never nudged" is
+  /// the correct interpretation of that, not a guess.
+  awayNoticeAt DateTime?
 
   @@map("users")
+}
+
+/// One day on which somebody opened the newsroom.
+///
+/// ── Why a row per day and not a counter ──────────────────────────────────
+/// A `streak` integer on `User` would be smaller and would be wrong within a
+/// week. A counter has to be advanced by something that knows the last date it
+/// was advanced on, and that logic then lives in whatever code path happens to
+/// run — so two tabs open at midnight either double-count or race, and a bug
+/// in it is unfixable after the fact because the days it was counting are
+/// gone. Rows are the days. The streak is derived from them every time it is
+/// asked for, so a wrong answer can be corrected by fixing the query rather
+/// than by apologising for a number.
+///
+/// ── Why the day is a string ──────────────────────────────────────────────
+/// `YYYY-MM-DD`, matching `StoryEvent.day` and for the same reason: it is what
+/// carries the unique index. A timestamp would need a function in the index to
+/// answer "was there activity today", and two rows an hour apart on the same
+/// day would both be stored.
+///
+/// ── What it is not ───────────────────────────────────────────────────────
+/// Not analytics, and deliberately impoverished so it cannot become any. There
+/// is no time of day, no page, no address, no session — only that this account
+/// opened the newsroom on this date. That is the whole of what a streak needs,
+/// and anything more would be a record of a journalist's working hours sitting
+/// in the same database as their sources.
+model WriterDay {
+  userId String
+  /// The UTC date as YYYY-MM-DD.
+  day    String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([userId, day])
+  @@map("writer_days")
 }
 
 /// One outstanding "email me a way back in".

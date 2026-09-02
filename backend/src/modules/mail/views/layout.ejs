@@ -1,0 +1,203 @@
+<%#
+  The shell every VibeVic email is rendered into.
+
+  ── Why this looks like 2004 HTML ────────────────────────────────────────
+  Because mail clients are 2004 browsers. Outlook on Windows renders through
+  Word's engine, which has no flexbox, no grid, no `max-width` on a div worth
+  relying on, and no external stylesheets. Tables with explicit widths and
+  attributes alongside the CSS are not nostalgia; they are the only layout
+  primitive that behaves the same in Apple Mail, Gmail, Outlook and a dozen
+  webmails nobody tests against.
+
+  ── Two colour schemes, and why the site has only one ────────────────────
+  The product has no dark theme — `index.css` says so, and says why: a dark
+  set invented without being validated against a dark surface would be worse
+  than none. This is a different question. An email does not choose its
+  surroundings: Apple Mail and iOS Mail honour `prefers-color-scheme`, and
+  Gmail and Outlook will *forcibly* invert a light email on a dark device
+  whether or not it was designed for it. The choice is not "dark mode or no
+  dark mode", it is "our dark rendering or theirs", and theirs turns navy text
+  on ice into whatever the inversion heuristic produces.
+
+  So the dark palette below is the email's own, derived from the brand hues
+  rather than copied from a site theme that does not exist. `color-scheme` and
+  `supported-color-schemes` tell the client we have handled it, which is what
+  stops most auto-inversion; the media query then does the handling.
+
+  ── Mobile first, because that is where a pitch is read ──────────────────
+  600px is the widest this ever gets, and everything inside it is fluid below
+  that. Body copy is 16px — smaller and iOS zooms the whole message on its own
+  — the buttons are 44px tall, and the padding drops on narrow screens rather
+  than the type shrinking.
+
+  ── What is deliberately not here ────────────────────────────────────────
+  No images, no web fonts, no tracking pixel. A remote image is a request that
+  says the message was opened, and this newsroom does not need to know that
+  about anyone. It also means nothing breaks when a client blocks images,
+  which most do by default — the design carries in text and colour alone, and
+  Fraunces is asked for and gracefully lost to Georgia, which is what a mail
+  client will use anyway.
+-%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title><%= subject %></title>
+    <style>
+      /* ── The palette, from the site's own tokens ──────────────────
+         Light is `index.css` verbatim: ice ground, navy-ink text,
+         blue-grey secondary, bright blue accent. Dark is derived —
+         the same hues, the lightness relationship inverted, with the
+         accent lifted because 54% blue on a near-black ground is
+         darker than it looks on ice. */
+      :root { color-scheme: light dark; supported-color-schemes: light dark; }
+
+      body, table, td, a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table { border-collapse: collapse !important; }
+      img { border: 0; line-height: 100%; outline: none; text-decoration: none; }
+
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        background-color: #f7fbfd;
+      }
+
+      .vv-ground { background-color: #f7fbfd; }
+      .vv-card {
+        background-color: #ffffff;
+        border: 1px solid #d5e2ed;
+        border-radius: 12px;
+      }
+      .vv-rule { background-color: #d5e2ed; }
+      .vv-title { color: #111f31; }
+      .vv-text { color: #111f31; }
+      .vv-muted { color: #4e6480; }
+      .vv-accent { color: #1479ea; }
+      .vv-bar { background-color: #0e4fa0; }
+      .vv-btn {
+        background-color: #0e4fa0;
+        border: 1px solid #0e4fa0;
+        color: #ffffff !important;
+      }
+      .vv-chip {
+        background-color: #e4f2fd;
+        color: #0e4fa0;
+      }
+      .vv-quote {
+        border-left: 3px solid #1479ea;
+        background-color: #f2f8fd;
+      }
+      .vv-late { color: #cf2020; }
+
+      /* ── The client's dark mode ────────────────────────────────────
+         Only the surfaces and the type move. The accent hue is the
+         same blue, lifted in lightness so it clears the ground it now
+         sits on rather than sinking into it. */
+      @media (prefers-color-scheme: dark) {
+        body, .vv-ground { background-color: #0b141f !important; }
+        .vv-card {
+          background-color: #121e2c !important;
+          border-color: #26374b !important;
+        }
+        .vv-rule { background-color: #26374b !important; }
+        .vv-title, .vv-text { color: #e8f1f8 !important; }
+        .vv-muted { color: #9db0c6 !important; }
+        .vv-accent { color: #63aef7 !important; }
+        .vv-bar { background-color: #1479ea !important; }
+        .vv-btn {
+          background-color: #1479ea !important;
+          border-color: #1479ea !important;
+          color: #ffffff !important;
+        }
+        .vv-chip {
+          background-color: #17304d !important;
+          color: #a9cffb !important;
+        }
+        .vv-quote {
+          border-left-color: #63aef7 !important;
+          background-color: #16273a !important;
+        }
+        .vv-late { color: #ff8a80 !important; }
+      }
+
+      /* ── Narrow screens ───────────────────────────────────────────
+         The padding gives way, never the type size. A pitch read on a
+         phone at 13px is a pitch read badly. */
+      @media only screen and (max-width: 620px) {
+        .vv-pad { padding-left: 20px !important; padding-right: 20px !important; }
+        .vv-shell { padding: 16px 8px !important; }
+        .vv-h1 { font-size: 22px !important; line-height: 30px !important; }
+        .vv-btn-cell a { display: block !important; text-align: center !important; }
+      }
+    </style>
+  </head>
+
+  <body class="vv-ground">
+    <%#
+      The preheader: the grey line a phone shows under the subject. Left
+      unset it fills with whatever the first words of the body happen to be,
+      which on a pitch is the covering line's "Hello". Given one, it is the
+      second sentence a recipient reads. The spacer characters after it stop
+      the client from padding it out with the body anyway.
+    -%>
+    <div style="display:none;font-size:1px;color:#f7fbfd;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      <%= preheader %>
+      <%- '&#847;&zwnj;&nbsp;'.repeat(60) %>
+    </div>
+
+    <table role="presentation" class="vv-ground" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center" class="vv-shell" style="padding: 32px 16px;">
+
+          <table role="presentation" class="vv-card" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+            <%# The brand bar. Four pixels of ink navy, which is the whole of
+                the identity that survives an image-blocking client. -%>
+            <tr>
+              <td class="vv-bar" height="4" style="height:4px;line-height:4px;font-size:4px;border-radius:12px 12px 0 0;">&nbsp;</td>
+            </tr>
+
+            <tr>
+              <td class="vv-pad" style="padding: 28px 36px 8px 36px;">
+                <p class="vv-muted" style="margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;">
+                  VibeVic Newsroom
+                </p>
+                <h1 class="vv-h1 vv-title" style="margin:10px 0 0 0;font-family:'Fraunces',Georgia,'Times New Roman',serif;font-size:25px;line-height:33px;font-weight:600;letter-spacing:-0.3px;">
+                  <%= heading %>
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="vv-pad" style="padding: 18px 36px 30px 36px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:26px;">
+                <%- body %>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="vv-pad" style="padding: 0 36px;">
+                <div class="vv-rule" style="height:1px;line-height:1px;font-size:1px;">&nbsp;</div>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="vv-pad" style="padding: 18px 36px 28px 36px;">
+                <p class="vv-muted" style="margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:19px;">
+                  <%= footnote %>
+                </p>
+              </td>
+            </tr>
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

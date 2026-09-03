@@ -71,22 +71,42 @@ export default function Dashboard() {
               Welcome back, Victor
             </h1>
           </div>
-          <div className="flex gap-2">
-            <Button
-              as="a"
-              href={CHANNEL.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              variant="outline"
-              size="sm"
-            >
-              <Youtube className="icon-tilt h-4 w-4" aria-hidden />
-              Channel
-            </Button>
-            <Button as={Link} href={newsroomPath("/stories/new")} size="sm">
-              <PenLine className="icon-lean h-4 w-4" aria-hidden />
-              New story
-            </Button>
+          {/* The two actions, and under them the streak.
+
+              The streak used to be a full-width band below the four figures,
+              where its fortnight was pinned to the far right by `ml-auto` and
+              the middle of the row was empty — a strip of nothing between a
+              small number and fourteen small squares. Sized to its content up
+              here the two halves sit together and read as one object.
+
+              It belongs beside the actions rather than among the figures
+              below: those four are the channel's totals, counted by somebody
+              else, and this is the only number on the screen that is about the
+              person reading it. */}
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex gap-2">
+              <Button
+                as="a"
+                href={CHANNEL.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                variant="outline"
+                size="sm"
+              >
+                <Youtube className="icon-tilt h-4 w-4" aria-hidden />
+                Channel
+              </Button>
+              <Button as={Link} href={newsroomPath("/stories/new")} size="sm">
+                <PenLine className="icon-lean h-4 w-4" aria-hidden />
+                New story
+              </Button>
+            </div>
+
+            {/* No `surface`: a card here would be a third box in a row that
+                already has two buttons, and the streak renders nothing at all
+                when it has nothing to say — an empty bordered box would be the
+                one case where its silence became visible. */}
+            <StreakCard />
           </div>
         </div>
       </Reveal>
@@ -143,19 +163,7 @@ export default function Dashboard() {
 
           See `DueStrip` for what it deliberately will not do: there is no
           count of how many are late and no completion score. */}
-      {/* Showing up, and what is due — the two things about work in
-          progress, above the four cards about work that is finished.
-
-          The streak is above the deadlines because it is the smaller claim:
-          it says only that the newsroom was opened, whereas the strip below
-          is a list of promises. See `StreakCard` for the line it refuses to
-          cross — there is no target here, and nothing is ever described as
-          broken. */}
-      <Reveal variant="fade-up" className="surface mt-6 p-5">
-        <StreakCard />
-      </Reveal>
-
-      <Reveal variant="fade-up" delay={40} className="surface mt-4 p-5">
+      <Reveal variant="fade-up" delay={40} className="surface mt-6 p-5">
         <DueStrip />
       </Reveal>
 

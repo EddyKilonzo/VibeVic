@@ -149,19 +149,46 @@ async function signingKey(secret: string): Promise<CryptoKey> {
  * `atob`; it is caught and becomes null, because a cookie is arbitrary input
  * from the network and an exception here would be a 500 on the sign-in page.
  */
-function decodeBase64Url(value: string): ArrayBuffer | null {
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> | null {
   try {
     const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
     const binary = atob(padded);
-    // An ArrayBuffer rather than a view of one, because `crypto.subtle.verify`
-    // is typed against a buffer whose backing store cannot be shared, and a
-    // Uint8Array is not — it might be a view onto a SharedArrayBuffer.
-    const bytes = new Uint8Array(binary.length);
+    /*
+     * The view, not the buffer behind it.
+     *
+     * This returned `bytes.buffer` until it was found to break every sign-in.
+     * A bare `ArrayBuffer` satisfies TypeScript — `BufferSource` admits it —
+     * and works under Node, so the page's own session check passed and the
+     * tests passed. The middleware runs in the edge runtime, whose
+     * `crypto.subtle.verify` rejects it at runtime:
+     *
+     *   3rd argument is not instance of ArrayBuffer, Buffer, TypedArray, or
+     *   DataView
+     *
+     * because an `ArrayBuffer` minted inside that sandbox fails the check
+     * against the realm's own constructor. `verifySession` catches, returns
+     * null, and the gate then refuses a session it had just been handed —
+     * while the sign-in page, running under Node, accepted the same cookie and
+     * sent the person back to the gate. That disagreement is a redirect loop
+     * with no way out, and the only sign-out button is behind the gate.
+     *
+     * A `Uint8Array` is a TypedArray and is accepted by both runtimes without
+     * qualification, so there is no longer a version of this that depends on
+     * where it runs.
+     *
+     * It is built over an `ArrayBuffer` named here rather than left to
+     * `new Uint8Array(length)`, whose type is `Uint8Array<ArrayBufferLike>` —
+     * and `ArrayBufferLike` admits `SharedArrayBuffer`, which `BufferSource`
+     * does not. That was the real observation behind the comment this replaces;
+     * it was correct about the typing and drew the wrong conclusion from it,
+     * reaching for `.buffer` when the fix was to say which buffer.
+     */
+    const bytes = new Uint8Array(new ArrayBuffer(binary.length));
     for (let index = 0; index < binary.length; index += 1) {
       bytes[index] = binary.charCodeAt(index);
     }
-    return bytes.buffer;
+    return bytes;
   } catch {
     return null;
   }

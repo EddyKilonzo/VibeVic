@@ -90,7 +90,17 @@ const nextConfig: NextConfig = {
         // fetches cross-origin. `no-referrer` is the only setting that is
         // true regardless of what the page later grows.
         source: "/newsroom-access/:path*",
-        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+
+          // And nothing keeps a copy. The reset page is rendered with a live
+          // token in its URL; a shared cache, a browser's back-forward cache
+          // or an intermediary holding that page is holding a credential.
+          // `no-store` is the only directive that means all three, and
+          // `private` is not enough — it permits the browser's own disk cache,
+          // which is exactly the copy that outlives the session.
+          { key: "Cache-Control", value: "no-store, max-age=0, must-revalidate" },
+        ],
       },
       // HSTS, production only — the whole entry, not an entry with an empty
       // list, which Next rejects at boot. On a development machine this would

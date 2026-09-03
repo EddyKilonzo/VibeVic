@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, KeyRound, Minus } from "lucide-react";
 import { resetAction, type FormState } from "@/app/newsroom-access/actions";
@@ -26,6 +26,22 @@ const MIN_LENGTH = 12;
  * history, to the `Referer` of anything the page loads, and to every proxy
  * log in between; a form body is not. The hidden field is the handover
  * between those two facts.
+ *
+ * ── And it is taken back out of the address bar ──────────────────────────
+ * Once this component has the token in memory, the URL is rewritten to the
+ * bare path. Everything that could be done about the token *in transit* has
+ * been — `no-referrer` on this route, `no-store` so no cache keeps the page,
+ * a single-use token stored only as a SHA-256 — and what is left is the part
+ * none of that touches: the credential sitting in the address bar of a screen
+ * that may be shared, photographed, recorded by support tooling, or simply
+ * read over a shoulder in a newsroom. It also stops the URL being the thing
+ * somebody pastes into a chat when asking for help.
+ *
+ * What this is *not* is obfuscation. The token is exactly as strong as it was
+ * — 256 bits of `randomBytes`, spent on first use — and hiding the string
+ * would add nothing to that; a link that has to work when clicked cannot be
+ * made secret by being made ugly. This narrows where a working credential is
+ * left lying about, which is a real and much smaller claim.
  *
  * ── The second field is not security ─────────────────────────────────────
  * Both fields are masked and the link is single-use, so a typo here is not an
@@ -56,6 +72,29 @@ export function ResetForm({ token }: { token?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(resetAction, {});
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+
+  /*
+   * Take the token out of the address bar, keeping it in the field above.
+   *
+   * `replaceState` rather than `router.replace`: the App Router's version
+   * re-runs the route's server component, which would hand this form a fresh
+   * `token` prop of `undefined` and swap it for the "no token in that
+   * address" branch while somebody is typing their password into it. Changing
+   * only the address is the whole of what is wanted.
+   *
+   * The current history state is passed straight back rather than `null`. The
+   * router keeps its own state there, and wiping it re-initialises the router
+   * from nothing — the same trap `StoryWorkspace` documents when it renames a
+   * new draft's URL.
+   *
+   * Replace, never push: a back button that returned to the URL carrying the
+   * token would undo this entirely.
+   */
+  useEffect(() => {
+    if (!token || typeof window === "undefined") return;
+    if (!window.location.search) return;
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, [token]);
 
   const longEnough = password.length >= MIN_LENGTH;
   const matches = password.length > 0 && confirmation === password;

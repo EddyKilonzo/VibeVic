@@ -1,24 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Victor Kiplimo">
   <!--
-    The site's own mark: one cell of the honeycomb that runs through every
-    page, in the brand navy.
+    The site's mark at tab size — the same shape as `components/Logotype.tsx`,
+    redrawn here rather than imported.
 
-    Drawn as geometry rather than as text. An SVG favicon containing a <text>
-    element renders in whatever font the browser happens to resolve, which is
-    not the site's — a monogram that falls back to Times on one machine and
-    Arial on another is not a mark. A path is the same shape everywhere.
+    It has to be a standalone file: Next resolves this by convention and a
+    browser fetches it on its own, so it cannot be a React component. The
+    geometry is therefore duplicated, and the duplication is deliberate rather
+    than accidental — the alternative is a build step that generates one file
+    from the other, which is more machinery than four coordinates deserve.
 
-    Sized for 16px first: the hexagon is stroked at 3 units in a 32 unit box,
-    which stays a legible outline at favicon size instead of collapsing into a
-    blob the way a filled shape does. The tile is rounded rather than square so
-    it reads as an icon in a tab strip full of them.
+    ── What differs from the component, and why ──────────────────────────
+    No ring. In the component the full hexagon sits behind the V at a quarter
+    opacity; at 16 CSS pixels those two strokes are three pixels apart and the
+    eye resolves them as one thick smudge. The V alone is still the mark, and
+    `LogoMark` has a `bare` prop that draws exactly this.
+
+    The V is also heavier here — 3.4 against 3 — because a stroke on a white
+    tile in a tab strip is doing without the surrounding contrast the header
+    gives it.
+
+    Drawn as geometry, never as <text>: a favicon containing a text element
+    renders in whatever font the browser resolves, which is not the site's, and
+    a monogram that falls back to Times on one machine is not a mark.
   -->
   <rect width="32" height="32" rx="7" fill="#0E47A1"/>
   <path
-    d="M16 6.5 L24.2 11.25 L24.2 20.75 L16 25.5 L7.8 20.75 L7.8 11.25 Z"
+    d="M8.6 11 L8.6 21.2 L16 25.4 L23.4 21.2 L23.4 11"
     fill="none"
     stroke="#ffffff"
-    stroke-width="3"
+    stroke-width="3.4"
+    stroke-linecap="round"
     stroke-linejoin="round"
   />
 </svg>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NavLink } from "@/components/nav/NavLink";
+import { LogoMark } from "@/components/Logotype";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bookmark, Search } from "lucide-react";
@@ -100,12 +101,24 @@ export function PublicHeader() {
               : "border-white/50 bg-white/30 shadow-raised backdrop-blur-lg backdrop-saturate-150",
           )}
         >
+          {/* The mark, then the name.
+
+              One cell of the honeycomb the whole site is textured with, whose
+              descending edges were already a V — see `Logotype`. The name
+              stays as text beside it rather than being drawn into the SVG,
+              because a byline should be selectable, searchable and read
+              correctly aloud, and outlines give all three up for letterforms
+              nobody was going to compare. */}
           <Link
             href="/"
-            className="focus-ring font-display tap inline-flex shrink-0 items-center text-lg font-semibold tracking-tight"
+            className="focus-ring tap inline-flex shrink-0 items-center gap-2.5 text-primary"
           >
-            Victor Kiplimo
-            <span className="ml-2 hidden text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">
+            <LogoMark size={26} className="hidden sm:block" />
+            <LogoMark size={22} bare className="sm:hidden" />
+            <span className="font-display text-lg font-semibold tracking-tight text-foreground">
+              Victor Kiplimo
+            </span>
+            <span className="ml-1 hidden text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">
               Journalist
             </span>
           </Link>

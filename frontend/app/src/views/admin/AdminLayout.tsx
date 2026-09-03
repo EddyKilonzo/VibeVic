@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PageTransition } from "@/components/motion";
+import { LogoMark } from "@/components/Logotype";
+import { Mia } from "@/components/admin/Mia";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
 import { AccountMenu, type SessionSummary } from "@/components/admin/AccountMenu";
@@ -162,9 +164,11 @@ export default function AdminLayout({
             aria-label="View the public site"
             className="focus-ring group relative inline-flex shrink-0 items-center justify-center"
           >
-            {/* The house hex, at mark scale. Same clip-path as the stat
-                cards, so the admin's one piece of identity is the shape the
-                rest of the product already uses. */}
+            {/* The mark itself now, rather than initials inside a hex-shaped
+                tint. The tint was standing in for a logo that did not exist —
+                it drew the house shape and then put two letters in it, which
+                is two marks arguing. `LogoMark` is the same shape doing the
+                job on its own, and it inherits the rail's white. */}
             <span
               aria-hidden
               className="absolute -inset-x-1.5 -inset-y-1 bg-white/10 transition-colors duration-normal group-hover:bg-white/20"
@@ -172,7 +176,7 @@ export default function AdminLayout({
                 clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
               }}
             />
-            <span className="font-display relative text-base font-semibold text-white">VK</span>
+            <LogoMark size={22} bare className="relative text-white" />
           </Link>
           <AnimatePresence initial={false}>
             {!collapsed && (
@@ -315,6 +319,11 @@ export default function AdminLayout({
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+
+      {/* The assistant, on every admin screen, because the questions she is
+          for are asked while doing something else. Docked above the mobile
+          bar so the two never overlap. */}
+      <Mia />
 
       <MobileAdminBar />
     </div>

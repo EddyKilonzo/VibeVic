@@ -6,6 +6,7 @@ import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { NEWSROOM_BASE } from "@/lib/newsroom-path";
 import { PORTRAIT } from "@/data/portraits";
 import { PortraitFrame } from "@/components/media/PortraitFrame";
+import { LogoMark } from "@/components/Logotype";
 import { SocialIcon } from "@/components/social/SocialIcon";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 
@@ -58,7 +59,13 @@ export function PublicFooter() {
                 size={56}
                 className="h-14 w-14 shrink-0 rounded-full shadow-lifted ring-1 ring-border"
               />
-              <p className="font-display text-2xl font-semibold tracking-tight">{PROFILE.name}</p>
+              <p className="flex items-center gap-2.5 font-display text-2xl font-semibold tracking-tight">
+                {/* Beside the portrait rather than instead of it: the face is
+                    the byline, the mark is the publication. A footer that had
+                    only one of them would be missing the other. */}
+                <LogoMark size={24} className="text-primary" />
+                {PROFILE.name}
+              </p>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               Journalist reporting from {PROFILE.base}. Campus systems, Kenyan culture and student

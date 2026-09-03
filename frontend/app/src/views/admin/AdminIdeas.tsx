@@ -22,6 +22,7 @@ import { IdeaCard, TagField } from "@/components/admin/IdeaCard";
 import { PRIORITIES, PRIORITY_RANK, STAGES } from "@/components/admin/idea";
 import { EmptyState } from "@/components/ui/States";
 import { newsroomPath } from "@/lib/newsroom-path";
+import { Scratchpad } from "@/components/admin/Scratchpad";
 
 /**
  * The story list before there are any stories.
@@ -500,13 +501,25 @@ ${text}` : text))}
           )}
         </div>
 
-        <IdeaForm
-          note={note}
-          setNote={setNote}
-          genre={genre}
-          setGenre={setGenre}
-          onResult={setPitch}
-        />
+        {/* The rail: the form, and under it the pad.
+
+            Both are places to put words, which is why they belong in the same
+            column rather than the pad being a full-width slab under the whole
+            page — down there it read as a footer, and a footer is not
+            somewhere anybody types. Keeping them together also states the
+            difference between them by adjacency: above, a line becomes an
+            idea with a stage and a place in a list; below, it stays a line. */}
+        <div className="min-w-0">
+          <IdeaForm
+            note={note}
+            setNote={setNote}
+            genre={genre}
+            setGenre={setGenre}
+            onResult={setPitch}
+          />
+
+          <Scratchpad />
+        </div>
       </div>
     </div>
   );

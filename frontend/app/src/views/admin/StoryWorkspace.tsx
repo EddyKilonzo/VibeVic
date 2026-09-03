@@ -52,6 +52,7 @@ import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
 import { StoryHistory } from "@/components/admin/StoryHistory";
 import { WritingCoach } from "@/components/admin/WritingCoach";
+import { Scratchpad } from "@/components/admin/Scratchpad";
 import { StoryRecords } from "@/components/admin/StoryRecords";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { newsroomPath } from "@/lib/newsroom-path";
@@ -826,6 +827,15 @@ export default function StoryWorkspace({
       {/* Advice about the writing rather than about the reporting. Two halves,
           measured and modelled, never mixed — see `WritingCoach`. */}
       <WritingCoach draft={draft} />
+
+      {/* The same pad as the one on the ideas screen, deliberately.
+
+          It sits last because it is the only panel here that is not about this
+          piece: everything above describes the draft, and this is where the
+          thought that arrived *while* working on the draft goes when it turns
+          out to be about something else. Material that does belong to this
+          piece has a home a few panels up, under "The reporting behind it". */}
+      <Scratchpad />
     </div>
   );
 }

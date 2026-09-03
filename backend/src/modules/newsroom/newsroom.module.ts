@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import {
   CollectionsController,
   PortfolioController,
+  ScratchpadController,
   StyleGuideController,
 } from './curation/curation.controller';
 import { CurationService } from './curation/curation.service';
@@ -77,6 +78,7 @@ import { TimelineService } from './timeline/timeline.service';
     DeadlinesController,
     CollectionsController,
     PortfolioController,
+    ScratchpadController,
     StyleGuideController,
     SummaryController,
   ],

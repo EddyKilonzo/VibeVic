@@ -567,6 +567,31 @@ model PortfolioEntry {
 }
 
 /// House style: preferred term → terms to avoid.
+/// The scratchpad: one document, for the whole newsroom.
+///
+/// A single row, and the id is a constant rather than a cuid. There is one
+/// pad, so a table that could hold two would be a table somebody eventually
+/// finds two in — and then has to decide which is the real one. Writes are an
+/// upsert against that fixed id, which makes "save the pad" idempotent and
+/// makes the first save no different from the hundredth.
+///
+/// Deliberately not a Note. Notes are records: they have titles, they attach
+/// to a piece, they carry a visibility, and they are things a journalist filed
+/// on purpose. This is the opposite — the place thinking goes before it is
+/// worth filing, and giving it a title field would reintroduce the ceremony it
+/// exists to avoid.
+///
+/// No visibility column for the same reason ideas have none: the whole thing
+/// is private, so there is no per-row decision to make.
+model Scratchpad {
+  /// Always "singleton". See above.
+  id        String   @id @default("singleton")
+  body      String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@map("scratchpad")
+}
+
 model StyleGuideEntry {
   id        String   @id @default(cuid())
   preferred String

@@ -13,6 +13,7 @@ import { NewsroomOnly, RequireScopes } from '../../../common/authz/surface.decor
 import {
   CreateCollectionDto,
   SetPortfolioClassDto,
+  SetScratchpadDto,
   SetStyleGuideDto,
   UpdateCollectionDto,
 } from './curation.dto';
@@ -112,6 +113,36 @@ export class PortfolioController {
     @Param('storyId') storyId: string,
   ) {
     return this.curation.clearPortfolioClass(principal, storyId);
+  }
+}
+
+/**
+ * The scratchpad, read and replaced as one document.
+ *
+ * PUT with no id, because there is exactly one pad. The same argument the
+ * portfolio controller makes for keying on a story id applies harder here:
+ * saving the pad twice is one statement made twice, not two pads, so the verb
+ * has to be idempotent — which matters more than usual because this route is
+ * called by an autosave that will retry.
+ */
+@Controller('newsroom/scratchpad')
+@NewsroomOnly()
+@RequireScopes('newsroom:read')
+export class ScratchpadController {
+  constructor(private readonly curation: CurationService) {}
+
+  @Get()
+  read(@CurrentPrincipal() principal: Principal | undefined) {
+    return this.curation.scratchpad(principal);
+  }
+
+  @Put()
+  @RequireScopes('newsroom:read', 'newsroom:write')
+  replace(
+    @CurrentPrincipal() principal: Principal | undefined,
+    @Body() dto: SetScratchpadDto,
+  ) {
+    return this.curation.setScratchpad(principal, dto);
   }
 }
 

@@ -99,6 +99,23 @@ export class StyleGuideEntryDto {
  * one and adds another in a single sitting — and a screen that had to emit five
  * requests to save that would leave the guide half-written whenever one failed.
  */
+/**
+ * The scratchpad's whole text.
+ *
+ * One field, and it may be empty — clearing the pad is a thing somebody does
+ * on purpose, so an empty string has to be a legal value rather than a
+ * validation failure. `@IsString` without `@MinLength` is what says that.
+ *
+ * The cap is generous because this is where long thinking goes, and a limit a
+ * writer can reach mid-sentence is worse than no pad at all. It exists only so
+ * that a runaway client cannot post a megabyte.
+ */
+export class SetScratchpadDto {
+  @IsString()
+  @MaxLength(100_000)
+  body!: string;
+}
+
 export class SetStyleGuideDto {
   @IsArray()
   @ValidateNested({ each: true })

@@ -7,11 +7,22 @@ import { updateWithOptimisticLock } from '../../../common/concurrency/optimistic
 import { assertAllExist } from '../../../common/relations/link-set';
 import type {
   CreateCollectionDto,
+  SetScratchpadDto,
   SetStyleGuideDto,
   UpdateCollectionDto,
 } from './curation.dto';
 
 const NOT_FOUND = 'Collection not found.';
+
+/**
+ * The scratchpad's only id.
+ *
+ * A constant rather than a value the caller supplies, so there is no request
+ * that can address a second pad into existence. It matches the schema's
+ * `@default`, and the two agreeing is what makes the upsert in `scratchpad()`
+ * create exactly the row the schema describes.
+ */
+const SCRATCHPAD_ID = 'singleton';
 
 type CollectionRow = Prisma.CollectionGetPayload<{
   include: { stories: { select: { storyId: true; position: true } } };
@@ -271,6 +282,44 @@ export class CurationService {
 
     await this.prisma.portfolioEntry.delete({ where: { storyId } });
     return { storyId, deleted: true };
+  }
+
+  /* ── Scratchpad ────────────────────────────────────────────── */
+
+  /**
+   * The pad, creating it on first read.
+   *
+   * An upsert rather than a findUnique, so a newsroom that has never opened
+   * the pad gets an empty one instead of a null the caller has to know to
+   * expect. There is no state where the pad does not exist; there is only a
+   * state where it is empty, and those are different claims.
+   */
+  async scratchpad(principal: Principal | undefined) {
+    this.policy.requireScope(principal, 'newsroom:read');
+    return this.prisma.scratchpad.upsert({
+      where: { id: SCRATCHPAD_ID },
+      create: { id: SCRATCHPAD_ID },
+      update: {},
+    });
+  }
+
+  /**
+   * Replaces the pad's text.
+   *
+   * Last write wins, with no version check — and that is the right model here
+   * rather than an oversight. Every other record in this newsroom uses
+   * optimistic locking because two people could be editing one row; there is
+   * one journalist, the pad is theirs, and a 409 telling them their own
+   * unsaved thinking conflicts with their own unsaved thinking would be the
+   * product picking a fight it invented.
+   */
+  async setScratchpad(principal: Principal | undefined, dto: SetScratchpadDto) {
+    this.policy.requireScope(principal, 'newsroom:write');
+    return this.prisma.scratchpad.upsert({
+      where: { id: SCRATCHPAD_ID },
+      create: { id: SCRATCHPAD_ID, body: dto.body },
+      update: { body: dto.body },
+    });
   }
 
   /* ── Style guide ───────────────────────────────────────────── */

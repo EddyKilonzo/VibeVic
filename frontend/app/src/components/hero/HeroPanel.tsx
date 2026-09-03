@@ -1,4 +1,14 @@
+"use client";
+
+/*
+ * A client component only because of the body attribute it sets — see the
+ * effect below. `children` is still whatever the caller passed, server
+ * components included: they are rendered by the parent and arrive here as
+ * elements, so nothing under a hero is dragged into the bundle by this.
+ */
+
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,14 +57,39 @@ export function HeroPanel({
   fitViewport?: boolean;
   minViewport?: number;
 }) {
+  /*
+   * Tell the page there is a dark slab at the top of it.
+   *
+   * The header is fixed and lives in the layout, so it is not a sibling of
+   * this element in any way CSS can select across — and it needs to know,
+   * because white nav text is right over this panel and invisible on the
+   * three page types that have no hero at all (About, an article, a video).
+   *
+   * A body attribute rather than a prop or a context: the header does not
+   * care *which* hero is present or anything about it, only whether the top
+   * of the page is dark, and that is one bit. Cleared on unmount so a
+   * client-side navigation to a page without a hero puts the dark text back.
+   */
+  useEffect(() => {
+    document.body.dataset.hero = "dark";
+    return () => {
+      delete document.body.dataset.hero;
+    };
+  }, []);
+
   return (
-    <div className="px-2 pt-2 sm:px-3 sm:pt-3">
+    /*
+     * Full bleed. The panel used to sit inset by 8-12px with a 28px radius, so
+     * it read as a card laid on the page; edge to edge it reads as the top of
+     * the page itself, which is what a hero is.
+     */
+    <div>
       <section
         className={cn(
           "hero-panel honeycomb honeycomb-strong",
           bleed ? "pb-0" : fitViewport ? "pb-10 sm:pb-12" : "pb-16 sm:pb-20",
           fitViewport
-            ? "flex min-h-[calc(100svh-0.5rem)] flex-col justify-center pt-20 sm:min-h-[calc(100svh-0.75rem)] sm:pt-24"
+            ? "flex min-h-svh flex-col justify-center pt-24 sm:pt-28"
             : "pt-28 sm:pt-36",
           minViewport && !fitViewport && "flex flex-col justify-center",
           className,

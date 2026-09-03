@@ -863,24 +863,83 @@
      radial pools read as light falling across a surface. Stops are
      placed so the deepest tint sits bottom-right, away from the
      headline, keeping ink-on-ice contrast where the type lives.  */
+  /*
+   * The hero slab, in deep blue.
+   *
+   * ── Why the tokens are redefined rather than the content restyled ─────
+   * Everything inside a hero already asks for `text-foreground`,
+   * `text-muted-foreground`, `border-border` and the rest. Rewriting each of
+   * those to a dark-ground variant would mean every future hero element
+   * having to remember it is on navy, and the first one that forgot would be
+   * invisible navy-on-navy. Redefining the tokens here inverts the whole
+   * subtree once, and anything dropped into a hero later is correct without
+   * knowing where it is. It is the same trick `.honeycomb-invert` plays with
+   * `--comb-ink`, applied to the palette rather than to one texture.
+   *
+   * ── The gradient keeps its geometry ──────────────────────────────────
+   * The five layers sit at exactly the stops the light version used — lit at
+   * the top-left, cool at the top-right, a blue bloom low on the right, and
+   * a deeper corner bottom-left. Only the colours moved. The composition was
+   * a considered thing and darkening it is not a reason to redraw it.
+   */
   .hero-panel {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border-radius: 28px;
+    /* Square, and full width. See `HeroPanel` — this is the top of the page
+       rather than a card resting on it. */
+    border-radius: 0;
+
+    /* Light on a dark ground, and one step short of pure white: #fff on a
+       saturated navy vibrates at display sizes, which is exactly the size
+       this text is. */
+    --foreground: 205 60% 97%;
+    --card-foreground: 205 60% 97%;
+    --popover-foreground: 205 60% 97%;
+
+    /* Secondary copy at a real contrast rather than a dimmed one. Lowering
+       the lightness until it "looks secondary" on dark is how a subhead ends
+       up below 4.5:1; this keeps the blue-grey relationship by moving the
+       hue's lightness up, not its alpha down. */
+    --muted-foreground: 205 40% 82%;
+
+    /* A primary button on navy has to be the light thing in the composition,
+       so primary and its foreground swap ends. */
+    --primary: 0 0% 100%;
+    --primary-foreground: 216 48% 13%;
+
+    /* Surfaces and rules become tints of the ground rather than of paper.
+       `--background` and `--card` matter as much as the text tokens: an
+       outline button and the chip rail both paint themselves with them, and
+       leaving those at near-white produced a white pill with white text on
+       it — the two controls in the hero, both invisible. */
+    --background: 216 52% 17%;
+    --card: 214 56% 22%;
+    --secondary: 214 60% 26%;
+    --secondary-foreground: 205 60% 97%;
+    --muted: 214 55% 24%;
+    --border: 210 45% 100%;
+    --input: 210 45% 100%;
+
+    /* The accent carries the annotations and the focus ring. Brightened,
+       because 54% lightness against this ground is legible but joyless. */
+    --accent: 205 92% 72%;
+    --accent-foreground: 216 48% 13%;
+    --ring: 205 92% 72%;
+
+    /* The comb, inverted. `--primary` is white in here, so the derived value
+       would already have been close — it is written out so that the texture
+       does not silently change if the button colours are ever retuned. */
+    --comb-ink: hsl(0 0% 100% / 0.05);
+    --comb-ink-strong: hsl(0 0% 100% / 0.075);
+
+    color: hsl(var(--foreground));
     background:
-      radial-gradient(78% 62% at 6% 0%, hsl(var(--sky) / 0.55) 0%, transparent 62%),
-      radial-gradient(60% 55% at 96% 6%, hsl(var(--ice) / 0.95) 0%, transparent 58%),
-      radial-gradient(70% 70% at 92% 100%, hsl(var(--blue) / 0.30) 0%, transparent 62%),
-      radial-gradient(65% 60% at 14% 96%, hsl(var(--ice) / 0.85) 0%, transparent 60%),
-      linear-gradient(155deg, hsl(var(--ice) / 0.7) 0%, hsl(0 0% 100%) 48%, hsl(var(--sky) / 0.22) 100%);
-  }
-  @media (max-width: 640px) {
-    /* A 28px radius on a full-width phone panel eats the first line
-       of the headline; 20px keeps the shape without the cost. */
-    .hero-panel {
-      border-radius: 20px;
-    }
+      radial-gradient(78% 62% at 6% 0%, hsl(214 68% 30% / 0.95) 0%, transparent 62%),
+      radial-gradient(60% 55% at 96% 6%, hsl(207 72% 27% / 0.85) 0%, transparent 58%),
+      radial-gradient(70% 70% at 92% 100%, hsl(205 90% 44% / 0.32) 0%, transparent 62%),
+      radial-gradient(65% 60% at 14% 96%, hsl(217 62% 11% / 0.9) 0%, transparent 60%),
+      linear-gradient(155deg, hsl(216 58% 16%) 0%, hsl(215 70% 21%) 48%, hsl(217 62% 12%) 100%);
   }
 
   /* A hairline of white along the top edge, so the slab catches
@@ -892,9 +951,31 @@
     z-index: -1;
     pointer-events: none;
     border-radius: inherit;
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.85),
-      inset 0 0 0 1px hsl(var(--ink) / 0.06);
+    /* Only the bottom edge now. A ring made sense around an inset card; on
+       a full-bleed slab it drew a box around the whole viewport. What is left
+       is the seam between the hero and the page under it. */
+    box-shadow: inset 0 -1px 0 hsl(0 0% 100% / 0.12);
+  }
+
+  /*
+   * The header capsule over a dark hero.
+   *
+   * Scoped to `body[data-hero="dark"]` and to the unscrolled state, which is
+   * the only moment both things are true: past the fold the capsule is
+   * frosted white over body copy and its dark text is correct again. Written
+   * as token overrides for the same reason the hero itself is — the nav
+   * links, the name, the strapline and the two icon buttons all ask for
+   * `--foreground`, `--muted-foreground` or `--primary`, and none of them
+   * should have to know what is behind them.
+   */
+  body[data-hero="dark"] .site-header-bar[data-scrolled="false"] {
+    --foreground: 205 60% 97%;
+    --muted-foreground: 205 45% 88%;
+    --primary: 0 0% 100%;
+    --accent: 205 92% 72%;
+    color: hsl(var(--foreground));
+    border-color: hsl(0 0% 100% / 0.26);
+    background-color: hsl(216 55% 16% / 0.26);
   }
 
   /* ── Hairline rail ────────────────────────────────────────────

@@ -89,7 +89,13 @@ export function PublicHeader() {
           assembling itself.
         */}
         <div
+          /* Read by the `body[data-hero="dark"]` rule in index.css, which
+             turns the capsule's text white while it floats over a hero. An
+             attribute rather than a class so the two states are one switch
+             that cannot end up both on at once. */
+          data-scrolled={scrolled ? "true" : "false"}
           className={cn(
+            "site-header-bar",
             // Not `container-site`: that utility carries its own horizontal
             // padding, and which of the two wins depends on stylesheet order
             // rather than on the class list. The width is spelled out instead.

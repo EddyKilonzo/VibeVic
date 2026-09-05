@@ -147,14 +147,21 @@ function Portfolio() {
         on purpose, so a quiet investigation cannot be demoted by its traffic.
       </p>
 
-      <ul className="mt-5 space-y-2">
+      {/* Two columns of cards rather than one column of rows. Classing a
+          portfolio is a pass over the whole archive — you are comparing
+          pieces against each other, not reading them one at a time — and a
+          single column puts half as many in front of you per screen while
+          leaving most of the width to the select's right-hand margin. */}
+      <ul className="mt-5 grid gap-3 lg:grid-cols-2">
         {stories.map((story) => (
           <li
             key={story.id}
-            className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background p-3.5"
+            className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3.5"
           >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">{story.title}</p>
+            <div className="min-w-0">
+              <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                {story.title}
+              </p>
               <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
                 {story.status === "published" ? "Published" : story.status} · {story.genre}
               </p>
@@ -166,7 +173,7 @@ function Portfolio() {
               id={`class-${story.id}`}
               value={portfolio[story.id] ?? ""}
               onChange={(event) => void set(story.id, event.target.value)}
-              className="focus-ring h-10 shrink-0 rounded-md border border-border bg-background px-3 text-[13px]"
+              className="focus-ring mt-auto h-10 w-full rounded-md border border-border bg-background px-3 text-[13px]"
             >
               <option value="">— unclassed —</option>
               {CLASSES.map((entry) => (
@@ -265,9 +272,20 @@ function Collections() {
         </div>
       )}
 
-      <ul className="mt-4 space-y-3">
+      {/* Collapsed collections sit two to a row; the one being edited takes
+          the full width back. A collection opens into an ordered list of its
+          stories with move-up and move-down on each — that is a sequence
+          being arranged, and arranging one inside half a column would be
+          fighting the layout for no gain. */}
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2">
         {collections.map((collection) => (
-          <li key={collection.id} className="rounded-lg border border-border bg-background p-4">
+          <li
+            key={collection.id}
+            className={cn(
+              "rounded-lg border border-border bg-background p-4",
+              editing === collection.id && "sm:col-span-2",
+            )}
+          >
             <CollectionRow
               collection={collection}
               stories={stories ?? []}
@@ -565,7 +583,12 @@ function HouseStyle() {
         </div>
       )}
 
-      <ul className="mt-5 space-y-3">
+      {/* Two rules to a row from `xl` and not before. Each rule already
+          carries a two-column pair of fields inside it, and those breakpoints
+          are viewport-based rather than container-based — so halving the
+          card any earlier gives the inputs about 180px each, which is not
+          enough to read a term and the terms it replaces. */}
+      <ul className="mt-5 grid gap-3 xl:grid-cols-2">
         {rows.map((row, index) => (
           <li key={index} className="rounded-lg border border-border bg-background p-3.5">
             <div className="grid gap-3 sm:grid-cols-2">

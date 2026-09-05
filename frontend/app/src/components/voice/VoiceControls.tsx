@@ -223,7 +223,10 @@ export function VoiceMenu({ placement }: { placement?: "up" | "down" } = {}) {
            sized to the rail's inner width, and below lg, where the player is
            full-width, it takes the room it wants. Long voice names truncate;
            the language underneath is what distinguishes them. */
-        <div className="-mx-0.5 max-h-80 w-[248px] overflow-y-auto px-0.5 lg:w-[176px]">
+        <div
+          data-lenis-prevent
+          className="-mx-0.5 max-h-80 w-[248px] overflow-y-auto px-0.5 lg:w-[176px]"
+        >
           {groups.map((group) => (
             <div key={group.id} role="group" aria-label={group.label}>
               {/* Sticky, so a scroll through forty voices never leaves you

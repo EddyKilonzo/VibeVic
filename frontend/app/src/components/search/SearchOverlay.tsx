@@ -159,7 +159,11 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                 No stories match <span className="font-semibold text-foreground">“{query}”</span>.
               </motion.p>
             ) : (
-              <motion.ul key="results" className="max-h-[52vh] overflow-y-auto py-2">
+              <motion.ul
+              key="results"
+              data-lenis-prevent
+              className="max-h-[52vh] overflow-y-auto py-2"
+            >
                 {results.map((story, i) => (
                   <motion.li
                     key={story.slug}

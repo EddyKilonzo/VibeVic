@@ -305,7 +305,10 @@ export default function Story({
                   actually navigates with. `overflow-y` on the sticky element
                   itself is safe; it is an *ancestor* scroll container that
                   breaks sticky. */}
-              <div className="surface p-5 sm:p-6 lg:sticky lg:top-28 lg:max-h-[calc(100svh-9rem)] lg:overflow-y-auto">
+              <div
+                data-lenis-prevent
+                className="surface p-5 sm:p-6 lg:sticky lg:top-28 lg:max-h-[calc(100svh-9rem)] lg:overflow-y-auto"
+              >
                 {/* Offered, never applied — see `useReadingPosition`. First in
                     the rail because it is the one thing here that expires:
                     everything below it is available for the whole read. */}

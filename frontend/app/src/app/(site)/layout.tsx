@@ -3,6 +3,7 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { HoneycombGround } from "@/components/texture/HoneycombGround";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
+import { SmoothScroll } from "@/components/motion";
 
 /**
  * The public shell.
@@ -10,6 +11,10 @@ import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
  * Header and footer live here rather than in each page so they survive route
  * changes: the masthead keeps its scroll state, and the reader never sees the
  * chrome flash out and back in between two articles. Only `<main>` swaps.
+ *
+ * Smooth scrolling mounts here rather than in `AppProviders` for the same
+ * reason the footer does: it belongs to the reading side of the app. The
+ * newsroom shares the providers and does not get it — see `SmoothScroll`.
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
@@ -19,6 +24,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
     <HoneycombGround className="flex min-h-screen flex-col">
       {/* Person and WebSite, on every public page and none of the newsroom. */}
       <SiteStructuredData />
+      <SmoothScroll />
       <PublicHeader />
       <main id="main" className="flex-1">
         {children}

@@ -263,7 +263,13 @@ function MobileMenu({
           exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
           transition={transitions.normal}
         >
-          <nav aria-label="Mobile" className="container-site flex-1 overflow-y-auto py-8">
+          <nav
+            aria-label="Mobile"
+            // Lenis owns the wheel on the document; without this the sheet
+            // cannot be scrolled past its first screen on a short viewport.
+            data-lenis-prevent
+            className="container-site flex-1 overflow-y-auto py-8"
+          >
             <ul>
               {NAV.map((item, i) => (
                 <motion.li

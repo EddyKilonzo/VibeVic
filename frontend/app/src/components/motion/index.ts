@@ -17,3 +17,4 @@ export { PageTransition } from "./PageTransition";
 export { ScrollProgress } from "./ScrollProgress";
 export { CountUp } from "./CountUp";
 export { HeroSequence } from "./HeroSequence";
+export { SmoothScroll } from "./SmoothScroll";

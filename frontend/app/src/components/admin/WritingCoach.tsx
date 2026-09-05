@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bot, PenLine, Sparkles } from "lucide-react";
 import type { Block, Story } from "@/data/types";
 import { craftTips, type Tip } from "@/lib/intelligence/craft";
+import { useCuration } from "@/data/newsroom/useNewsroom";
 import { Button } from "@/components/ui/Button";
 import { transitions } from "@/lib/motion";
 
@@ -142,10 +143,18 @@ function Measured({ tips }: { tips: Tip[] }) {
 interface Read {
   notes: { about: string; observation: string; consider: string }[];
   unanswered: string[];
+  phrasing: { where: string; habit: string; direction: string }[];
+  attention: { where: string; why: string }[];
+  hold: string;
   strongest: string;
+  /** True when the draft was longer than the route reads in one pass. */
+  truncated: boolean;
 }
 
 function EditorsRead({ draft }: { draft: Story }) {
+  // The same source `StoryChecks` reads it from, so the two halves of the
+  // coach are held to one style guide rather than to two copies of one.
+  const { styleGuide } = useCuration();
   const [read, setRead] = useState<Read | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
@@ -161,6 +170,22 @@ function EditorsRead({ draft }: { draft: Story }) {
           title: draft.title,
           dek: draft.dek,
           body: plainText(draft.body),
+          beat: draft.genre,
+          /*
+           * The house style guide, which the counted half has always had and
+           * this half never did — `findHouseStyle` reads it, the read did not
+           * see it, and the read was the half giving advice about wording.
+           * Sent as the plain lines rather than the records, because the model
+           * needs the rule and not the row.
+           */
+          styleGuide: styleGuide.map((entry) =>
+            [
+              `Prefer "${entry.preferred}" over ${entry.avoid.map((term) => `"${term}"`).join(", ")}`,
+              entry.why,
+            ]
+              .filter(Boolean)
+              .join(" — "),
+          ),
         }),
         cache: "no-store",
       });
@@ -217,6 +242,22 @@ function EditorsRead({ draft }: { draft: Story }) {
             Suggestion from a model, not a measurement
           </p>
 
+          {/*
+              Said out loud at last.
+
+              The route has always capped the body it reads, and the comment
+              beside that cap claimed the panel said so — it did not, because
+              there was nothing in the response to say it with. A long feature
+              got notes on its first two thirds presented as notes on the
+              piece, and the one place that is most misleading is the ending,
+              which the read never saw. */}
+          {read.truncated && (
+            <p className="max-w-[68ch] rounded-lg border border-accent/40 bg-accent/[0.05] p-3.5 text-[13px] leading-relaxed text-muted-foreground">
+              This piece is longer than one read covers, so the notes are about the earlier part
+              of it. Nothing here is a comment on the ending.
+            </p>
+          )}
+
           <ul className="space-y-3">
             {read.notes.map((note, index) => (
               <li key={index} className="rounded-lg border border-border bg-background p-3.5">
@@ -254,9 +295,69 @@ function EditorsRead({ draft }: { draft: Story }) {
             </div>
           )}
 
-          <p className="max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
-            <span className="font-semibold text-foreground">Working:</span> {read.strongest}
-          </p>
+          {/*
+              Phrasing, and the reason there is no "instead" column.
+
+              The schema has nowhere to put a replacement sentence, so one
+              cannot arrive — which is the mechanism rather than the promise.
+              Each note names the habit, points at the passage and says which
+              direction fixes it; the words stay the writer's. */}
+          {read.phrasing.length > 0 && (
+            <div className="rounded-lg border border-border bg-background p-3.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Phrasing
+              </p>
+              <ul className="mt-2.5 space-y-3">
+                {read.phrasing.map((note, index) => (
+                  <li key={index}>
+                    <p className="text-[12px] font-semibold text-foreground">
+                      {note.habit}{" "}
+                      <span className="font-normal text-muted-foreground">— {note.where}</span>
+                    </p>
+                    <p className="mt-1 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+                      {note.direction}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/*
+              Where a reader leaves, which is a locatable thing rather than a
+              mood. The route is forbidden from giving general advice about
+              engagement or suggesting a hook, because that is the note that
+              produces hype — so every item here points at a passage and names
+              what in the text loses them there. */}
+          {read.attention.length > 0 && (
+            <div className="rounded-lg border border-border bg-background p-3.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Where a reader is most likely to stop
+              </p>
+              <ul className="mt-2.5 space-y-3">
+                {read.attention.map((note, index) => (
+                  <li key={index}>
+                    <p className="text-[12px] font-semibold text-foreground">{note.where}</p>
+                    <p className="mt-1 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+                      {note.why}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            {read.hold && (
+              <p className="max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+                <span className="font-semibold text-foreground">Earns the next paragraph:</span>{" "}
+                {read.hold}
+              </p>
+            )}
+            <p className="max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">Working:</span> {read.strongest}
+            </p>
+          </div>
         </div>
       )}
     </div>

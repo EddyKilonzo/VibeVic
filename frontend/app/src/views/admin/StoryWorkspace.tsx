@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   AnimatePresence,
@@ -45,7 +52,13 @@ import { cloudinaryUrl, isCloudinary } from "@/lib/cloudinary";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 import { PublishControls } from "@/components/admin/PublishControls";
 import { useCan } from "@/components/admin/SessionContext";
-import { linkAt, toggleEmphasis, unlinkAt, wrapLink, type EmphasisKind } from "@/lib/inline";
+import {
+  linkAt,
+  toggleEmphasis,
+  unlinkAt,
+  wrapLink,
+  type EmphasisKind,
+} from "@/lib/inline";
 import { useVoice } from "@/context/VoiceProvider";
 import { Reveal } from "@/components/motion";
 import { Button } from "@/components/ui/Button";
@@ -164,7 +177,9 @@ export default function StoryWorkspace({
    * because a prop is the same value on the server and on the client.
    */
   const [draft, setDraft] = useState<Story>(() =>
-    existing ? { ...existing, body: [...existing.body] } : { ...BLANK, id: id ?? "new" },
+    existing
+      ? { ...existing, body: [...existing.body] }
+      : { ...BLANK, id: id ?? "new" },
   );
   const [activeBlock, setActiveBlock] = useState<string | null>(null);
   const [coverPicking, setCoverPicking] = useState(false);
@@ -320,7 +335,10 @@ export default function StoryWorkspace({
           "",
           newsroomPath(`/stories/${outcome.story.id}`),
         );
-        notify.success("Filed to the newsroom", "This piece now has a record other devices can open.");
+        notify.success(
+          "Filed to the newsroom",
+          "This piece now has a record other devices can open.",
+        );
       }
       return;
     }
@@ -407,13 +425,18 @@ export default function StoryWorkspace({
     if (!stored) return;
     setDraft({ ...stored.story, body: [...stored.story.body] });
     setRestoreOffer(false);
-    notify.success("Local draft restored", `Saved ${formatRelative(stored.savedAt)}`);
+    notify.success(
+      "Local draft restored",
+      `Saved ${formatRelative(stored.savedAt)}`,
+    );
   };
 
   const wordCount = useMemo(
     () =>
       draft.body
-        .map((b) => ("text" in b ? b.text : "items" in b ? b.items.join(" ") : ""))
+        .map((b) =>
+          "text" in b ? b.text : "items" in b ? b.items.join(" ") : "",
+        )
         .join(" ")
         .trim()
         .split(/\s+/)
@@ -426,7 +449,9 @@ export default function StoryWorkspace({
   const updateBlock = (blockId: string, patch: Partial<Block>) =>
     setDraft((d) => ({
       ...d,
-      body: d.body.map((b) => (b.id === blockId ? ({ ...b, ...patch } as Block) : b)),
+      body: d.body.map((b) =>
+        b.id === blockId ? ({ ...b, ...patch } as Block) : b,
+      ),
     }));
 
   const insertAfter = (blockId: string, type: BlockType = "paragraph") =>
@@ -461,7 +486,8 @@ export default function StoryWorkspace({
       ...d,
       body: d.body.map((b) => {
         if (b.id !== blockId) return b;
-        const text = "text" in b ? b.text : "items" in b ? b.items.join(" ") : "";
+        const text =
+          "text" in b ? b.text : "items" in b ? b.items.join(" ") : "";
         const fresh = emptyBlock(type);
         if ("text" in fresh) fresh.text = text;
         if ("items" in fresh && text) fresh.items = [text];
@@ -499,7 +525,25 @@ export default function StoryWorkspace({
   };
 
   return (
-    <div ref={pickUpDraft} className="mx-auto max-w-[900px] pb-24">
+    /*
+     * ── Why this screen is two columns now ───────────────────────────────
+     * Everything that is not the draft used to be stacked underneath it:
+     * the reporting record, the history, the checks, the coach, the
+     * proposals and the pad, in that order, one after another. Six panels
+     * deep, which meant the reporting behind a piece was a scroll away from
+     * the sentence that needed it — and a writer checking a figure against a
+     * source had to leave the paragraph on screen to go and look.
+     *
+     * Beside it, they are all reachable without losing the line being
+     * written. The column is sticky and scrolls on its own, so a long
+     * transcript or a long records list never drags the draft off the top of
+     * the screen.
+     *
+     * The split is `lg` and above only. Below that the panels stack under the
+     * draft exactly as before, because a 380px sidebar next to a 380px editor
+     * is two columns of nothing.
+     */
+    <div ref={pickUpDraft} className="mx-auto max-w-[1500px] pb-24">
       <Reveal variant="fade-up">
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -545,8 +589,8 @@ export default function StoryWorkspace({
               />
             ) : (
               <p className="max-w-[24ch] text-[11px] leading-snug text-muted-foreground">
-                Publishing is the writer&rsquo;s. The draft is saved and waiting; taking it
-                live is theirs.
+                Publishing is the writer&rsquo;s. The draft is saved and
+                waiting; taking it live is theirs.
               </p>
             )}
           </div>
@@ -555,314 +599,366 @@ export default function StoryWorkspace({
 
       {/* The offer to restore, when a newer local copy exists. Never applied
           on its own — see `lib/drafts`. */}
-      {stored && restoreOffer && stored.savedAt > (existing?.updatedAt ?? "") && (
-        <Reveal
-          variant="fade-up"
-          delay={30}
-          className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-accent/30 bg-accent/[0.07] p-3.5"
-        >
-          <p className="min-w-0 flex-1 text-sm leading-snug text-muted-foreground">
-            <span className="font-semibold text-primary">
-              You have an unsent draft of this piece
-            </span>{" "}
-            on this device, saved {formatRelative(stored.savedAt)}. The published copy is open.
-          </p>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button size="sm" onClick={restore}>
-              Open the draft
-            </Button>
-            <Button size="sm" variant="quiet" onClick={() => setRestoreOffer(false)}>
-              Keep this one
-            </Button>
-          </div>
-        </Reveal>
-      )}
+      {stored &&
+        restoreOffer &&
+        stored.savedAt > (existing?.updatedAt ?? "") && (
+          <Reveal
+            variant="fade-up"
+            delay={30}
+            className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-accent/30 bg-accent/[0.07] p-3.5"
+          >
+            <p className="min-w-0 flex-1 text-sm leading-snug text-muted-foreground">
+              <span className="font-semibold text-primary">
+                You have an unsent draft of this piece
+              </span>{" "}
+              on this device, saved {formatRelative(stored.savedAt)}. The
+              published copy is open.
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button size="sm" onClick={restore}>
+                Open the draft
+              </Button>
+              <Button
+                size="sm"
+                variant="quiet"
+                onClick={() => setRestoreOffer(false)}
+              >
+                Keep this one
+              </Button>
+            </div>
+          </Reveal>
+        )}
 
-      {/* Headline and standfirst */}
-      {/* The writing surface: a raised sheet the draft lives on, so the
+      <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
+        {/* ── The draft ─────────────────────────────────────────────────────
+          Seven columns of twelve, which at this container width is close to
+          the 900px the whole screen used to be. The measure a person writes
+          into is a typographic constraint and does not get to grow just
+          because the window did. */}
+        <div className="lg:col-span-7">
+          {/* Headline and standfirst */}
+          {/* The writing surface: a raised sheet the draft lives on, so the
           editor reads as a page being written rather than a form being
           filled in. Everything chrome-like stays outside it. */}
-      <Reveal variant="fade-up" delay={60} className="surface mt-8 px-6 py-8 sm:px-10 sm:py-10">
-        <textarea
-          value={draft.title}
-          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-          placeholder="Headline"
-          rows={2}
-          className={cn(
-            faceClass,
-            "display-2 w-full resize-none bg-transparent font-semibold outline-none placeholder:text-muted-foreground/30",
-          )}
-        />
-        <textarea
-          value={draft.dek}
-          onChange={(e) => setDraft((d) => ({ ...d, dek: e.target.value }))}
-          placeholder="Standfirst — one sentence on why this matters."
-          rows={2}
-          className={cn(
-            faceClass,
-            "lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30",
-          )}
-        />
+          <Reveal
+            variant="fade-up"
+            delay={60}
+            className="surface mt-8 px-6 py-8 sm:px-10 sm:py-10"
+          >
+            <textarea
+              value={draft.title}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, title: e.target.value }))
+              }
+              placeholder="Headline"
+              rows={2}
+              className={cn(
+                faceClass,
+                "display-2 w-full resize-none bg-transparent font-semibold outline-none placeholder:text-muted-foreground/30",
+              )}
+            />
+            <textarea
+              value={draft.dek}
+              onChange={(e) => setDraft((d) => ({ ...d, dek: e.target.value }))}
+              placeholder="Standfirst — one sentence on why this matters."
+              rows={2}
+              className={cn(
+                faceClass,
+                "lead-copy mt-5 w-full resize-none bg-transparent text-muted-foreground outline-none placeholder:text-muted-foreground/30",
+              )}
+            />
 
-        {/* ── Cover ────────────────────────────────────────────────
+            {/* ── Cover ────────────────────────────────────────────────
             There was no way to set one. Every cover on the site came in with
             the WordPress import, and a piece written here fell back to the
             generated art — which is deliberately abstract and says plainly
             that it is standing in for a photograph. Fine as a fallback, wrong
             as the only option once there is somewhere to put a real one. */}
-        <div className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="rule-label">Cover</span>
-            {draft.cover && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft((d) => ({ ...d, cover: undefined }));
-                  setCoverPicking(false);
-                }}
-                className="focus-ring text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive"
-              >
-                Remove — fall back to generated art
-              </button>
-            )}
-          </div>
+            <div className="mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="rule-label">Cover</span>
+                {draft.cover && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft((d) => ({ ...d, cover: undefined }));
+                      setCoverPicking(false);
+                    }}
+                    className="focus-ring text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive"
+                  >
+                    Remove — fall back to generated art
+                  </button>
+                )}
+              </div>
 
-          {draft.cover && !coverPicking ? (
-            <div className="relative mt-3 overflow-hidden rounded-lg border border-border">
-              <img
-                src={
-                  isCloudinary(draft.cover)
-                    ? cloudinaryUrl(draft.cover, { width: 900 })
-                    : draft.cover
-                }
-                alt=""
-                className="max-h-64 w-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => setCoverPicking(true)}
-                className="focus-ring absolute right-2 top-2 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold shadow-raised backdrop-blur transition-colors hover:text-primary"
-              >
-                Replace
-              </button>
+              {draft.cover && !coverPicking ? (
+                <div className="relative mt-3 overflow-hidden rounded-lg border border-border">
+                  <img
+                    src={
+                      isCloudinary(draft.cover)
+                        ? cloudinaryUrl(draft.cover, { width: 900 })
+                        : draft.cover
+                    }
+                    alt=""
+                    className="max-h-64 w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCoverPicking(true)}
+                    className="focus-ring absolute right-2 top-2 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-semibold shadow-raised backdrop-blur transition-colors hover:text-primary"
+                  >
+                    Replace
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <MediaPicker
+                    kind="image"
+                    onPick={(asset) => {
+                      setDraft((d) => ({ ...d, cover: asset.url }));
+                      setCoverPicking(false);
+                    }}
+                    onCancel={
+                      draft.cover ? () => setCoverPicking(false) : undefined
+                    }
+                  />
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="mt-3">
-              <MediaPicker
-                kind="image"
-                onPick={(asset) => {
-                  setDraft((d) => ({ ...d, cover: asset.url }));
-                  setCoverPicking(false);
-                }}
-                onCancel={draft.cover ? () => setCoverPicking(false) : undefined}
-              />
-            </div>
-          )}
-        </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3 border-y border-border py-3 text-xs text-muted-foreground">
-          <label className="flex items-center gap-2">
-            <span className="rule-label">Beat</span>
-            <select
-              value={draft.genre}
-              onChange={(e) => setDraft((d) => ({ ...d, genre: e.target.value }))}
-              className="focus-ring tap rounded-md border border-border bg-background px-2 py-1 text-xs"
-            >
-              {/* Beats opened in the workspace are listed here too — a beat
+            <div className="mt-5 flex flex-wrap items-center gap-3 border-y border-border py-3 text-xs text-muted-foreground">
+              <label className="flex items-center gap-2">
+                <span className="rule-label">Beat</span>
+                <select
+                  value={draft.genre}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, genre: e.target.value }))
+                  }
+                  className="focus-ring tap rounded-md border border-border bg-background px-2 py-1 text-xs"
+                >
+                  {/* Beats opened in the workspace are listed here too — a beat
                   you cannot file anything under is a beat you did not open. */}
-              <BeatOptions beats={genres} />
-            </select>
-          </label>
-          <span aria-hidden className="h-3 w-px bg-border" />
-          <span>
-            {wordCount} {wordCount === 1 ? "word" : "words"}
-          </span>
-          <span aria-hidden className="h-3 w-px bg-border" />
-          <span>
-            {draft.body.length} {draft.body.length === 1 ? "block" : "blocks"}
-          </span>
+                  <BeatOptions beats={genres} />
+                </select>
+              </label>
+              <span aria-hidden className="h-3 w-px bg-border" />
+              <span>
+                {wordCount} {wordCount === 1 ? "word" : "words"}
+              </span>
+              <span aria-hidden className="h-3 w-px bg-border" />
+              <span>
+                {draft.body.length}{" "}
+                {draft.body.length === 1 ? "block" : "blocks"}
+              </span>
 
-          <span aria-hidden className="h-3 w-px bg-border" />
-          {/* A preview, and labelled as one. The site decides the published
+              <span aria-hidden className="h-3 w-px bg-border" />
+              {/* A preview, and labelled as one. The site decides the published
               face; this is here so the rhythm and the line breaks a writer is
               judging are the ones the reader will get. */}
-          <label className="flex items-center gap-2">
-            <span className="rule-label">Set in</span>
-            <span
-              role="group"
-              aria-label="Preview typeface"
-              className="surface-compact flex items-center gap-0.5 p-0.5"
-            >
-              {(
-                [
-                  { id: "display", label: "Fraunces", cls: "font-display" },
-                  { id: "sans", label: "Inter", cls: "font-sans" },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setFace(option.id)}
-                  aria-pressed={face === option.id}
-                  title={
-                    option.id === "display"
-                      ? "Fraunces — the face the site publishes in"
-                      : "Inter — the sans, for comparison"
-                  }
-                  className={cn(
-                    option.cls,
-                    "focus-ring relative inline-flex h-6 items-center rounded px-2 text-[11px] font-semibold transition-colors duration-normal",
-                    face === option.id
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-primary",
-                  )}
+              <label className="flex items-center gap-2">
+                <span className="rule-label">Set in</span>
+                <span
+                  role="group"
+                  aria-label="Preview typeface"
+                  className="surface-compact flex items-center gap-0.5 p-0.5"
                 >
-                  {face === option.id && (
-                    <motion.span
-                      layoutId={reduced ? undefined : "workspace-face-pill"}
-                      className="absolute inset-0 rounded bg-primary"
-                      transition={transitions.normal}
-                    />
-                  )}
-                  <span className="relative">{option.label}</span>
-                </button>
-              ))}
-            </span>
-          </label>
-          {/* Same pill vocabulary as the story list, and the same contrast
+                  {(
+                    [
+                      { id: "display", label: "Fraunces", cls: "font-display" },
+                      { id: "sans", label: "Inter", cls: "font-sans" },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setFace(option.id)}
+                      aria-pressed={face === option.id}
+                      title={
+                        option.id === "display"
+                          ? "Fraunces — the face the site publishes in"
+                          : "Inter — the sans, for comparison"
+                      }
+                      className={cn(
+                        option.cls,
+                        "focus-ring relative inline-flex h-6 items-center rounded px-2 text-[11px] font-semibold transition-colors duration-normal",
+                        face === option.id
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground hover:text-primary",
+                      )}
+                    >
+                      {face === option.id && (
+                        <motion.span
+                          layoutId={reduced ? undefined : "workspace-face-pill"}
+                          className="absolute inset-0 rounded bg-primary"
+                          transition={transitions.normal}
+                        />
+                      )}
+                      <span className="relative">{option.label}</span>
+                    </button>
+                  ))}
+                </span>
+              </label>
+              {/* Same pill vocabulary as the story list, and the same contrast
               fix: `text-accent` on `bg-accent/12` measured 2.8:1 at 11px
               semibold, where 4.5:1 applies. */}
-          <span
-            className={cn(
-              "ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-              draft.status === "published"
-                ? "bg-primary text-primary-foreground"
-                : draft.status === "scheduled"
-                  ? "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35"
-                  : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
-            )}
-          >
-            {draft.status === "published" ? "ready" : draft.status}
-          </span>
-        </div>
+              <span
+                className={cn(
+                  "ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
+                  draft.status === "published"
+                    ? "bg-primary text-primary-foreground"
+                    : draft.status === "scheduled"
+                      ? "bg-accent/12 text-primary ring-1 ring-inset ring-accent/35"
+                      : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                )}
+              >
+                {draft.status === "published" ? "ready" : draft.status}
+              </span>
+            </div>
 
-        {/* Where the work is. Stated on the sheet rather than left for the
+            {/* Where the work is. Stated on the sheet rather than left for the
             writer to infer from a toast they have already dismissed. */}
-        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-          Drafts are held in this browser. Nothing here reaches the public site
-          yet — that arrives with the API.
-        </p>
-      </Reveal>
+            <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+              Drafts are held in this browser. Nothing here reaches the public
+              site yet — that arrives with the API.
+            </p>
+          </Reveal>
 
-      {/* Blocks */}
-      <Reorder.Group
-        axis="y"
-        values={draft.body}
-        onReorder={(body) => setDraft((d) => ({ ...d, body }))}
-        className="drag-zone surface mt-6 space-y-1 px-6 py-8 sm:px-10 sm:py-10"
-        data-dimmed={dragging || undefined}
-      >
-        {draft.body.map((block, i) => (
-          <BlockRow
-            key={block.id}
-            block={block}
-            index={i}
-            active={activeBlock === block.id}
-            onFocus={() => setActiveBlock(block.id)}
-            onBlur={() => setActiveBlock((current) => (current === block.id ? null : current))}
-            onDragStart={() => setDragging(true)}
-            onDragEnd={() => setDragging(false)}
-            onChange={(patch) => updateBlock(block.id, patch)}
-            onInsert={(type) => insertAfter(block.id, type)}
-            onDuplicate={() => duplicate(block.id)}
-            onRemove={() => remove(block.id)}
-            onConvert={(type) => convert(block.id, type)}
-            reduced={!!reduced}
-            faceClass={faceClass}
-          />
-        ))}
-      </Reorder.Group>
+          {/* Blocks */}
+          <Reorder.Group
+            axis="y"
+            values={draft.body}
+            onReorder={(body) => setDraft((d) => ({ ...d, body }))}
+            className="drag-zone surface mt-6 space-y-1 px-6 py-8 sm:px-10 sm:py-10"
+            data-dimmed={dragging || undefined}
+          >
+            {draft.body.map((block, i) => (
+              <BlockRow
+                key={block.id}
+                block={block}
+                index={i}
+                active={activeBlock === block.id}
+                onFocus={() => setActiveBlock(block.id)}
+                onBlur={() =>
+                  setActiveBlock((current) =>
+                    current === block.id ? null : current,
+                  )
+                }
+                onDragStart={() => setDragging(true)}
+                onDragEnd={() => setDragging(false)}
+                onChange={(patch) => updateBlock(block.id, patch)}
+                onInsert={(type) => insertAfter(block.id, type)}
+                onDuplicate={() => duplicate(block.id)}
+                onRemove={() => remove(block.id)}
+                onConvert={(type) => convert(block.id, type)}
+                reduced={!!reduced}
+                faceClass={faceClass}
+              />
+            ))}
+          </Reorder.Group>
 
-      {/* The control a writer reaches at the end of the paragraph they just
+          {/* The control a writer reaches at the end of the paragraph they just
           finished. It appended a paragraph and nothing else, so carrying on
           with a picture meant going back up to the gutter of the block above.
           Same six choices as the gutter menu, laid out as a row because there
           is width here and a menu would be one click for no reason. */}
-      <div className="mt-4 rounded-lg border border-dashed border-border p-2">
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="rule-label px-2">Continue with</span>
-          {INSERT_ORDER.map((type) => {
-            const Icon = INSERT_ICON[type];
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setDraft((d) => ({ ...d, body: [...d.body, emptyBlock(type)] }))}
-                className="focus-ring tap group inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
-              >
-                <Icon className="icon-pop h-3.5 w-3.5" aria-hidden />
-                {BLOCK_LABEL[type]}
-              </button>
-            );
-          })}
+          <div className="mt-4 rounded-lg border border-dashed border-border p-2">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="rule-label px-2">Continue with</span>
+              {INSERT_ORDER.map((type) => {
+                const Icon = INSERT_ICON[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        body: [...d.body, emptyBlock(type)],
+                      }))
+                    }
+                    className="focus-ring tap group inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-muted-foreground transition-colors duration-normal hover:bg-secondary hover:text-primary"
+                  >
+                    <Icon className="icon-pop h-3.5 w-3.5" aria-hidden />
+                    {BLOCK_LABEL[type]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* The deterministic checks, reading the live draft. Collapsed until
+        {/* ── Everything about the draft that is not the draft ──────────────
+          Sticky from the top of the viewport with its own scrollbar, so the
+          panel a writer is reading and the paragraph it is about can be on
+          screen together. `top-6` clears the workspace's own padding;
+          `max-h` is the viewport less that padding, which is what gives the
+          column something to scroll inside rather than growing the page.
+
+          `data-lenis-prevent` for the reason every other nested scroller on
+          the site carries it — though the newsroom does not mount smooth
+          scrolling today, this column is exactly the shape that breaks if it
+          ever does, and the attribute costs nothing until then. */}
+        <div
+          data-lenis-prevent
+          className="lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100svh-3rem)] lg:overflow-y-auto lg:pr-1"
+        >
+          {/* The deterministic checks, reading the live draft. Collapsed until
           asked for — see the note in the component. */}
-      {/* The reporting behind the piece — sources, quotes, interviews,
-          evidence, the timeline, notes and what is due. Below the draft
+          {/* The reporting behind the piece — sources, quotes, interviews,
+          evidence, the timeline, notes and what is due. Beside the draft
           rather than in front of it: see `StoryRecords`. */}
-      <StoryRecords storyId={filedId} />
+          <StoryRecords storyId={filedId} />
 
-      {/* Earlier versions, and a way back to one. Restoring loads the older
+          {/* Earlier versions, and a way back to one. Restoring loads the older
           copy into the editor unsaved — see `StoryHistory` for why it does
           not write on its own. */}
-      <StoryHistory
-        storyId={filedId}
-        onRestore={(copy) => setDraft((d) => ({ ...d, ...copy }))}
-      />
+          <StoryHistory
+            storyId={filedId}
+            onRestore={(copy) => setDraft((d) => ({ ...d, ...copy }))}
+          />
 
-      <StoryChecks draft={draft} />
+          <StoryChecks draft={draft} />
 
-      {/* Advice about the writing rather than about the reporting. Two halves,
+          {/* Advice about the writing rather than about the reporting. Two halves,
           measured and modelled, never mixed — see `WritingCoach`. */}
-      <WritingCoach draft={draft} />
+          <WritingCoach draft={draft} />
 
-      {/* What a model can propose against this draft: where it is filed, the
+          {/* What a model can propose against this draft: where it is filed, the
           sequence it describes, and every figure in it against the records
           filed for it. Nothing here writes — see `StoryAssist` for why that
           is structural rather than a promise. */}
-      <StoryAssist
-        draft={draft}
-        storyId={filedId}
-        onFile={({ beat, tags }) =>
-          /*
-           * Into the editor, not into the database. The draft's own autosave
-           * carries it from here, which means an applied filing is undoable
-           * by the same ⌘Z that undoes typing — and a writer who applies it
-           * and then changes their mind never has a saved row to correct.
-           *
-           * Tags are merged rather than replaced. A tag already on the piece
-           * was put there deliberately by a person, and a proposal is not
-           * grounds to remove it.
-           */
-          setDraft((d) => ({
-            ...d,
-            genre: beat,
-            tags: [...new Set([...d.tags, ...tags])],
-          }))
-        }
-      />
+          <StoryAssist
+            draft={draft}
+            storyId={filedId}
+            onFile={({ beat, tags }) =>
+              /*
+               * Into the editor, not into the database. The draft's own autosave
+               * carries it from here, which means an applied filing is undoable
+               * by the same ⌘Z that undoes typing — and a writer who applies it
+               * and then changes their mind never has a saved row to correct.
+               *
+               * Tags are merged rather than replaced. A tag already on the piece
+               * was put there deliberately by a person, and a proposal is not
+               * grounds to remove it.
+               */
+              setDraft((d) => ({
+                ...d,
+                genre: beat,
+                tags: [...new Set([...d.tags, ...tags])],
+              }))
+            }
+          />
 
-      {/* The same pad as the one on the ideas screen, deliberately.
+          {/* The same pad as the one on the ideas screen, deliberately.
 
           It sits last because it is the only panel here that is not about this
           piece: everything above describes the draft, and this is where the
           thought that arrived *while* working on the draft goes when it turns
           out to be about something else. Material that does belong to this
           piece has a home a few panels up, under "The reporting behind it". */}
-      <Scratchpad />
+          <Scratchpad />
+        </div>
+      </div>
     </div>
   );
 }
@@ -916,7 +1012,8 @@ function SaveIndicator({
 
   // A failure states its reason, once, next to the thing it happened to. The
   // toast is gone by the time somebody looks up from a paragraph.
-  const detail = status !== "error" && landing && landing !== "server" ? message : null;
+  const detail =
+    status !== "error" && landing && landing !== "server" ? message : null;
 
   const wrong = status === "error" || landing === "conflict";
 
@@ -963,7 +1060,8 @@ function SaveIndicator({
    abbreviations and names that read badly aloud.                   */
 
 function NarrationPreview({ draft }: { draft: Story }) {
-  const { supported, load, play, pause, stop, state, activeSentence } = useVoice();
+  const { supported, load, play, pause, stop, state, activeSentence } =
+    useVoice();
   const playing = state === "playing";
 
   useEffect(() => () => stop(), [stop]);
@@ -1064,7 +1162,10 @@ function BlockRow({
       animate={{
         opacity: 1,
         y: 0,
-        transition: { ...transitions.normal, delay: Math.min(index, 8) * stagger.tight },
+        transition: {
+          ...transitions.normal,
+          delay: Math.min(index, 8) * stagger.tight,
+        },
       }}
       className={cn(
         "drag-item group/block relative rounded-lg transition-shadow duration-normal",
@@ -1086,7 +1187,9 @@ function BlockRow({
       <div
         className={cn(
           "absolute -left-24 top-1 hidden items-center gap-0.5 transition-opacity duration-normal lg:flex",
-          active || held ? "opacity-100" : "opacity-0 group-hover/block:opacity-100",
+          active || held
+            ? "opacity-100"
+            : "opacity-0 group-hover/block:opacity-100",
         )}
       >
         <button
@@ -1120,7 +1223,9 @@ function BlockRow({
             <GripVertical className="h-4 w-4" aria-hidden />
           </button>
           <InsertMenu onInsert={onInsert} />
-          <span className="rule-label ml-1.5 truncate">{BLOCK_LABEL[block.type]}</span>
+          <span className="rule-label ml-1.5 truncate">
+            {BLOCK_LABEL[block.type]}
+          </span>
         </div>
 
         <BlockEditor
@@ -1143,7 +1248,9 @@ function BlockRow({
               className="overflow-hidden"
             >
               <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-border pt-2">
-                <span className="rule-label mr-2">{BLOCK_LABEL[block.type]}</span>
+                <span className="rule-label mr-2">
+                  {BLOCK_LABEL[block.type]}
+                </span>
 
                 <label className="inline-flex items-center gap-1.5">
                   <Type className="h-3 w-3 text-muted-foreground" aria-hidden />
@@ -1199,7 +1306,14 @@ function BlockRow({
  * writer is pointing. Paragraph stays first because it is still the common
  * case, and Image second because it is the one this menu exists for.
  */
-const INSERT_ORDER: BlockType[] = ["paragraph", "image", "heading", "quote", "list", "divider"];
+const INSERT_ORDER: BlockType[] = [
+  "paragraph",
+  "image",
+  "heading",
+  "quote",
+  "list",
+  "divider",
+];
 
 const INSERT_ICON: Record<BlockType, typeof Plus> = {
   paragraph: Pilcrow,
@@ -1245,7 +1359,10 @@ function InsertMenu({ onInsert }: { onInsert: (type: BlockType) => void }) {
         className="focus-ring tap-square flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary aria-expanded:bg-secondary aria-expanded:text-primary"
       >
         <Plus
-          className={cn("h-4 w-4 transition-transform duration-normal", open && "rotate-45")}
+          className={cn(
+            "h-4 w-4 transition-transform duration-normal",
+            open && "rotate-45",
+          )}
           aria-hidden
         />
       </button>
@@ -1255,7 +1372,9 @@ function InsertMenu({ onInsert }: { onInsert: (type: BlockType) => void }) {
           <motion.div
             role="menu"
             aria-label="Block type"
-            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+            initial={
+              reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }
+            }
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
             transition={transitions.fast}
@@ -1320,7 +1439,8 @@ function ImageBlockPicker({
    * which is the convention the rest of the editor already used for "empty".
    */
   const src = block.src && block.src !== block.id ? block.src : null;
-  const preview = src && isCloudinary(src) ? cloudinaryUrl(src, { width: 800 }) : src;
+  const preview =
+    src && isCloudinary(src) ? cloudinaryUrl(src, { width: 800 }) : src;
 
   return (
     <div className="space-y-2">
@@ -1578,7 +1698,9 @@ function LinkTool({
       range.current = null;
       onOpenChange(false);
     } else {
-      setProblem("Needs to start with https://, mailto: or / — anything else is refused.");
+      setProblem(
+        "Needs to start with https://, mailto: or / — anything else is refused.",
+      );
     }
   };
 
@@ -1625,7 +1747,9 @@ function LinkTool({
             className="focus-ring w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none transition-colors focus:border-accent"
           />
           {problem && (
-            <p className="mt-1.5 text-[11px] leading-snug text-destructive">{problem}</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-destructive">
+              {problem}
+            </p>
           )}
           <div className="mt-2 flex items-center gap-1.5">
             <Button size="sm" onClick={submit} disabled={!url.trim()}>
@@ -1655,12 +1779,15 @@ function LinkTool({
 function EmphasisButtons({ apply }: { apply: (kind: EmphasisKind) => void }) {
   return (
     <>
-      {(
-        [
-          { kind: "bold" as const, Icon: Bold, label: "Bold", hint: "Ctrl/⌘ B" },
-          { kind: "italic" as const, Icon: Italic, label: "Italic", hint: "Ctrl/⌘ I" },
-        ]
-      ).map(({ kind, Icon, label, hint }) => (
+      {[
+        { kind: "bold" as const, Icon: Bold, label: "Bold", hint: "Ctrl/⌘ B" },
+        {
+          kind: "italic" as const,
+          Icon: Italic,
+          label: "Italic",
+          hint: "Ctrl/⌘ I",
+        },
+      ].map(({ kind, Icon, label, hint }) => (
         <button
           key={kind}
           type="button"
@@ -1755,7 +1882,9 @@ function BlockEditor({
           <ImageBlockPicker block={block} onChange={onChange} />
           <input
             value={block.caption ?? ""}
-            onChange={(e) => onChange({ caption: e.target.value } as Partial<Block>)}
+            onChange={(e) =>
+              onChange({ caption: e.target.value } as Partial<Block>)
+            }
             onFocus={onFocus}
             onBlur={onBlur}
             placeholder="Caption — read aloud with the article"
@@ -1763,7 +1892,9 @@ function BlockEditor({
           />
           <input
             value={block.alt ?? ""}
-            onChange={(e) => onChange({ alt: e.target.value } as Partial<Block>)}
+            onChange={(e) =>
+              onChange({ alt: e.target.value } as Partial<Block>)
+            }
             onFocus={onFocus}
             onBlur={onBlur}
             placeholder="Alt text — what the picture shows, for anyone who cannot see it"
@@ -1820,11 +1951,8 @@ function EmphasisField({
   className: string;
 }) {
   const [linkOpen, setLinkOpen] = useState(false);
-  const { ref, apply, selectionAt, applyLink, removeLink, onKeyDown } = useEmphasis(
-    value,
-    onChange,
-    () => setLinkOpen(true),
-  );
+  const { ref, apply, selectionAt, applyLink, removeLink, onKeyDown } =
+    useEmphasis(value, onChange, () => setLinkOpen(true));
 
   return (
     <div>

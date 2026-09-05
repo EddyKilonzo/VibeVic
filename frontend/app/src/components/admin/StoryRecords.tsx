@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useCan } from "@/components/admin/SessionContext";
 import { useNewsroom } from "@/data/newsroom/useNewsroom";
 import type { ListKey } from "@/data/newsroom/store";
+import { Transcribe } from "@/components/admin/Transcribe";
 import { RecordPanel } from "@/components/admin/RecordPanel";
 import { WorkspaceTabs } from "@/components/admin/WorkspaceTabs";
 import {
@@ -139,6 +140,14 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
             which would show a source's fields against a quote's row. */}
         <RecordPanel key={active} collection={active} storyId={storyId} />
       </div>
+
+      {/* Below the collections rather than inside the interviews tab.
+
+          What comes out of a recording is quotes, which live in a different
+          tab from interviews — so putting the recorder inside either one would
+          file its output somewhere the writer was not looking. Here it belongs
+          to the reporting record as a whole, which is what it actually feeds. */}
+      <Transcribe storyId={storyId} />
     </section>
   );
 }

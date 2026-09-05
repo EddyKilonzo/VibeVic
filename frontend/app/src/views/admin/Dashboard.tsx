@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
+import { BookOpen, Eye, FileText, Headphones, PenLine, Youtube } from "lucide-react";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { useAllStories } from "@/hooks/useStories";
 import { CHANNEL, VIDEOS, totalViews } from "@/data/videos";
@@ -43,8 +43,33 @@ export default function Dashboard() {
   const storyBySlug = (slug: string) => stories.find((story) => story.slug === slug);
   const reduced = useReducedMotion();
 
-  const drafts = stories.filter((s) => s.status !== "published").length;
-  const published = stories.length - drafts;
+  /*
+   * Counted by status rather than by "not published", which the previous line
+   * did and which folded scheduled pieces in with drafts. They are opposite
+   * situations — one is waiting on the writer, the other is waiting on the
+   * clock — and the row now shows them separately, so the count has to.
+   */
+  const drafts = stories.filter((s) => s.status === "draft").length;
+  const scheduled = stories.filter((s) => s.status === "scheduled").length;
+  const published = stories.filter((s) => s.status === "published").length;
+
+  /*
+   * The body of work, in the unit a reader experiences it in.
+   *
+   * Published only. Counting drafts here would make the figure go up while
+   * nobody outside this room could read a word of it, which is the opposite
+   * of what the card says.
+   */
+  const readingMinutes = stories
+    .filter((s) => s.status === "published")
+    .reduce((total, story) => total + (story.readingMinutes ?? 0), 0);
+
+  /*
+   * Reads on this site, from this site's own counters — not a platform's.
+   * `stats` is absent on a story nobody has opened, which is a real state and
+   * not a missing value, so it contributes zero rather than being skipped.
+   */
+  const siteReads = stories.reduce((total, story) => total + (story.stats?.reads ?? 0), 0);
 
   const chartData = useMemo(
     () =>
@@ -111,42 +136,68 @@ export default function Dashboard() {
         </div>
       </Reveal>
 
-      {/* Four figures, each a card. No trend arrows: this product holds a
-          snapshot of channel figures, not a time series, and a delta would be
-          a comparison against data that does not exist. */}
+      {/*
+          Four figures, and all four are about the writing.
+
+          ── What this row used to be ─────────────────────────────────────
+          Reports published, total views, subscribers — three YouTube figures
+          and one about the archive. A newsroom overview whose first row is
+          three channel metrics is a channel dashboard, and it puts the
+          writer's own work fourth on the screen they open first every
+          morning. The channel is still one button away in the header and
+          still has its own chart below; it is simply no longer the headline.
+
+          ── Why these four ───────────────────────────────────────────────
+          Each one is a fact about work this newsroom did, readable at a
+          glance, and none of them is a score. Published leads because it is
+          the only number that means the work is finished. Reading time is the
+          body of work stated the way a reader experiences it rather than as a
+          word count nobody has intuition for. Readers is site reads, which is
+          this site's own figure rather than a platform's. In progress is last
+          because it is the one that should be small.
+
+          Still no trend arrows. This product holds a snapshot rather than a
+          time series, and a delta would compare against data that does not
+          exist. */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Reports published"
-          value={CHANNEL.videoCount}
-          icon={Youtube}
-          caption={`On ${CHANNEL.handle}`}
+          label="Published"
+          value={published}
+          icon={FileText}
+          caption={published === 0 ? "Nothing out yet" : "Pieces readers can read"}
           accent
         />
         <StatCard
-          label="Total views"
-          value={totalViews()}
-          icon={Eye}
-          caption="Across every report"
+          label="Minutes of reading"
+          value={readingMinutes}
+          icon={BookOpen}
+          caption="Published work, end to end"
           delay={70}
         />
         <StatCard
-          label="Subscribers"
-          value={CHANNEL.subscribers}
-          icon={Headphones}
-          caption="At last capture"
+          label="Readers"
+          value={siteReads}
+          icon={Eye}
+          caption={siteReads === 0 ? "No reads recorded yet" : "Reads on this site"}
           delay={140}
         />
-        {/* The written archive exists now — five imported pieces — and the
-            dashboard had no view of it at all. A newsroom overview that counts
-            only video is describing half the work. Drafts moved into the
-            caption because the number is currently zero, and a zeroed card in
-            a row of four reads as something broken rather than as nothing
-            outstanding. */}
+        {/*
+            Drafts and scheduled together, because the question this answers is
+            "what is on my desk" and a scheduled piece is off it. The caption
+            splits them when there is something scheduled and stays quiet when
+            there is not — a card reading "0 scheduled" is a fact nobody needs
+            printed. */}
         <StatCard
-          label="Written pieces"
-          value={published}
-          icon={FileText}
-          caption={drafts > 0 ? `${drafts} in draft` : "All published"}
+          label="In progress"
+          value={drafts}
+          icon={PenLine}
+          caption={
+            scheduled > 0
+              ? `${scheduled} scheduled to go live`
+              : drafts === 0
+                ? "Desk is clear"
+                : "Drafts open"
+          }
           delay={210}
         />
       </div>

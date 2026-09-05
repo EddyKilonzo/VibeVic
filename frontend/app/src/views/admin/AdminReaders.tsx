@@ -71,7 +71,7 @@ export default function AdminReaders() {
     <div ref={load} className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Newsroom</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Readers</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Readers</h1>
         <p className="mt-3 max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
           The site counts reading itself — no accounts, no cookies, no third-party script,
           and nothing that can tell two visits apart. What the figures cover is below, and

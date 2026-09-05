@@ -259,6 +259,27 @@
     line-height: 1.18;
     letter-spacing: -0.012em;
   }
+  /*
+   * ── The newsroom's own heading ───────────────────────────────────
+   *
+   * The desk was setting its page titles in `display-2`, which tops out at
+   * 3.1rem — around fifty pixels for the word "Stories". That scale is drawn
+   * for an article headline, where the type is the content and the reader has
+   * arrived to look at it. On a tool it is a shout: it costs a fifth of the
+   * first screen before a single row of work appears, and it makes every
+   * screen in the newsroom announce itself as if the reader might not know
+   * where they clicked.
+   *
+   * This is the same face and the same tightening at two thirds the size, so
+   * a desk page still opens with a title rather than a label — it simply
+   * stops competing with the work under it.
+   */
+  .desk-title {
+    font-size: clamp(1.5rem, 1.2rem + 0.9vw, 1.95rem);
+    line-height: 1.15;
+    letter-spacing: -0.014em;
+  }
+
   .lead-copy {
     font-size: clamp(1rem, 0.94rem + 0.4vw, 1.25rem);
     line-height: 1.6;

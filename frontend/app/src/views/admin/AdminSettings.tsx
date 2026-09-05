@@ -54,7 +54,7 @@ export default function AdminSettings() {
     <div className="mx-auto max-w-[900px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Workspace</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Settings</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Settings</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           Preferences for this browser, what the workspace is holding on this device, and how
           to take it with you. Every control here changes something real.

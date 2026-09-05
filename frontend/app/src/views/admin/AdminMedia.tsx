@@ -155,7 +155,7 @@ export default function AdminMedia() {
     <div className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Content</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Media</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Media</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           Pictures and clips for your stories. Uploads go to Cloudinary and the library
           is stored with the rest of the newsroom, so what you add here is on every

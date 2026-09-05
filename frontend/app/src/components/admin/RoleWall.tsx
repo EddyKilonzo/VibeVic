@@ -44,7 +44,7 @@ export function RoleWall({
 
   return (
     <div className="mx-auto max-w-[640px] pt-10">
-      <div className="surface p-6 sm:p-8">
+      <div className="surface p-5 sm:p-8">
         <span
           aria-hidden
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"

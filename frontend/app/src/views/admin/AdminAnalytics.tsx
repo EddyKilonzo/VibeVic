@@ -88,7 +88,7 @@ export default function AdminAnalytics() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="rule-label">Newsroom</p>
-            <h1 className="font-display display-2 mt-2 font-semibold">Analytics</h1>
+            <h1 className="font-display desk-title mt-2 font-semibold">Analytics</h1>
             <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
               How the written archive travels, channel figures as captured from{" "}
               {CHANNEL.handle}, and playback recorded by this browser. Nothing here is

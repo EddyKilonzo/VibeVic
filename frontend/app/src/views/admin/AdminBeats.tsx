@@ -102,7 +102,7 @@ export default function AdminBeats() {
     <div className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Content</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Beats</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Beats</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           The subjects the work is filed under. The published beats are compiled into the
           site — pages, footer, sitemap. A beat you open here lives in this browser and can

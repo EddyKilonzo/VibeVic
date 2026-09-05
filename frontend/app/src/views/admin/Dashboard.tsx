@@ -92,7 +92,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="rule-label">Overview</p>
-            <h1 className="font-display display-2 mt-2 font-semibold">
+            <h1 className="font-display desk-title mt-2 font-semibold">
               Welcome back, Victor
             </h1>
           </div>

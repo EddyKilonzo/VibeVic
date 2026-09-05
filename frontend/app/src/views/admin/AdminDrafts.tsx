@@ -68,7 +68,7 @@ export default function AdminDrafts() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="rule-label">Content</p>
-            <h1 className="font-display display-2 mt-2 font-semibold">Drafts on this device</h1>
+            <h1 className="font-display desk-title mt-2 font-semibold">Drafts on this device</h1>
             <p className="mt-3 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
               The workspace saves as you write, to this browser. Nothing here has reached
               the public site — that arrives with the API. Clearing your browser data

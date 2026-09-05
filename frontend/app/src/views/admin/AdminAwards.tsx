@@ -117,7 +117,7 @@ export default function AdminAwards() {
     <div ref={load} className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Recognition</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Awards</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Awards</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           Prizes, nominations and shortlistings, recorded as they happen. This is the
           list the public awards page reads — an entry made here is on the site.

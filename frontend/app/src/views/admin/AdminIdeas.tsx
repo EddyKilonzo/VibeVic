@@ -277,7 +277,7 @@ export default function AdminIdeas() {
     <div className="mx-auto max-w-[1100px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Newsroom</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Ideas</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Ideas</h1>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
           Everything that might become a story, and the stage it has reached. Private by
           design — ideas never appear in a public payload, and like the rest of the

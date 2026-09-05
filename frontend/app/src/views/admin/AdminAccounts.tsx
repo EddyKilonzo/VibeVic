@@ -68,7 +68,7 @@ export default function AdminAccounts() {
     <div className="mx-auto max-w-[900px]">
       <Reveal variant="fade-up">
         <p className="rule-label">Workspace</p>
-        <h1 className="font-display display-2 mt-2 font-semibold">Accounts</h1>
+        <h1 className="font-display desk-title mt-2 font-semibold">Accounts</h1>
         <p className="mt-3 max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
           Who can sign in to the newsroom. Nobody&rsquo;s password passes through this screen:
           a new account is created without one, and its owner sets it from a single-use link

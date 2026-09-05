@@ -137,7 +137,7 @@ export function VoiceMiniPlayer() {
                     className="absolute inset-0 flex items-center justify-center"
                   >
                     {playing ? (
-                      <Pause className="h-[18px] w-[18px]" fill="currentColor" aria-hidden />
+                      <Pause className="h-5 w-5" fill="currentColor" aria-hidden />
                     ) : (
                       <Play className="ml-0.5 h-[18px] w-[18px]" fill="currentColor" aria-hidden />
                     )}

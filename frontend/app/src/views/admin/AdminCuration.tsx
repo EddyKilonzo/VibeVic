@@ -60,7 +60,7 @@ export default function AdminCuration() {
     <div className="pb-24">
       <Reveal variant="fade-up">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center text-primary">
             <Layers className="h-4.5 w-4.5" aria-hidden />
           </span>
           <div className="min-w-0">

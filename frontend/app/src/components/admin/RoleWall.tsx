@@ -49,7 +49,7 @@ export function RoleWall({
           aria-hidden
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"
         >
-          <Lock className="h-[18px] w-[18px]" />
+          <Lock className="h-5 w-5" />
         </span>
 
         <h1 className="font-display mt-4 text-xl font-semibold tracking-tight">

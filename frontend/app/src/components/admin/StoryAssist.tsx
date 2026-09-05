@@ -63,8 +63,8 @@ export function StoryAssist({
         aria-expanded={open}
         className="focus-ring flex w-full items-center gap-3 p-5 text-left transition-colors duration-normal hover:bg-secondary/50"
       >
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
-          <Sparkles className="h-[18px] w-[18px]" aria-hidden />
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center text-primary">
+          <Sparkles className="h-5 w-5" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-foreground">Proposals</span>

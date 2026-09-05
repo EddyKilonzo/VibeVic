@@ -224,8 +224,8 @@ function NewAccount({ onCreated }: { onCreated: () => void }) {
   return (
     <Reveal variant="fade-up" className="surface p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-          <UserPlus className="h-[18px] w-[18px]" aria-hidden />
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground">
+          <UserPlus className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
           <h2 className="font-display text-base font-semibold tracking-tight">Add an account</h2>

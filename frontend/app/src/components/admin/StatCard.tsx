@@ -45,7 +45,17 @@ export function StatCard({
         className,
       )}
     >
-      {/* The house hex, at object scale, catching the corner. */}
+      {/*
+          The house hex, at object scale, catching the corner.
+
+          Kept while the icon's own plate went, because the two were doing
+          different jobs: the hex is the card's material showing through at
+          one corner, and it is the only thing left carrying the accent that
+          marks the leading card. The plate behind the icon was a container,
+          and a container drawn around a line icon is a badge — it makes the
+          glyph read as a status chip rather than as a label for the figure
+          underneath it.
+      */}
       <span
         aria-hidden
         className={cn(
@@ -55,13 +65,15 @@ export function StatCard({
         style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
       />
 
+      {/* No plate. The accent now reaches the icon as colour on the stroke
+          rather than as a filled square behind it. */}
       <span
         className={cn(
-          "relative inline-flex h-9 w-9 items-center justify-center rounded-lg",
-          accent ? "bg-accent text-accent-foreground" : "bg-secondary text-primary",
+          "relative inline-flex h-9 w-9 items-center justify-center",
+          accent ? "text-accent" : "text-primary",
         )}
       >
-        <Icon className="h-[18px] w-[18px]" aria-hidden />
+        <Icon className="h-[22px] w-[22px]" aria-hidden />
       </span>
 
       <p className="font-display relative mt-4 text-[2.1rem] font-semibold leading-none tracking-tight text-primary">

@@ -97,7 +97,7 @@ export default function AdminDiagnostics() {
         {data && (
           <>
             <Panel
-              icon={<Database className="h-[18px] w-[18px]" aria-hidden />}
+              icon={<Database className="h-5 w-5" aria-hidden />}
               title="Database"
               detail={
                 data.database.reachable
@@ -141,7 +141,7 @@ export default function AdminDiagnostics() {
             </Panel>
 
             <Panel
-              icon={<Server className="h-[18px] w-[18px]" aria-hidden />}
+              icon={<Server className="h-5 w-5" aria-hidden />}
               title="Process"
               detail="The API container itself."
             >
@@ -152,7 +152,7 @@ export default function AdminDiagnostics() {
             </Panel>
 
             <Panel
-              icon={<Activity className="h-[18px] w-[18px]" aria-hidden />}
+              icon={<Activity className="h-5 w-5" aria-hidden />}
               title="Configuration"
               detail="Set or not set. Never the value."
             >
@@ -216,7 +216,7 @@ function Panel({
   return (
     <Reveal variant="fade-up" className="surface p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground">
           {icon}
         </span>
         <div className="min-w-0">

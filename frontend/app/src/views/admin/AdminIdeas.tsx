@@ -622,8 +622,8 @@ function IdeaForm({
       delay={120}
       className="surface honeycomb honeycomb-strong h-fit overflow-hidden p-5 sm:p-6 lg:order-2 lg:sticky lg:top-24"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
-        <Lightbulb className="h-[18px] w-[18px]" aria-hidden />
+      <span className="inline-flex h-9 w-9 items-center justify-center text-primary">
+        <Lightbulb className="h-5 w-5" aria-hidden />
       </span>
       <h2 className="font-display mt-4 text-lg font-semibold tracking-tight">Note an idea</h2>
 

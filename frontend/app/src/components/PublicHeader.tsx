@@ -166,7 +166,7 @@ export function PublicHeader() {
               aria-label={`Saved stories${count ? ` (${count})` : ""}`}
               className="focus-ring relative hidden h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-primary sm:flex"
             >
-              <Bookmark className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+              <Bookmark className="h-5 w-5" strokeWidth={1.75} aria-hidden />
               <AnimatePresence>
                 {count > 0 && (
                   <motion.span
@@ -188,7 +188,7 @@ export function PublicHeader() {
               aria-label="Search stories"
               className="focus-ring flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-primary"
             >
-              <Search className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+              <Search className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             </button>
 
             <MenuToggle open={menuOpen} onToggle={() => setMenuOpen((v) => !v)} />

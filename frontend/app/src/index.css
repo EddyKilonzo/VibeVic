@@ -1343,6 +1343,26 @@
        · nothing here loops. A permanently animating icon is a
          distraction on a page whose job is to be read. */
   .icon-rise,
+  /*
+   * ── Icon weight ──────────────────────────────────────────────────
+   *
+   * Lucide ships every glyph at `stroke-width="2"`, which is drawn to sit
+   * beside 16px UI text. Against this site's type — Fraunces at display
+   * sizes, Inter at 13px for everything else — a 2px stroke is heavier than
+   * the letterforms next to it, and the icon wins a contest it should not be
+   * in. At 1.5 it reads as the same hand as the text.
+   *
+   * Set here rather than as a `strokeWidth` prop on some hundreds of call
+   * sites, which is a convention that survives exactly as long as the next
+   * person remembers it. `stroke-width` arrives on the element as a
+   * presentation attribute, and any CSS rule outranks one, so this wins
+   * without `!important` and a call site that genuinely needs a heavier
+   * stroke can still say so in a class.
+   */
+  .lucide {
+    stroke-width: 1.5;
+  }
+
   .icon-tilt,
   .icon-lean,
   .icon-pop {

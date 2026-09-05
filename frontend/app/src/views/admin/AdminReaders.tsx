@@ -93,8 +93,8 @@ export default function AdminReaders() {
         // blur, which is the whole point of frosting it.
         className="glass-strong honeycomb honeycomb-strong mt-8 overflow-hidden rounded-xl p-5 sm:p-6"
       >
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
-          <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
+        <span className="inline-flex h-9 w-9 items-center justify-center text-primary">
+          <ShieldCheck className="h-5 w-5" aria-hidden />
         </span>
         <h2 className="font-display mt-4 text-lg font-semibold tracking-tight">
           What the site collects about readers

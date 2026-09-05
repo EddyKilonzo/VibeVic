@@ -88,7 +88,7 @@ function Preferences() {
   return (
     <Reveal variant="fade-up" className="surface p-5 sm:p-6">
       <Head
-        icon={<SlidersHorizontal className="h-[18px] w-[18px]" aria-hidden />}
+        icon={<SlidersHorizontal className="h-5 w-5" aria-hidden />}
         title="Preferences"
         detail="Remembered in this browser. They follow you between screens, not between devices."
       />
@@ -288,7 +288,7 @@ function StoredData() {
     <Reveal variant="fade-up" delay={60} className="surface p-5 sm:p-6">
       <div ref={load}>
         <Head
-          icon={<Database className="h-[18px] w-[18px]" aria-hidden />}
+          icon={<Database className="h-5 w-5" aria-hidden />}
           title="On this device"
           detail="Newsroom records live in Postgres and are counted there. Everything else on this list is held by this browser, and is counted from the stores themselves."
         />
@@ -384,7 +384,7 @@ function Access() {
   return (
     <Reveal variant="fade-up" delay={90} className="surface p-5 sm:p-6">
       <Head
-        icon={<Lock className="h-[18px] w-[18px]" aria-hidden />}
+        icon={<Lock className="h-5 w-5" aria-hidden />}
         title="Access"
         detail="Named accounts with a role, checked at the edge before any workspace route is served."
       />
@@ -447,7 +447,7 @@ function SiteFacts() {
   return (
     <Reveal variant="fade-up" delay={120} className="surface p-5 sm:p-6">
       <Head
-        icon={<SettingsIcon className="h-[18px] w-[18px]" aria-hidden />}
+        icon={<SettingsIcon className="h-5 w-5" aria-hidden />}
         title="The site"
         detail="Compiled into the build, so they are shown here rather than edited here."
       />
@@ -485,7 +485,7 @@ function Head({
 }) {
   return (
     <div>
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
+      <span className="inline-flex h-9 w-9 items-center justify-center text-primary">
         {icon}
       </span>
       <h2 className="font-display mt-4 text-lg font-semibold tracking-tight">{title}</h2>

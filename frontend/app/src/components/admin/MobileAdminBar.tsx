@@ -100,7 +100,7 @@ export function MobileAdminBar() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <item.icon className="h-[18px] w-[18px]" aria-hidden />
+                <item.icon className="h-5 w-5" aria-hidden />
                 {item.label}
               </Link>
             </li>

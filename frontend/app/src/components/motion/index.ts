@@ -6,7 +6,7 @@
  * Pages import from here and never from `gsap` or `motion/react` directly, so
  * the engine behind any given primitive can change without touching a page.
  */
-export { Reveal, FadeIn, FadeUp, FadeInScale, type RevealVariant } from "./Reveal";
+export { Reveal, RevealDefaults, FadeIn, FadeUp, FadeInScale, type RevealVariant } from "./Reveal";
 export { Stagger, StaggerItem, useStaggerDelay } from "./Stagger";
 export { TextReveal } from "./TextReveal";
 export { Typewriter } from "./Typewriter";

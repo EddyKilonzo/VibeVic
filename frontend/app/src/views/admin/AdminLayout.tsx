@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { stagger, transitions } from "@/lib/motion";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { PageTransition } from "@/components/motion";
+import { PageTransition, RevealDefaults } from "@/components/motion";
 import { LogoMark } from "@/components/Logotype";
 import { Mia } from "@/components/admin/Mia";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
@@ -141,6 +141,22 @@ export default function AdminLayout({
     /* The provider wraps the whole shell rather than only `main`, so the rail
        and the header are asking the same question from the same answer. */
     <SessionProvider session={session}>
+    {/*
+        ── Motion, in a tool ────────────────────────────────────────────
+        Reveals across the site replay on every entry and reverse on every
+        exit, which is the editorial feel the reading side is built for.
+        Inside the newsroom it is the interface moving while somebody is
+        trying to work in it: fifty-eight panels fading in on the way down
+        and back out on the way up, most of them while a writer is scrolling
+        between a paragraph and the record behind it.
+
+        So in here a reveal settles once and stays settled, and travels 8px
+        rather than 18px — enough that a panel arrives rather than appears,
+        short enough that a dense column of them does not read as a wave.
+        Set on the region so a component dropped into the newsroom inherits
+        the answer without knowing it is in one; an explicit prop still wins.
+    */}
+    <RevealDefaults repeat={false} distance="sm">
     <div className="flex min-h-screen bg-muted/40">
       {/* Desktop sidebar.
 
@@ -327,6 +343,7 @@ export default function AdminLayout({
 
       <MobileAdminBar />
     </div>
+    </RevealDefaults>
     </SessionProvider>
   );
 }

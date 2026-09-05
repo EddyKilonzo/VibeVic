@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 import { distance as distanceTokens, transitions, viewport } from "@/lib/motion";
@@ -63,6 +70,47 @@ export interface RevealProps {
 }
 
 /**
+ * Whether reveals in this part of the app replay, and how far they travel.
+ *
+ * ── Why this is a context and not a prop at every call site ──────────────
+ * `repeat` defaults to true because the reading side wants it: the site's
+ * reveals are tied to visibility rather than to page load, so scrolling back
+ * up an article plays them again and that is the intended editorial feel.
+ *
+ * The newsroom is not the reading side. It is a tool with fifty-eight of
+ * these in it, and there every panel fading in on the way down and back out
+ * on the way up is not atmosphere — it is the interface moving while somebody
+ * is trying to work in it. A writer scrolling between a paragraph and the
+ * source record behind it should find the source record simply there.
+ *
+ * Setting `repeat={false}` at fifty-eight call sites would fix today and
+ * nothing after it: the fix would be a convention, and the next panel added
+ * would be the one that forgot. A context makes it a property of the region,
+ * so a component dropped into the newsroom inherits the newsroom's answer
+ * without knowing it is in one.
+ *
+ * An explicit prop still wins, for the rare element that genuinely wants the
+ * other behaviour.
+ */
+interface RevealDefaults {
+  repeat: boolean;
+  /** The travel of the entrance. Shorter where the content is dense. */
+  distance: keyof typeof distanceTokens;
+}
+
+const RevealContext = createContext<RevealDefaults>({ repeat: true, distance: "md" });
+
+export function RevealDefaults({
+  repeat,
+  distance,
+  children,
+}: RevealDefaults & { children: ReactNode }) {
+  return (
+    <RevealContext.Provider value={{ repeat, distance }}>{children}</RevealContext.Provider>
+  );
+}
+
+/**
  * The single scroll-reveal primitive, built on Motion's `whileInView`.
  *
  * Everything that enters on scroll — a heading, a card, an image, a timeline
@@ -77,16 +125,20 @@ export function Reveal({
   children,
   variant = "fade-up",
   delay = 0,
-  distance = "md",
+  distance,
   immediate = false,
-  repeat = true,
+  repeat,
   className,
   style,
   as = "div",
 }: RevealProps) {
   const reduced = useReducedMotion();
   const inherited = useStaggerDelay();
-  const px = typeof distance === "number" ? distance : distanceTokens[distance];
+  // The call site wins; the region answers when it has not said.
+  const defaults = useContext(RevealContext);
+  const travel = distance ?? defaults.distance;
+  const replay = repeat ?? defaults.repeat;
+  const px = typeof travel === "number" ? travel : distanceTokens[travel];
 
   const Tag = motion[as];
 
@@ -168,7 +220,7 @@ export function Reveal({
         // straight afterwards so the observer keeps ownership. See above.
         animate: kicked ? ("visible" as const) : undefined,
         whileInView: "visible" as const,
-        viewport: { once: !repeat, margin: viewport.margin, amount: viewport.amount },
+        viewport: { once: !replay, margin: viewport.margin, amount: viewport.amount },
       };
 
   return (

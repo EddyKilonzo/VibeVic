@@ -33,15 +33,48 @@ export function CountUp({
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
   const [display, setDisplay] = useState(() => value * from);
-  const played = useRef(false);
+  /**
+   * The value this has already counted to, not merely "whether it ran".
+   *
+   * ── The bug this shape fixes ─────────────────────────────────────────
+   * A boolean here meant the count was strictly one-shot, and one-shot is
+   * wrong for every figure on the dashboard: they arrive from a fetch, so the
+   * first render has `value = 0`. If the card was already on screen when that
+   * happened — which on the dashboard it always is, the cards being above the
+   * fold — the effect fired immediately, animated 0 to 0, and set the flag.
+   * The real figure landed a moment later, the effect re-ran because `value`
+   * is a dependency, and the flag turned it straight back around. The card
+   * then read 0 for the rest of the session while the screen-reader span
+   * beside it announced the true number.
+   *
+   * That is not a cosmetic miss: "0 published" on the screen a writer opens
+   * first is a false statement about their own work, and it is most false on
+   * a slow connection, where the fetch is most likely to lose the race.
+   *
+   * Holding the last counted value instead makes the rule the honest one:
+   * count when the number changes to something new, and stay put when it does
+   * not. Re-renders with the same value still animate nothing, which is what
+   * the boolean was there to protect.
+   */
+  const counted = useRef<number | null>(null);
 
   useEffect(() => {
     // Under reduced motion the number is derived below, never animated, so
     // there is nothing to start here.
-    if (!inView || played.current || reduced) return;
-    played.current = true;
+    if (!inView || reduced || counted.current === value) return;
 
-    const controls = animate(value * from, value, {
+    /*
+     * From wherever it currently is, not from `value * from`.
+     *
+     * On the first count those are the same thing. On a later one — a figure
+     * that changed after it had already been shown — starting from the
+     * fraction would make the number jump backwards before running forwards,
+     * which reads as the figure having dropped.
+     */
+    const start = counted.current === null ? value * from : display;
+    counted.current = value;
+
+    const controls = animate(start, value, {
       duration: durationMs / 1000,
       // easeOutExpo: fast arrival, calm settle.
       ease: [0.16, 1, 0.3, 1],
@@ -49,6 +82,9 @@ export function CountUp({
     });
 
     return () => controls.stop();
+    // `display` is read to pick a starting point and must not re-trigger this;
+    // the guard above is what decides whether a run happens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView, value, from, durationMs, reduced]);
 
   // Reduced motion goes straight to the final figure — the number is the

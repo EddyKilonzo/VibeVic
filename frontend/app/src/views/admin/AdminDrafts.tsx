@@ -82,13 +82,24 @@ export default function AdminDrafts() {
         </div>
       </Reveal>
 
-      <div className="surface mt-8 overflow-hidden">
+      {/*
+          ── Cards, not rows ──────────────────────────────────────────────
+          A divided list gave every draft the same one-line silhouette, so a
+          piece with 504 words in it and the three that are still only a
+          headline were indistinguishable until you read the count. On a
+          screen whose entire job is "what have I got half-finished", that is
+          the one distinction worth seeing before reading anything.
+
+          Cards also give the word count and the status room to sit apart
+          from the title rather than queueing behind it on a single line, and
+          the grid puts six drafts on a screen where the list managed five.
+      */}
+      <div className="mt-8">
         {drafts.length === 0 ? (
           <EmptyState
             icon={<FileText className="h-5 w-5" aria-hidden />}
             title="Nothing saved here yet"
-            description="Start a story and it appears in this list from the first sentence — no save button to remember."
-            className="border-0"
+            description="Start a story and it appears here from the first sentence — no save button to remember."
             action={
               <Button as={Link} href={newsroomPath("/stories/new")} variant="outline" size="sm">
                 Start writing
@@ -96,7 +107,7 @@ export default function AdminDrafts() {
             }
           />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <AnimatePresence initial={false}>
               {drafts.map((record, i) => {
                 const words = draftWordCount(record.story);
@@ -113,30 +124,48 @@ export default function AdminDrafts() {
                         delay: Math.min(i, 8) * stagger.tight,
                       },
                     }}
-                    exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12, height: 0 }}
+                    exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
                     transition={transitions.normal}
-                    className="group relative overflow-hidden"
+                    className="surface surface-hover group relative flex min-h-[9.5rem] flex-col p-4"
                   >
-                    <div className="flex items-center gap-4 p-4 transition-colors duration-normal hover:bg-secondary/50">
-                      <Link
-                        href={
-                          record.story.id === "new"
-                            ? newsroomPath("/stories/new")
-                            : newsroomPath(`/stories/${record.story.id}`)
-                        }
-                        className="focus-ring min-w-0 flex-1"
-                      >
-                        <p className="truncate font-semibold tracking-tight">
-                          {record.story.title || (
-                            <span className="text-muted-foreground">Untitled</span>
-                          )}
+                    {/* The whole card is the target, so the link stretches
+                        across it rather than wrapping only the text — which
+                        would leave the padding and the space under a short
+                        headline dead to a click on a card that is mostly
+                        space. */}
+                    <Link
+                      href={
+                        record.story.id === "new"
+                          ? newsroomPath("/stories/new")
+                          : newsroomPath(`/stories/${record.story.id}`)
+                      }
+                      className="focus-ring min-w-0"
+                    >
+                      <span className="absolute inset-0" aria-hidden />
+                      <p className="line-clamp-2 pr-8 font-semibold leading-snug tracking-tight">
+                        {record.story.title || (
+                          <span className="text-muted-foreground">Untitled</span>
+                        )}
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {genreLabel(record.story.genre)}
+                      </p>
+                    </Link>
+
+                    {/* Pushed to the foot, so every card's metadata sits on
+                        one line however far the headline above it ran. */}
+                    <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                      <div className="min-w-0">
+                        {/* The count leads, and it is the reason this is a
+                            card at all: it tells a draft with a paragraph in
+                            it from one that is still only a headline. */}
+                        <p className="text-sm font-semibold tabular-nums text-foreground">
+                          {words} {words === 1 ? "word" : "words"}
                         </p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {genreLabel(record.story.genre)} · {words}{" "}
-                          {words === 1 ? "word" : "words"} · saved here{" "}
-                          {formatRelative(record.savedAt)}
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                          saved here {formatRelative(record.savedAt)}
                         </p>
-                      </Link>
+                      </div>
 
                       {/* Same pill vocabulary as the story list. "Ready" rather
                           than "published", for the same reason the button says
@@ -150,16 +179,17 @@ export default function AdminDrafts() {
                       >
                         {record.story.status === "published" ? "ready" : record.story.status}
                       </span>
-
-                      <button
-                        type="button"
-                        onClick={() => remove(record)}
-                        aria-label={`Discard ${record.story.title || "untitled draft"}`}
-                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
                     </div>
+
+                    {/* Above the stretched link, or it could not be clicked. */}
+                    <button
+                      type="button"
+                      onClick={() => remove(record)}
+                      aria-label={`Discard ${record.story.title || "untitled draft"}`}
+                      className="focus-ring tap-square absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground opacity-0 transition-all duration-normal hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </button>
                   </motion.li>
                 );
               })}

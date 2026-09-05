@@ -169,8 +169,20 @@ export default function AdminStories() {
    * Not component state: a view mode that resets on every navigation is one
    * the person has to re-choose all day, which makes it a worse default than
    * having no choice at all.
+   *
+   * Grid is the default rather than list. Every story here has a cover, and a
+   * list renders each one as a 44px thumbnail — small enough that it
+   * identifies nothing, which makes it decoration attached to a row of text.
+   * The grid shows the picture at a size that actually distinguishes one
+   * piece from another, and finding a story by recognising its photograph is
+   * faster than reading five headlines that all begin with the same beat.
+   *
+   * Anybody who has already chosen list keeps it: this is the fallback for an
+   * unset key, not a reset of a stored preference, and quietly overriding a
+   * choice somebody made is worse than having defaulted wrongly in the first
+   * place.
    */
-  const [view, setView] = useLocalStorage<"list" | "grid">("vv:admin-stories-view", "list");
+  const [view, setView] = useLocalStorage<"list" | "grid">("vv:admin-stories-view", "grid");
   /**
    * Takes a deleted row out of the list.
    *

@@ -2,16 +2,15 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Eye, Headphones, Info, Youtube } from "lucide-react";
-import { CHANNEL, VIDEOS, longFormVideos, shorts, topicName, totalViews, watchUrl } from "@/data/videos";
+import { Eye, Headphones, Info, Youtube } from "lucide-react";
+import { CHANNEL, VIDEOS, topicName, totalViews, watchUrl } from "@/data/videos";
 import { useAllStories } from "@/hooks/useStories";
 import { useStoryFigures } from "@/hooks/useStoryFigures";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { summariseAll, type AudioSummary } from "@/lib/voice/analytics";
 import { LOCALE, formatCompact, formatPercent, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Reveal } from "@/components/motion";
-import { StatCard } from "@/components/admin/StatCard";
+import { CountUp, Reveal } from "@/components/motion";
 import { BeatShare } from "@/components/admin/BeatShare";
 import { ViewsTrend } from "@/components/admin/ViewsTrend";
 import { EmptyState } from "@/components/ui/States";
@@ -71,15 +70,6 @@ export default function AdminAnalytics() {
     return list;
   }, [sort]);
 
-  /**
-   * The mean, and only the mean.
-   *
-   * An average of eight real numbers is a real number. A median, a growth
-   * rate or a projection would each need a series this product does not have,
-   * so none of them are here.
-   */
-  const meanViews = VIDEOS.length ? Math.round(total / VIDEOS.length) : 0;
-
   const listened = audio?.reduce((n, s) => n + s.plays, 0) ?? 0;
 
   return (
@@ -90,10 +80,8 @@ export default function AdminAnalytics() {
             <p className="rule-label">Newsroom</p>
             <h1 className="font-display desk-title mt-2 font-semibold">Analytics</h1>
             <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-              How the written archive travels, channel figures as captured from{" "}
-              {CHANNEL.handle}, and playback recorded by this browser. Nothing here is
-              modelled or estimated — where a number does not exist, the panel says so
-              instead of drawing one.
+              Nothing here is modelled or estimated. Where a number does not exist, the
+              panel says so instead of drawing one.
             </p>
           </div>
           <a
@@ -107,6 +95,43 @@ export default function AdminAnalytics() {
           </a>
         </div>
       </Reveal>
+
+      {/*
+          ── The answer, before the working ───────────────────────────────
+          The page opened on a paragraph of methodology and then a table, so
+          the first question anybody brings to it — roughly how much has been
+          read — could not be answered without reading a column of figures and
+          adding them up. Four numbers at the top answer it in a glance, and
+          the panels below stay exactly what they were: the same data, read
+          closely, for when the glance was interesting.
+
+          Each figure is a plain sum of things already on this page. There is
+          no new measurement here and no derived rate, which is the same rule
+          the rest of the screen keeps — a number that cannot be pointed at
+          the archive, the channel capture or this browser's playback does not
+          appear.
+      */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Headline
+          label="Reads on this site"
+          value={figures ? figures.reduce((n, f) => n + f.reads, 0) : null}
+          note="The written archive"
+        />
+        <Headline
+          label="Pieces read"
+          value={figures ? figures.length : null}
+          // A story nobody has opened is absent from `figures` rather than
+          // present with a zero, so this is a count of the archive that has
+          // actually been reached — not of the archive.
+          note={`of ${stories.filter((s) => s.status === "published").length} published`}
+        />
+        <Headline label="Views on the channel" value={total} note={CHANNEL.handle} />
+        <Headline
+          label="Played aloud"
+          value={audio ? listened : null}
+          note="Recorded by this browser"
+        />
+      </div>
 
       {/* ── The written archive ─────────────────────────────────
           First, because it is the thing this newsroom actually publishes. The
@@ -206,43 +231,22 @@ export default function AdminAnalytics() {
         )}
       </Reveal>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Total views"
-          value={total}
-          icon={Eye}
-          caption={`Across ${VIDEOS.length} reports, at last capture`}
-          accent
-        />
-        <StatCard
-          label="Mean per report"
-          value={meanViews}
-          icon={BarChart3}
-          caption="Total divided by reports — no weighting"
-          delay={70}
-        />
-        <StatCard
-          label="Long-form reports"
-          value={longFormVideos().length}
-          icon={Youtube}
-          caption={`${shorts().length} Shorts alongside them`}
-          delay={140}
-        />
-        <StatCard
-          label="Plays on this device"
-          value={listened}
-          icon={Headphones}
-          caption={
-            audio === null
-              ? "Reading recorded playback"
-              : listened === 0
-                ? "Nothing played aloud yet"
-                : `Across ${audio.length} ${audio.length === 1 ? "piece" : "pieces"}`
-          }
-          delay={210}
-        />
-      </div>
+      {/*
+          ── The second summary row is gone ───────────────────────────────
+          Four StatCards stood here: total views, mean per report, long-form
+          count and plays on this device. Two of them printed the same figures
+          as the row at the top of the page — 661 twice, 8 twice — which is
+          the specific way a screen becomes harder to read rather than easier:
+          the reader has to work out whether two identical numbers are the
+          same measurement or a coincidence.
 
+          The two that were not duplicates were channel trivia. The mean is
+          the total divided by the count, which anybody wanting it can take
+          from the two numbers already shown; the long-form/Shorts split is
+          answered in more detail by the "Every report" table below, where
+          each video is listed with its own figure. Neither earns a card at
+          the top of a page about the written archive.
+      */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
         <Reveal variant="fade-up" className="surface p-5 lg:col-span-7">
           <p className="rule-label">Views by publication month</p>
@@ -451,6 +455,42 @@ export default function AdminAnalytics() {
           </ul>
         </Reveal>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One figure at the head of the page.
+ *
+ * `value` is nullable and the null is the point: it means the figure has not
+ * arrived yet, and it renders as an em dash rather than as a zero. The rest of
+ * this screen already makes that distinction everywhere — "a story nobody has
+ * opened is absent from this list, not present with a zero. A zero looks like
+ * a measurement" — and a summary row that broke the rule would be the loudest
+ * place on the page to break it.
+ */
+function Headline({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: number | null;
+  note: string;
+}) {
+  return (
+    <div className="surface p-5">
+      <p className="font-display text-[2rem] font-semibold leading-none tracking-tight text-primary">
+        {value === null ? (
+          <span className="text-muted-foreground/50" aria-label="not counted yet">
+            —
+          </span>
+        ) : (
+          <CountUp value={value} />
+        )}
+      </p>
+      <p className="rule-label mt-2">{label}</p>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{note}</p>
     </div>
   );
 }

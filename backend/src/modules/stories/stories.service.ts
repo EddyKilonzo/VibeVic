@@ -505,6 +505,74 @@ export class StoriesService {
     }
   }
 
+
+  /**
+   * Deleting a piece, which is only ever a draft.
+   *
+   * ── The rule, and the two questions it answers ───────────────────────────
+   * The admin list has been carrying a comment saying there is no delete here,
+   * and that its absence was a decision rather than an omission: removing the
+   * row is the easy part of a choice that also has to say what the links
+   * pointing at it become, and what the old public address says afterwards.
+   * Both have answers now, and the second one is what makes the first cheap.
+   *
+   * **The old URL.** A DRAFT has no old URL. `publishedWhere` has never let a
+   * draft reach a reader, so nothing has ever been served from `/stories/:slug`
+   * for this row — there is no address in anybody's bookmarks, no entry in an
+   * index, and deleting it changes precisely nothing a reader could observe.
+   * Refusing anything that is not a draft is therefore not a limitation working
+   * around a hard problem; it is the hard problem, removed. A writer who wants
+   * a published piece gone takes it down first, and that transition is the one
+   * that owes readers an answer — which is why it lives on `publish`, beside
+   * the un-publishing rule, and not here.
+   *
+   * **The links.** Answered in the schema, row by row, and deliberately not
+   * re-decided here. Revisions, stats, events, collection entries and the
+   * `StorySource`/`StoryQuote`/`StoryInterview`/`StoryEvidence`/timeline joins
+   * are `onDelete: Cascade` — they describe this story and mean nothing without
+   * it. Ideas, pitches, notes and deadlines are `onDelete: SetNull` — they are
+   * records of work that happened, they outlive the draft they were attached
+   * to, and orphaning them keeps the reporting record while dropping a pointer
+   * that no longer resolves. A service re-implementing any of that in
+   * application code would be a second copy of a rule the database already
+   * enforces, and the copy that drifts is always the one further from the data.
+   *
+   * ── Why `stories:publish` and not `stories:write` ────────────────────────
+   * The same argument the publish route makes. `stories:write` is craft, and
+   * the dev account holds it so an editor bug can be reproduced against a real
+   * draft. Destroying a writer's unpublished work is not craft, and no amount
+   * of software maintenance requires it.
+   */
+  async remove(
+    principal: Principal | undefined,
+    id: string,
+  ): Promise<{ id: string; deleted: true }> {
+    this.policy.requireScope(principal, 'stories:publish');
+
+    const story = await this.prisma.story.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    });
+    if (!story) throw new NotFoundException('Story not found.');
+
+    if (story.status !== StoryStatus.DRAFT) {
+      /*
+       * Phrased as the next step rather than as a rule, because the writer is
+       * one click from being allowed — "Take it down" is a control on the same
+       * screen. A refusal that only names the constraint leaves them to work
+       * out for themselves that un-publishing is what unlocks this.
+       */
+      throw new BadRequestException(
+        story.status === StoryStatus.SCHEDULED
+          ? 'This piece is scheduled to go live. Cancel the schedule first, then delete it.'
+          : 'This piece is published and has an address readers may hold. Take it down first, then delete it.',
+      );
+    }
+
+    await this.prisma.story.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
   /** A `publishAt` that is present, real, and actually still ahead of us. */
   private futureInstant(value: string | undefined): Date {
     if (!value) {

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -173,5 +174,22 @@ export class StoriesAdminController {
     @Body() dto: PublishStoryDto,
   ) {
     return this.stories.publish(principal, id, dto);
+  }
+
+  /**
+   * Deleting a draft. Refused on anything a reader has ever been able to open.
+   *
+   * `stories:publish` for the same reason the route above holds it: this is
+   * the other end of the same decision. One puts work in front of readers and
+   * the other destroys it, and neither is something the account that maintains
+   * the software has any business doing.
+   */
+  @Delete(':id')
+  @RequireScopes('stories:write', 'stories:publish')
+  remove(
+    @CurrentPrincipal() principal: Principal | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.stories.remove(principal, id);
   }
 }

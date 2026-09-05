@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { AudioLines, Bot, Check, Copy, Mic, Upload, X } from "lucide-react";
+import { AudioLines, Bot, Check, Copy, Mic, NotebookPen, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { transitions } from "@/lib/motion";
 import { notify } from "@/lib/toast";
@@ -23,12 +23,19 @@ import { notify } from "@/lib/toast";
  * the transcript is shown beside the candidates is so the journalist can
  * check one against the other before any of it becomes a record.
  *
- * ── The transcript is not filed anywhere ─────────────────────────────────
- * It is shown, and it can be copied. Filing it would need a column that does
- * not exist, and inventing one to hold a machine's draft of what somebody
- * said is not a small schema change — it is a decision about what this
- * newsroom keeps. The quotes are the reporting record; the transcript is
- * working material, and it lives in this panel until the tab is closed.
+ * ── Where the transcript goes ────────────────────────────────────────────
+ * Into `Interview.notes`, which is where the schema always said it should:
+ * "Free notes. Transcripts, if a recording is ever made, live here too."
+ * This panel previously claimed the column did not exist and that inventing
+ * one would be a decision about what the newsroom keeps. The decision had
+ * already been taken, in the DTO, before there was anything to put in it.
+ *
+ * So the meeting becomes an `Interview` row and the words become `Quote` rows
+ * pointing back at it through `interviewId` — which is the shape the model
+ * describes: "an interview record is the meeting, not the words". Filing the
+ * interview is its own press, and quotes filed afterwards carry the link.
+ * A quote filed before it is still a valid quote, simply unlinked; the panel
+ * says which of the two is happening rather than deciding for the writer.
  */
 
 interface Quote {
@@ -51,6 +58,9 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
   const [result, setResult] = useState<Result | null>(null);
   const [filed, setFiled] = useState<Record<number, "kept" | "dropped">>({});
   const [interviewee, setInterviewee] = useState("");
+  /** The `Interview` row, once filed. Quotes link to it from then on. */
+  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [filingInterview, setFilingInterview] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const reduced = useReducedMotion();
 
@@ -59,6 +69,9 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
     setError(null);
     setResult(null);
     setFiled({});
+    // A new recording is a new meeting; carrying the last one's id over would
+    // hang this tape's quotes off the previous interview.
+    setInterviewId(null);
     try {
       const form = new FormData();
       form.append("audio", file);
@@ -86,6 +99,49 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
     }
   };
 
+  /**
+   * The meeting, filed as a record with the transcript in its notes.
+   *
+   * Its own press rather than something the first quote does implicitly. An
+   * `Interview` row names who agreed to talk — which is why the schema
+   * defaults it to CONFIDENTIAL, and why creating one as a side effect of
+   * filing a quote would be this panel deciding to record a person's
+   * co-operation without being asked to.
+   */
+  const fileInterview = async () => {
+    if (!storyId || !result || interviewId) return;
+    setFilingInterview(true);
+    try {
+      const response = await fetch("/api/newsroom/records/interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interviewee: interviewee.trim() || "Unnamed interviewee",
+          conductedAt: new Date().toISOString(),
+          notes: result.transcript,
+          storyIds: [storyId],
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? `The newsroom returned ${response.status}.`);
+      }
+      const created = (await response.json()) as { id: string };
+      setInterviewId(created.id);
+      notify.success(
+        "Interview filed",
+        "The transcript is in its notes. Quotes filed from here on point back at it.",
+      );
+    } catch (cause) {
+      notify.error(
+        "Not filed",
+        cause instanceof Error ? cause.message : "Could not reach the newsroom.",
+      );
+    } finally {
+      setFilingInterview(false);
+    }
+  };
+
   const file = async (quote: Quote, index: number) => {
     if (!storyId) return;
     try {
@@ -97,6 +153,10 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
           speaker: quote.speaker,
           visibility: "PRIVATE",
           storyIds: [storyId],
+          // Present only once the meeting has a record to point at. The API
+          // treats it as optional, so an unlinked quote is a complete quote
+          // rather than a half-written one.
+          ...(interviewId ? { interviewId } : {}),
         }),
       });
       if (!response.ok) {
@@ -104,7 +164,12 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
         throw new Error(body?.error ?? `The newsroom returned ${response.status}.`);
       }
       setFiled((prev) => ({ ...prev, [index]: "kept" }));
-      notify.success("Quote filed", "It is in the record for this piece, marked private.");
+      notify.success(
+        "Quote filed",
+        interviewId
+          ? "Marked private, and linked to the interview."
+          : "Marked private. File the interview to link it to the meeting.",
+      );
     } catch (cause) {
       notify.error(
         "Not filed",
@@ -228,13 +293,49 @@ export function Transcribe({ storyId }: { storyId: string | null }) {
                       </button>
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      {result.language}. This is not saved anywhere — copy it if you want it.
+                      {result.language}.{" "}
+                      {interviewId
+                        ? "Filed in the interview's notes."
+                        : "Not filed yet — file the interview below to keep it."}
                     </p>
                     <div
                       data-lenis-prevent
                       className="mt-2.5 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-background p-3.5 text-[13px] leading-relaxed text-foreground"
                     >
                       {result.transcript}
+                    </div>
+
+                    {/* The meeting, as its own record and its own press.
+
+                        `Interview` is the row that names who agreed to talk,
+                        which is why the schema defaults it to CONFIDENTIAL —
+                        and why creating one as a side effect of filing a
+                        quote would be this panel recording somebody's
+                        co-operation without being asked to. */}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <Button
+                        size="sm"
+                        variant={interviewId ? "outline" : "primary"}
+                        disabled={filingInterview || interviewId !== null}
+                        onClick={() => void fileInterview()}
+                      >
+                        {interviewId ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                            Interview filed
+                          </>
+                        ) : (
+                          <>
+                            <NotebookPen className="h-3.5 w-3.5" aria-hidden />
+                            {filingInterview ? "Filing…" : "File the interview"}
+                          </>
+                        )}
+                      </Button>
+                      <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
+                        {interviewId
+                          ? "The meeting is in Records under Interviews, with this transcript in its notes. Quotes filed below point back at it."
+                          : "Keeps the transcript in the interview's notes and gives the quotes below something to point at. Marked confidential, like every interview record."}
+                      </p>
                     </div>
                   </div>
 

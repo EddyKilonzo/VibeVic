@@ -9,7 +9,7 @@ import { gsapEase, seconds, sequence } from "@/lib/motion";
  *
  * Children opt in by tagging themselves:
  *
- *   data-seq="texture" | "headline" | "image" | "support" | "cta" | "decor"
+ *   data-seq="texture" | "headline" | "image" | "support" | "cta"
  *
  * A tag with nothing wearing it is not free: GSAP logs "target not found" on
  * every render and the tween silently does nothing, so the console stops being
@@ -72,11 +72,7 @@ export function HeroSequence({ children }: { children: ReactNode }) {
             { opacity: 0, y: 12, duration: seconds.normal, stagger: 0.06 },
             sequence.cta,
           )
-          .from(
-            "[data-seq='decor']",
-            { opacity: 0, duration: seconds.slow, stagger: 0.08 },
-            sequence.decor,
-          );
+;
 
         /*
          * Content must never depend on an animation having run.

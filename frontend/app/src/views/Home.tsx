@@ -26,7 +26,6 @@ import { StoryCard } from "@/components/story/StoryCard";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/SectionHeading";
 import { HeroPanel } from "@/components/hero/HeroPanel";
-import { HeroNote } from "@/components/hero/HeroNote";
 import { LeadMark } from "@/components/hero/PageHero";
 import { CurvedMarquee, SpecularButton, SpringCountUp } from "@/components/reactbits";
 
@@ -141,11 +140,26 @@ export default function Home({
               as video, and readable or listenable here.
             </p>
 
-            <div className="relative mt-7 flex w-full flex-wrap items-center justify-center gap-3 sm:mt-8">
-              <HeroNote direction="down-right" className="absolute -left-2 -top-4 xl:left-8">
-                Every report plays right here
-              </HeroNote>
+            {/* ── What is no longer in this hero ──────────────────────────
+                Two handwritten notes used to flank these buttons — "Every
+                report plays right here" on the left, "Nothing loads from
+                YouTube until you press play" on the right — and a rail of six
+                beat chips sat between the buttons and the posters.
 
+                Six stacked things is not a composition, it is a list. The
+                notes were the easiest to lose because both were answering
+                questions nobody had asked yet: the first restates what
+                "Watch the reports" already says, and the second is a real and
+                worthwhile claim about privacy that belongs beside the players
+                it describes rather than in the headline's airspace. The chip
+                rail went because it was the third route to the same place —
+                "Beats" is in the masthead and every beat is in the footer —
+                and a nav duplicated inside a hero reads as indecision about
+                where the reader should start.
+
+                What is left is the shape the hero always was underneath:
+                headline, promise, one thing to do, and the work itself. */}
+            <div className="mt-8 flex w-full flex-wrap items-center justify-center gap-3 sm:mt-10">
               {/* One specular button on the whole site. Each instance owns a
                   WebGL context, so it is spent on the single action the hero
                   exists to offer. */}
@@ -168,25 +182,6 @@ export default function Home({
                   <Youtube className="icon-tilt h-4 w-4" aria-hidden />
                   Subscribe
                 </Button>
-              </div>
-
-              <HeroNote direction="down-left" className="absolute -right-2 -top-4 xl:right-8">
-                Nothing loads from YouTube until you press play
-              </HeroNote>
-            </div>
-
-            {/* The beats, on hairlines — real links, not decoration. */}
-            <div data-seq="decor" className="rail mt-8 w-full sm:mt-10">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {topBeats.map((topic) => (
-                  <Link
-                    key={topic.slug}
-                    href={`/beats/${topic.slug}`}
-                    className="surface-compact focus-ring tap inline-flex items-center rounded-full px-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-normal hover:border-accent/50 hover:text-primary sm:h-8"
-                  >
-                    {topic.name}
-                  </Link>
-                ))}
               </div>
             </div>
           </div>

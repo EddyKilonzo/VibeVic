@@ -1,7 +1,7 @@
-import { google } from "@ai-sdk/google";
-import { APICallError, generateText, Output, type LanguageModel } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { sessionWithScope } from "@/lib/newsroom-auth";
+import { assistModel, budgetMs, missingKey, modelFailure, type Purpose } from "@/lib/assist/model";
 
 /**
  * An editor's read.
@@ -50,29 +50,24 @@ export const dynamic = "force-dynamic";
 /** Hobby plan's ceiling. Raising it past 60 fails the deploy, not the request. */
 export const maxDuration = 60;
 
-/** The model, named once — the same shape `pitch/route.ts` settled on. */
-const DEFAULT_MODEL = "gemini-3.7-flash";
-
-function critiqueModel(): { model: LanguageModel; keyName: string } {
-  return {
-    model: google(process.env.CRITIQUE_MODEL ?? process.env.PITCH_MODEL ?? DEFAULT_MODEL),
-    keyName: "GOOGLE_GENERATIVE_AI_API_KEY",
-  };
-}
-
-/**
- * The route's own clock, under the platform's.
+/*
+ * Model, budget and failure taxonomy now come from `lib/assist/model`.
  *
- * Same two-clocks argument as the pitch desk: when the platform's timer wins
- * the function is destroyed with no handler and the browser gets a gateway
- * error page, which `response.json()` chokes on and the UI reports as a
- * network failure — the one explanation that is definitely wrong. This one
- * expires first and comes back as a sentence.
+ * This file used to carry its own copies and said why: a shared version would
+ * have needed a configuration object to produce two strings, which was more
+ * machinery than the duplication cost — "if a third model route appears, that
+ * is the point to extract it". Four appeared at once (filing, timeline,
+ * figures, transcription), so it was extracted, and the configuration object
+ * turned out to be one string: the env prefix below.
+ *
+ * The migration is not only tidiness. The shared version unwraps
+ * `AI_RetryError` before classifying, which the copy here did not — so a
+ * free-tier demand spike, which is what the provider actually returns most
+ * often, was falling through every branch and coming back as "the model could
+ * not be reached". That sent the reader to check their network for a queue
+ * that clears on its own in a minute.
  */
-function budgetMs(): number {
-  const configured = Number(process.env.CRITIQUE_TIMEOUT_MS);
-  return Number.isFinite(configured) && configured > 0 ? configured : 55_000;
-}
+const PURPOSE: Purpose = { env: "CRITIQUE", budgetMs: 55_000 };
 
 /**
  * The shape of a read.
@@ -144,13 +139,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const { model, keyName } = critiqueModel();
-  if (!process.env[keyName]) {
-    return Response.json(
-      { error: `No model key is configured. Set ${keyName} and restart, and this comes alive.` },
-      { status: 503 },
-    );
-  }
+  const noKey = missingKey();
+  if (noKey) return noKey;
 
   let title = "";
   let dek = "";
@@ -185,9 +175,9 @@ export async function POST(request: Request) {
 
   try {
     const { output } = await generateText({
-      model,
+      model: assistModel(PURPOSE),
       system: SYSTEM,
-      abortSignal: AbortSignal.timeout(budgetMs()),
+      abortSignal: AbortSignal.timeout(budgetMs(PURPOSE)),
       output: Output.object({ schema: Critique }),
       prompt: [
         title ? `Headline: ${title}` : null,
@@ -202,75 +192,6 @@ export async function POST(request: Request) {
 
     return Response.json(output);
   } catch (cause) {
-    console.error("[critique]", cause);
-    return Response.json({ error: explain(cause) }, { status: statusFor(cause) });
+    return modelFailure("critique", cause, PURPOSE);
   }
-}
-
-/* ── Failures, told apart ──────────────────────────────────────────────────
- *
- * The same shape as the pitch route's, and deliberately a second copy rather
- * than a shared helper. The two routes answer different questions and their
- * sentences name different settings — `CRITIQUE_MODEL` here, `PITCH_MODEL`
- * there — so a shared version would take a configuration object to produce
- * two strings, which is more machinery than the duplication costs. If a third
- * model route appears, that is the point to extract it.
- */
-
-function looksLike(error: APICallError, pattern: RegExp): boolean {
-  return pattern.test(error.responseBody ?? error.message);
-}
-
-function exhausted(error: APICallError): boolean {
-  return (
-    looksLike(error, /credit balance|billing|quota|insufficient|RESOURCE_EXHAUSTED/i) ||
-    error.statusCode === 402
-  );
-}
-
-function badKey(error: APICallError): boolean {
-  return (
-    error.statusCode === 401 ||
-    error.statusCode === 403 ||
-    looksLike(error, /API_KEY_INVALID|api key not valid|PERMISSION_DENIED|unauthenticated/i)
-  );
-}
-
-function timedOut(cause: unknown): boolean {
-  for (let error: unknown = cause, depth = 0; error && depth < 4; depth += 1) {
-    const name = (error as { name?: unknown }).name;
-    if (name === "TimeoutError" || name === "AbortError") return true;
-    error = (error as { cause?: unknown }).cause;
-  }
-  return false;
-}
-
-function explain(cause: unknown): string {
-  if (timedOut(cause)) {
-    return `The model did not answer within ${Math.round(
-      budgetMs() / 1000,
-    )} seconds, so the request was dropped. Nothing was changed in your draft. The free tier queues in bursts and usually clears — try again in a few minutes.`;
-  }
-
-  if (APICallError.isInstance(cause)) {
-    if (badKey(cause)) {
-      return `The model provider refused the API key. Check ${critiqueModel().keyName} — retrying with the same key will not work.`;
-    }
-    if (exhausted(cause)) {
-      return "The free model allowance is used up for now. It resets — try again later, or set CRITIQUE_MODEL to a lighter model.";
-    }
-    if (cause.statusCode === 429) {
-      return "The model is rate-limited right now. Give it a minute and try again.";
-    }
-  }
-  return "The model could not be reached. Nothing was changed in your draft; try again.";
-}
-
-function statusFor(cause: unknown): number {
-  if (timedOut(cause)) return 504;
-  if (APICallError.isInstance(cause)) {
-    if (badKey(cause)) return 503;
-    if (exhausted(cause) || cause.statusCode === 429) return 429;
-  }
-  return 502;
 }

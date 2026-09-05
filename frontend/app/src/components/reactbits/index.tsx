@@ -95,7 +95,7 @@ export function CurvedMarquee({
         interactive
       />
       {/* The band is decorative motion; the words are announced once here. */}
-      <span className="sr-only">{text.replace(/\s*·\s*$/, "")}</span>
+      <span className="sr-only select-none">{text.replace(/\s*·\s*$/, "")}</span>
     </div>
   );
 }
@@ -554,7 +554,7 @@ export function SpringCountUp({
       <span aria-hidden>
         <CountUpBase to={to} separator={separator} duration={1.6} />
       </span>
-      <span className="sr-only">{to.toLocaleString(LOCALE)}</span>
+      <span className="sr-only select-none">{to.toLocaleString(LOCALE)}</span>
     </span>
   );
 }

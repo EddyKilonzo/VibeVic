@@ -68,7 +68,15 @@ export function CountUp({
         {formatted}
         {suffix}
       </span>
-      <span className="sr-only">
+      {/*
+        `select-none` alongside `sr-only`, and the pairing is the point.
+        `sr-only` hides text visually but leaves it in the selection, so
+        dragging across a dashboard figure and copying it yields the number
+        twice — "661661" rather than "661". Screen readers do not consult
+        `user-select`, so refusing the selection costs nothing this span was
+        put here to provide.
+      */}
+      <span className="sr-only select-none">
         {prefix}
         {value.toLocaleString(LOCALE)}
         {suffix}

@@ -52,6 +52,7 @@ import { Button } from "@/components/ui/Button";
 import { StoryChecks } from "@/components/admin/StoryChecks";
 import { StoryHistory } from "@/components/admin/StoryHistory";
 import { WritingCoach } from "@/components/admin/WritingCoach";
+import { StoryAssist } from "@/components/admin/StoryAssist";
 import { Scratchpad } from "@/components/admin/Scratchpad";
 import { StoryRecords } from "@/components/admin/StoryRecords";
 import { BeatOptions } from "@/components/admin/BeatOptions";
@@ -827,6 +828,32 @@ export default function StoryWorkspace({
       {/* Advice about the writing rather than about the reporting. Two halves,
           measured and modelled, never mixed — see `WritingCoach`. */}
       <WritingCoach draft={draft} />
+
+      {/* What a model can propose against this draft: where it is filed, the
+          sequence it describes, and every figure in it against the records
+          filed for it. Nothing here writes — see `StoryAssist` for why that
+          is structural rather than a promise. */}
+      <StoryAssist
+        draft={draft}
+        storyId={filedId}
+        onFile={({ beat, tags }) =>
+          /*
+           * Into the editor, not into the database. The draft's own autosave
+           * carries it from here, which means an applied filing is undoable
+           * by the same ⌘Z that undoes typing — and a writer who applies it
+           * and then changes their mind never has a saved row to correct.
+           *
+           * Tags are merged rather than replaced. A tag already on the piece
+           * was put there deliberately by a person, and a proposal is not
+           * grounds to remove it.
+           */
+          setDraft((d) => ({
+            ...d,
+            genre: beat,
+            tags: [...new Set([...d.tags, ...tags])],
+          }))
+        }
+      />
 
       {/* The same pad as the one on the ideas screen, deliberately.
 

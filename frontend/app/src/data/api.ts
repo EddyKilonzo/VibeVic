@@ -106,6 +106,66 @@ async function get<T>(path: string): Promise<T> {
   }
 }
 
+/**
+ * The other half of this file: same-origin calls to this app's own newsroom
+ * handlers, rather than to the API.
+ *
+ * ── Why these do not go through `get` ────────────────────────────────────
+ * Two differences, and both matter. The path is same-origin, so `BASE` must
+ * not be prefixed — a newsroom call sent to the API's host would arrive with
+ * no cookie and no bearer token, which is a 401 that looks like an expired
+ * session. And a 401 here is a fact about the person at the keyboard rather
+ * than about a missing record, so it gets its own sentence: the fix is to
+ * unlock the newsroom, not to reload.
+ *
+ * `lapsed` is passed in because that sentence has to name what the caller was
+ * trying to do. "Unlock it again to see drafts" is right for a list and wrong
+ * for a delete, and a shared helper that guessed would be wrong half the time.
+ */
+async function newsroom<T>(
+  path: string,
+  { lapsed, ...init }: RequestInit & { lapsed: string },
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { Accept: "application/json", ...init.headers },
+      cache: "no-store",
+    });
+  } catch (cause) {
+    const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
+    throw new ApiError(
+      timedOut
+        ? "The newsroom took too long to answer. Try again."
+        : "Could not reach the newsroom.",
+      null,
+      path,
+    );
+  }
+
+  if (!response.ok) {
+    const detail = await messageFrom(response);
+    throw new ApiError(
+      // 401 means the newsroom session has lapsed, which is a different
+      // instruction from "something broke": one is a door to reopen, the
+      // other is a thing to report.
+      response.status === 401
+        ? lapsed
+        : (detail ?? `The newsroom returned ${response.status}.`),
+      response.status,
+      path,
+    );
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiError("The newsroom's answer could not be read.", response.status, path);
+  }
+}
+
 export const api = {
   /** Published work, newest first. Summaries — bodies come with the article. */
   stories: (): Promise<StorySummary[]> => get<StorySummary[]>("/stories"),
@@ -157,45 +217,30 @@ export const api = {
    * handler at `/api/newsroom/stories` holds the credential server-side, checks
    * the newsroom cookie before using it, and returns the same shape.
    */
-  allStories: async (): Promise<StorySummary[]> => {
-    const path = "/api/newsroom/stories";
+  allStories: (): Promise<StorySummary[]> =>
+    newsroom<StorySummary[]>("/api/newsroom/stories", {
+      lapsed: "Your newsroom session has expired. Unlock it again to see drafts.",
+    }),
 
-    let response: Response;
-    try {
-      response = await fetch(path, {
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      });
-    } catch (cause) {
-      const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
-      throw new ApiError(
-        timedOut
-          ? "The newsroom took too long to answer. Try again."
-          : "Could not reach the newsroom.",
-        null,
-        path,
-      );
-    }
-
-    if (!response.ok) {
-      const detail = await messageFrom(response);
-      throw new ApiError(
-        // 401 means the newsroom session has lapsed, which is a different
-        // instruction from "something broke": one is a door to reopen, the
-        // other is a thing to report.
-        response.status === 401
-          ? "Your newsroom session has expired. Unlock it again to see drafts."
-          : (detail ?? `The newsroom returned ${response.status}.`),
-        response.status,
-        path,
-      );
-    }
-
-    try {
-      return (await response.json()) as StorySummary[];
-    } catch {
-      throw new ApiError("The newsroom's answer could not be read.", response.status, path);
-    }
-  },
+  /**
+   * Admin: destroys a draft.
+   *
+   * Only drafts, and the API is what decides that — a published piece has an
+   * address readers may hold, so it has to be taken down before it can be
+   * deleted. The refusal that says so is the API's own sentence and arrives
+   * here as an `ApiError` with a 400, which is exactly what the caller should
+   * show: it names the move that unlocks this, and that move is a control on
+   * the same screen.
+   *
+   * There is no undo, which is why this is the one call in this file the UI
+   * asks twice about before making.
+   */
+  deleteStory: (id: string): Promise<{ id: string; deleted: boolean }> =>
+    newsroom<{ id: string; deleted: boolean }>(
+      `/api/newsroom/stories/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        lapsed: "Your newsroom session has expired. Unlock it again, then try that once more.",
+      },
+    ),
 };

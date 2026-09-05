@@ -83,3 +83,40 @@ export async function PATCH(
     return errorResponse(cause);
   }
 }
+
+/**
+ * Deleting a draft.
+ *
+ * ── Why there is no confirmation step here ───────────────────────────────
+ * A DELETE that arrives is a DELETE that was meant: the confirmation is two
+ * presses of the same button in the list, which is the right place for it
+ * because that is where the writer can see what they are about to lose. A
+ * proxy that asked for a token or a `?confirm=true` would be a second lock on
+ * a door that is already locked, and the kind that gets passed automatically
+ * by the one caller that exists.
+ *
+ * ── The refusal is the API's, forwarded whole ────────────────────────────
+ * Only a draft can be deleted, and the API's 400 says which move unlocks it —
+ * take it down, or cancel the schedule. Both are controls on the screen the
+ * writer is looking at, so the sentence is the useful part of the response and
+ * `errorResponse` passes it through unedited.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  if (!(await isUnlocked())) return Response.json(LOCKED, { status: 401 });
+
+  const { id } = await params;
+
+  try {
+    return Response.json(
+      await newsroomFetch<{ id: string; deleted: boolean }>(
+        `/admin/stories/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      ),
+    );
+  } catch (cause) {
+    return errorResponse(cause);
+  }
+}

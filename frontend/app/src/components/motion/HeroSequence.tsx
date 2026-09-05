@@ -9,8 +9,15 @@ import { gsapEase, seconds, sequence } from "@/lib/motion";
  *
  * Children opt in by tagging themselves:
  *
- *   data-seq="texture" | "eyebrow" | "headline" | "support" | "cta"
- *            | "image" | "decor"
+ *   data-seq="texture" | "headline" | "image" | "support" | "cta" | "decor"
+ *
+ * A tag with nothing wearing it is not free: GSAP logs "target not found" on
+ * every render and the tween silently does nothing, so the console stops being
+ * a place a real problem stands out. "eyebrow" was one of these — the badge
+ * above the headline was taken out of the hero and the step animating it
+ * stayed behind. The 0.16s slot is still in the motion tokens, because it is
+ * part of the choreography's shape and the next thing to sit between the
+ * texture and the headline should land on it rather than invent an offset.
  *
  * Choreography is exactly what timelines are for. Expressed as seven
  * independent components each holding a hand-tuned delay, the sequence would
@@ -36,11 +43,6 @@ export function HeroSequence({ children }: { children: ReactNode }) {
           { opacity: 0, duration: seconds.slow },
           sequence.texture,
         )
-          .from(
-            "[data-seq='eyebrow']",
-            { opacity: 0, y: 10, duration: seconds.normal },
-            sequence.eyebrow,
-          )
           .from(
             "[data-seq='headline']",
             {

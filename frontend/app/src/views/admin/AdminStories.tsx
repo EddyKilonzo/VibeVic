@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Clock, EyeOff, Headphones, LayoutGrid, List, PenLine, Search } from "lucide-react";
+import { Clock, Headphones, LayoutGrid, List, PenLine, Search, Trash2 } from "lucide-react";
 import type { StorySummary, StoryStatus } from "@/data/types";
 import { ApiError, api } from "@/data/api";
 import { LOCALE, formatRelative } from "@/lib/format";
@@ -19,6 +19,79 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useTaxonomy } from "@/context/TaxonomyProvider";
 import { newsroomPath } from "@/lib/newsroom-path";
+
+/**
+ * Delete, asked twice.
+ *
+ * ── Two presses, not a modal ─────────────────────────────────────────────
+ * The same choice `AdminSettings` makes, for the same reason: a dialog that
+ * asks "are you sure?" over a row the writer can no longer see is a worse
+ * question than a button that changes into its own confirmation in place. The
+ * piece stays on screen, under the cursor, while the decision is made.
+ *
+ * The confirming state widens into a labelled button rather than only changing
+ * colour. Colour alone would be the whole signal for "this press destroys
+ * something", and it is the signal a colour-blind reader does not get.
+ *
+ * ── Why it resets on blur ────────────────────────────────────────────────
+ * An armed delete that stays armed is a trap for the next click, which may be
+ * minutes later and aimed at something else. Leaving the button disarms it, so
+ * the dangerous state cannot outlive the attention that created it.
+ */
+function DeleteDraft({
+  title,
+  busy,
+  onConfirm,
+  className,
+}: {
+  title: string;
+  busy: boolean;
+  onConfirm: () => void;
+  className?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  if (armed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setArmed(false);
+          onConfirm();
+        }}
+        onBlur={() => setArmed(false)}
+        disabled={busy}
+        autoFocus
+        aria-label={`Confirm deleting ${title || "untitled draft"}`}
+        className={cn(
+          "focus-ring tap inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-destructive px-3 text-xs font-semibold text-destructive-foreground transition-colors duration-normal disabled:opacity-60",
+          // The armed state keeps the caller's placement classes. Losing
+          // `ml-auto` here would jump the button across the row at the exact
+          // moment it is asking for a decision.
+          className,
+        )}
+      >
+        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+        {busy ? "Deleting…" : "Delete for good"}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setArmed(true)}
+      disabled={busy}
+      aria-label={`Delete ${title || "untitled draft"}`}
+      className={cn(
+        "focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-destructive/10 hover:text-destructive",
+        className,
+      )}
+    >
+      <Trash2 className="h-4 w-4" aria-hidden />
+    </button>
+  );
+}
 
 /**
  * Status pills.
@@ -98,8 +171,18 @@ export default function AdminStories() {
    * having no choice at all.
    */
   const [view, setView] = useLocalStorage<"list" | "grid">("vv:admin-stories-view", "list");
-  /** Locally removed rows — the seed data itself is never mutated. */
+  /**
+   * Takes a deleted row out of the list.
+   *
+   * Local rather than a reload, and it is worth saying why the optimistic move
+   * is safe here when it usually is not: the request has already come back
+   * 200. There is no window in which the screen claims something the server
+   * has not done. A `reload()` would be a second round trip to learn a fact
+   * this component was just told.
+   */
   const [removed, setRemoved] = useState<string[]>([]);
+  /** The row a delete is in flight for, so its button can say so. */
+  const [busy, setBusy] = useState<string | null>(null);
   const reduced = useReducedMotion();
 
   const stories = useMemo(() => {
@@ -115,29 +198,44 @@ export default function AdminStories() {
   }, [data, removed, status, query]);
 
   /**
-   * Hides a row from this list. It does not delete anything, and no longer
-   * says it does.
+   * Deletes a draft, for real, and says so.
    *
-   * ── Why this is not wired to the API ─────────────────────────────────────
-   * There is no delete on `/admin/stories`, and its absence is not an oversight
-   * to be filled in from here. A published story has an address readers have
-   * saved and search engines hold; quotes, evidence and timeline events carry
-   * `storyIds` pointing at it. Removing the row is the easy part of a decision
-   * that also has to answer what those links become and what the old URL says —
-   * the same shape of argument the API made for holding `publish` back until
-   * all three of its parts could land together.
+   * ── What this replaces ───────────────────────────────────────────────────
+   * A trash can that hid a row for the session and a comment explaining that
+   * there was no delete on `/admin/stories` — because a delete had to answer
+   * what the links pointing at a story become and what its old public address
+   * says afterwards. Both have answers now. The links are settled in the
+   * schema, cascade by cascade; the address question is settled by only ever
+   * deleting drafts, which have never had an address. The API enforces that
+   * and this screen never has to argue about it.
    *
-   * So the control does what it can honestly do: it takes a piece out of the
-   * writer's way for this session. The label says "Hide", the toast says where
-   * it went, and nothing claims a deletion that did not happen — which is the
-   * bug this replaces, where a trash can quietly hid a story and a reload
-   * brought it back.
+   * ── Why the button is only on drafts ─────────────────────────────────────
+   * Offering it everywhere and letting the API refuse would mean a writer
+   * confirms a destructive action and *then* learns it was never available —
+   * a confirmation dialog that turns out to have been rhetorical. A published
+   * piece is taken down from the editor first, and the control that does that
+   * lives beside the words, which is where the decision belongs.
+   *
+   * The old per-row "Hide" is gone with it. Its job was to get a piece out of
+   * the way, and the search box and the status filter above do that better and
+   * survive a reload.
    */
-  const remove = (story: StorySummary) => {
-    setRemoved((prev) => [...prev, story.id]);
-    notify.undo(`“${story.title}” hidden from this list`, () =>
-      setRemoved((prev) => prev.filter((id) => id !== story.id)),
-    );
+  const remove = async (story: StorySummary) => {
+    setBusy(story.id);
+    try {
+      await api.deleteStory(story.id);
+      setRemoved((prev) => [...prev, story.id]);
+      notify.success(`“${story.title || "Untitled draft"}” deleted`, "The draft is gone for good.");
+    } catch (cause) {
+      // The API's own sentence, which for the one refusal that can reach here
+      // names the move that unlocks it. Worth more than "could not delete".
+      notify.error(
+        "The draft is still here",
+        cause instanceof ApiError ? cause.message : "Could not reach the newsroom.",
+      );
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -324,14 +422,14 @@ export default function AdminStories() {
                           {story.stats.listens.toLocaleString(LOCALE)}
                         </span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => remove(story)}
-                        aria-label={`Hide ${story.title} from this list`}
-                        className="focus-ring tap-square ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-muted hover:text-primary"
-                      >
-                        <EyeOff className="h-4 w-4" aria-hidden />
-                      </button>
+                      {story.status === "draft" && (
+                        <DeleteDraft
+                          title={story.title}
+                          busy={busy === story.id}
+                          onConfirm={() => void remove(story)}
+                          className="ml-auto"
+                        />
+                      )}
                     </div>
                   </div>
                 </motion.li>
@@ -410,14 +508,14 @@ export default function AdminStories() {
 
                       <StatusPill status={story.status} />
 
-                      <button
-                        type="button"
-                        onClick={() => remove(story)}
-                        aria-label={`Hide ${story.title} from this list`}
-                        className="focus-ring tap-square flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-normal hover:bg-muted hover:text-primary md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
-                      >
-                        <EyeOff className="h-4 w-4" aria-hidden />
-                      </button>
+                      {story.status === "draft" && (
+                        <DeleteDraft
+                          title={story.title}
+                          busy={busy === story.id}
+                          onConfirm={() => void remove(story)}
+                          className="md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+                        />
+                      )}
                     </div>
                   </div>
                 </motion.li>

@@ -26,6 +26,11 @@
      * only thing that has to carry the identity.
      */
     --background: 205 45% 99%;        /* ice, one step off white */
+    /* The same value, kept where the hero can still see it. `.hero-panel`
+       shadows `--background` with its navy so that the buttons and chips
+       inside it paint correctly, which means the panel cannot ask for the
+       colour of the page it is sitting on. This can. */
+    --page-ground: 205 45% 99%;
     --foreground: 216 48% 13%;        /* navy-ink, not black */
     --card: 0 0% 100%;                /* pure white, so cards lift off it */
     --card-foreground: 216 48% 13%;
@@ -929,9 +934,23 @@
 
     /* The comb, inverted. `--primary` is white in here, so the derived value
        would already have been close — it is written out so that the texture
-       does not silently change if the button colours are ever retuned. */
-    --comb-ink: hsl(0 0% 100% / 0.05);
-    --comb-ink-strong: hsl(0 0% 100% / 0.075);
+       does not silently change if the button colours are ever retuned.
+
+       Raised from 5%/7.5%. At the inherited weights the lattice was legible
+       only in the lightest corner of the mesh and vanished entirely across
+       the deep bottom-left, so the hero read as flat colour with an artefact
+       in one corner rather than as stock with a weave. These weights carry it
+       across the whole panel.
+
+       Raised *here* and not on `--comb-ink-strong` globally, which is
+       deliberate: that token is also worn by stat cards, empty states and the
+       About page's panels, all of which carry body copy at reading size. The
+       rule this file states — a texture you notice on an article page is a
+       texture competing with the article — still holds everywhere the reader
+       is reading. The hero is the one full-bleed surface with nothing on it
+       but display type, which is exactly the case `-strong` was made for. */
+    --comb-ink: hsl(0 0% 100% / 0.085);
+    --comb-ink-strong: hsl(0 0% 100% / 0.135);
 
     color: hsl(var(--foreground));
     background:
@@ -955,6 +974,49 @@
        a full-bleed slab it drew a box around the whole viewport. What is left
        is the seam between the hero and the page under it. */
     box-shadow: inset 0 -1px 0 hsl(0 0% 100% / 0.12);
+
+    /*
+     * ── The hero dissolves instead of ending on a ruled line ─────────────
+     * A hard edge between a saturated navy and a near-white ground is the
+     * highest-contrast boundary on the site, and the eye reads it as a seam
+     * between two documents rather than one page changing key. This ramp
+     * spends the last ~140px getting there, which is long enough to read as
+     * light falling off and short enough that the hero still has a floor.
+     *
+     * ── Why it is on `::after` and not `::before` ────────────────────────
+     * `::before` is not free: `.honeycomb` draws the lattice there, and
+     * `.hero-panel` always carries both classes. A `.hero-panel::before` with
+     * a background wins on source order, replaces the masked lattice with a
+     * gradient and takes the texture off the hero entirely — which looks like
+     * a working fade until you notice the honeycomb only survives inside the
+     * band. `::after` already exists here for the hairline, sits at the same
+     * `z-index: -1`, and paints after `::before` in tree order: above the
+     * lattice, below every word.
+     *
+     * `--page-ground` rather than `--background`, because inside `.hero-panel`
+     * that token is the navy. Fading to it would fade the hero to the hero.
+     *
+     * Anchored with `background-size` rather than written as stops in a
+     * full-height gradient, so the ramp is the same depth on the 100svh home
+     * hero and the 70svh inner ones. As stops it would be proportional, and
+     * the shallower heroes would dissolve for a third of their height.
+     *
+     * Six stops rather than two: a straight ramp between colours this far
+     * apart bands visibly at its midpoint, which is the artefact that makes
+     * naive gradients look striped.
+     */
+    background-image: linear-gradient(
+      to bottom,
+      hsl(var(--page-ground) / 0) 0%,
+      hsl(var(--page-ground) / 0.05) 26%,
+      hsl(var(--page-ground) / 0.2) 50%,
+      hsl(var(--page-ground) / 0.52) 73%,
+      hsl(var(--page-ground) / 0.84) 89%,
+      hsl(var(--page-ground)) 100%
+    );
+    background-repeat: no-repeat;
+    background-position: bottom center;
+    background-size: 100% clamp(96px, 18%, 200px);
   }
 
   /*

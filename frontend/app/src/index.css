@@ -801,6 +801,23 @@
   .container-site {
     @apply mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-12;
   }
+  /*
+   * A wider measure, for the pages that are a grid of cards and nothing else.
+   *
+   * `container-site` is set for pages that mix cards with prose, where 1440px
+   * is already at the limit of what a heading can span before it stops
+   * scanning as one line. The archive has no prose in it: past the filter bar
+   * it is cards all the way down, and on a wide display the site measure left
+   * a corridor of empty ground down both sides while the cards themselves
+   * were narrower than the pictures they hold.
+   *
+   * Deliberately a second class rather than a change to the first. Widening
+   * `container-site` would widen the article furniture, the About page and
+   * every hero along with it, which is a different decision and a worse one.
+   */
+  .container-wide {
+    @apply mx-auto w-full max-w-[1680px] px-5 sm:px-8 lg:px-12;
+  }
   /* The reading measure is a typographic constraint, not a layout one: it
      stays near 70 characters however wide the site container gets. */
   .container-article {

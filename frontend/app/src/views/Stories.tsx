@@ -65,7 +65,7 @@ export default function Stories() {
         }
       />
 
-      <div className="container-site">
+      <div className="container-wide">
 
       {/* Filters */}
       <Reveal variant="fade-up" delay={80} className="mt-10 border-y border-border py-4">
@@ -256,8 +256,28 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "focus-ring press tap relative inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-normal",
-        active ? "text-primary-foreground" : "text-muted-foreground hover:text-primary",
+        "focus-ring press tap relative inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors",
+        /*
+         * ── The label waits for the pill ─────────────────────────────────
+         * The pill is a `layoutId` shared element: it leaves the old chip and
+         * slides to the new one over 320ms. The label's colour was crossfading
+         * to white on the same tick the class flipped, which meant that for
+         * the whole of that slide the newly-chosen beat was white text on the
+         * near-white page — the one chip the reader was looking at was the one
+         * they could not read, and it looked like the filter had blanked.
+         *
+         * Delaying only the incoming direction fixes it without slowing
+         * anything down. Activating holds the dark label until the pill has
+         * essentially arrived, then switches under it; de-activating carries
+         * no delay, because the pill has already left and the label needs to
+         * be dark again immediately. The two are different events and CSS
+         * lets them have different timings — the delay lives on the active
+         * class, so it applies when that class is being gained and not when
+         * it is being lost.
+         */
+        active
+          ? "text-primary-foreground delay-[260ms] duration-100"
+          : "text-muted-foreground duration-normal hover:text-primary",
         className,
       )}
     >

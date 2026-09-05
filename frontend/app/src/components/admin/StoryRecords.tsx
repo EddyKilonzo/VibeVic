@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useCan } from "@/components/admin/SessionContext";
 import { useNewsroom } from "@/data/newsroom/useNewsroom";
 import type { ListKey } from "@/data/newsroom/store";
+import { StorySequence } from "@/components/admin/StorySequence";
 import { Transcribe } from "@/components/admin/Transcribe";
 import { RecordPanel } from "@/components/admin/RecordPanel";
 import { WorkspaceTabs } from "@/components/admin/WorkspaceTabs";
@@ -147,6 +148,14 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
           tab from interviews — so putting the recorder inside either one would
           file its output somewhere the writer was not looking. Here it belongs
           to the reporting record as a whole, which is what it actually feeds. */}
+      {/* The events filed against this piece, in the order they happened.
+
+          The timeline tab above can create and edit them; this is the only
+          place they can be read as a sequence, which is the one thing a
+          timeline is for. It renders nothing until there is something to
+          show — see `StorySequence`. */}
+      <StorySequence storyId={storyId} />
+
       <Transcribe storyId={storyId} />
     </section>
   );

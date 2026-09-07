@@ -49,12 +49,18 @@ export function PublishControls({
   status,
   publishedAt,
   onChanged,
+  flush,
 }: {
   /** Null until the piece has been filed and has a record to point at. */
   storyId: string | null;
   status: Story["status"];
   publishedAt: string;
   onChanged: (story: Story) => void;
+  /**
+   * Sends anything the editor has not sent yet, and resolves when it has
+   * landed. See the note in `run` for why publishing waits on it.
+   */
+  flush?: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState<Action | null>(null);
   const [picking, setPicking] = useState(false);
@@ -71,6 +77,29 @@ export function PublishControls({
 
     setBusy(action);
     try {
+      /*
+       * Everything typed goes to the server before the piece does.
+       *
+       * Publishing does not carry the words — it flips two columns on the row
+       * as the row currently stands — and the editor's autosave is on a
+       * debounce. So a writer who finishes the last sentence and reaches
+       * straight for Publish, which is the ordinary way this button gets
+       * pressed, was publishing the draft as it was a second and a bit ago.
+       * The missing sentence did arrive when the debounce expired, but it
+       * arrived after readers could already open the piece.
+       *
+       * Awaiting the flush costs a moment on the one press where correctness
+       * is least negotiable, and it is not merely cosmetic: the save is also
+       * what advances the version token, so the write and the transition go in
+       * the order the API's concurrency check expects.
+       *
+       * Not conditional on the outcome. A failed save leaves the indicator
+       * saying so and the words on the device, and a writer who publishes
+       * anyway has made a choice this control has no business overriding —
+       * what it must not do is publish *without having tried*.
+       */
+      await flush?.();
+
       const response = await fetch(
         `/api/newsroom/stories/${encodeURIComponent(storyId)}/publish`,
         {

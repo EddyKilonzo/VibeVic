@@ -753,6 +753,7 @@ export default function StoryWorkspace({
                 status={draft.status}
                 publishedAt={draft.publishedAt}
                 onChanged={applyTransition}
+                flush={saveNow}
               />
             ) : (
               <p className="max-w-[24ch] text-[11px] leading-snug text-muted-foreground">

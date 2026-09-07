@@ -49,48 +49,105 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, dela
     latest.current = value;
   }, [value]);
 
+  /*
+   * The save function, read at the moment it is called rather than captured.
+   *
+   * Call sites rebuild it on every render, and `flush` below is deliberately
+   * built once so that neither the debounce nor the ⌘S binding is torn down
+   * and rebuilt while somebody is typing. Holding it in a ref is what lets
+   * both of those be stable without any of them going stale — and it is the
+   * honest version of the `exhaustive-deps` suppressions that used to stand
+   * here saying the same thing in a comment.
+   */
+  const saver = useRef(save);
+  useEffect(() => {
+    saver.current = save;
+  }, [save]);
+
   /** The pending debounce, so an explicit save can cancel it. */
   const timer = useRef<number | null>(null);
-  /** Guards against a flush landing on top of a save already in flight. */
-  const inFlight = useRef(false);
+  /**
+   * The run that is talking to the server right now, if there is one.
+   *
+   * A promise rather than a boolean because callers wait on it: the publish
+   * control awaits `saveNow` before it asks the server to put the piece in
+   * front of readers, and "a save is happening" is not an answer it can use.
+   * Held until the run has nothing left queued, so what it resolves to is
+   * "everything typed up to now has been sent", which is the thing worth
+   * waiting for.
+   */
+  const running = useRef<Promise<void> | null>(null);
+  /** The value moved on while that run was in flight, and still needs sending. */
+  const queued = useRef(false);
 
   /**
-   * Save now, without waiting out the debounce.
+   * Save what is on screen now, without waiting out the debounce.
    *
-   * ── Why this exists when everything is saved anyway ──────────────────────
-   * Because ⌘S is a reflex, and the editor's answer to it was the browser's
-   * "save this page" dialog — which is both useless and slightly alarming, in
-   * a tool where the thing you are trying to protect is a draft. Autosave is
-   * the right design and the indicator does say where the words are, but a
-   * writer who has just typed something they care about wants to *do*
-   * something about it, and telling them the software has it under control is
-   * not the same as letting them check.
+   * ── Why an edit made during a save must not be dropped ───────────────────
+   * This guard used to be `if (inFlight.current) return`, in both the debounce
+   * and the explicit save, and it lost work. A save to Neon can take longer
+   * than the 1200ms debounce — a cold connection routinely does — and a writer
+   * who keeps typing through one produces exactly the sequence it mishandled:
+   * a save goes out, more words are typed, the next debounce expires while the
+   * first request is still open, and the guard returned. Nothing rescheduled
+   * it. The first save then resolved, and the indicator said "Saved".
    *
-   * So the keystroke is honoured rather than swallowed: it cancels the pending
-   * timer and saves immediately, which is what the writer asked for and is
-   * also strictly cheaper than the debounce it replaced.
+   * So the words were on neither the server nor the device — `writeDraft` runs
+   * inside the save that never ran — while the screen reported them safe,
+   * which is the one failure this indicator exists to make impossible.
+   *
+   * Coalescing rather than dropping: a save that arrives during another one
+   * sets a flag, and the loop below re-reads `latest` and goes again when the
+   * request in flight settles. Only one request is ever open, the last one
+   * always carries the newest text, and "Saved" is only said when nothing is
+   * still waiting to go.
+   *
+   * ── Why the retry also happens after a failure ───────────────────────────
+   * Because the queued value is newer than the one that just failed, and the
+   * call site writes to the device before it touches the network — so the
+   * extra pass is what puts the newest words somewhere at all. It cannot spin:
+   * the flag is only ever set by a debounce expiring or a ⌘S, so each of those
+   * buys exactly one more attempt.
    */
-  const saveNow = useCallback(async () => {
-    if (inFlight.current) return;
+  const flush = useCallback((): Promise<void> => {
     if (timer.current !== null) {
       window.clearTimeout(timer.current);
       timer.current = null;
     }
 
-    inFlight.current = true;
-    setStatus("saving");
-    try {
-      await save(latest.current);
-      setStatus("saved");
-      setSavedAt(new Date());
-    } catch {
-      setStatus("error");
-    } finally {
-      inFlight.current = false;
+    // Already saving: add this to what that run still has to do, and hand back
+    // the run itself so a caller that awaits gets the newest text, not the
+    // request that happened to be open when it asked.
+    if (running.current) {
+      queued.current = true;
+      return running.current;
     }
-    // `save` is recreated per render at most call sites; it is read at call
-    // time rather than captured, for the same reason the debounce does.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const run = (async () => {
+      try {
+        do {
+          // Cleared before the request, so anything arriving while it is open
+          // is seen as new work rather than as the work being done right now.
+          queued.current = false;
+          setStatus("saving");
+          try {
+            await saver.current(latest.current);
+            // Only the pass that leaves nothing behind gets to say "Saved".
+            if (!queued.current) {
+              setStatus("saved");
+              setSavedAt(new Date());
+            }
+          } catch {
+            if (!queued.current) setStatus("error");
+          }
+        } while (queued.current);
+      } finally {
+        running.current = null;
+      }
+    })();
+
+    running.current = run;
+    return run;
   }, []);
 
   useEffect(() => {
@@ -100,20 +157,9 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, dela
     if (Object.is(loaded.current, value)) return;
 
     setStatus("unsaved");
-    const id = window.setTimeout(async () => {
+    const id = window.setTimeout(() => {
       timer.current = null;
-      if (inFlight.current) return;
-      inFlight.current = true;
-      setStatus("saving");
-      try {
-        await save(latest.current);
-        setStatus("saved");
-        setSavedAt(new Date());
-      } catch {
-        setStatus("error");
-      } finally {
-        inFlight.current = false;
-      }
+      void flush();
     }, delayMs);
     timer.current = id;
 
@@ -121,9 +167,7 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, dela
       window.clearTimeout(id);
       if (timer.current === id) timer.current = null;
     };
-    // `save` is recreated per render in most call sites; `value` is the signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, delayMs]);
+  }, [value, delayMs, flush]);
 
-  return { status, savedAt, saveNow } as const;
+  return { status, savedAt, saveNow: flush } as const;
 }

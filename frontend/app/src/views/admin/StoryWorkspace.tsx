@@ -68,6 +68,7 @@ import { WritingCoach } from "@/components/admin/WritingCoach";
 import { StoryAssist } from "@/components/admin/StoryAssist";
 import { Scratchpad } from "@/components/admin/Scratchpad";
 import { StoryRecords } from "@/components/admin/StoryRecords";
+import { WorkspacePanel, WorkspaceTabs } from "@/components/admin/WorkspaceTabs";
 import { BeatOptions } from "@/components/admin/BeatOptions";
 import { newsroomPath } from "@/lib/newsroom-path";
 
@@ -93,7 +94,7 @@ function emptyBlock(type: BlockType): Block {
     case "list":
       return { id, type, items: [""] };
     case "image":
-      return { id, type, src: id, alt: "", caption: "" };
+      return { id, type, src: id, alt: "", caption: "", credit: "" };
     case "divider":
       return { id, type };
     default:
@@ -111,6 +112,29 @@ function emptyBlock(type: BlockType): Block {
  * is now the fork.
  */
 type Landing = "server" | "device" | "conflict";
+
+/**
+ * The column's panels, in the order a piece is worked on.
+ *
+ * Records first because it is the only one answering a question asked while a
+ * sentence is being written; History and the two sets of findings are what you
+ * open when you pause; Assist is a proposal you ask for; the Pad is the one
+ * thing here that is not about this piece at all.
+ *
+ * No counts. `WorkspaceTabs` will draw one, and the records strip inside the
+ * first panel uses them properly — but a number beside "Checks" would be a
+ * count of findings, and putting a running tally of what is wrong with a draft
+ * in permanent view of the person writing it is the opposite of what the
+ * checks are for. They are refusable observations, not a score.
+ */
+const PANELS = [
+  { id: "records", label: "Records" },
+  { id: "history", label: "History" },
+  { id: "checks", label: "Checks" },
+  { id: "coach", label: "Coach" },
+  { id: "assist", label: "Assist" },
+  { id: "pad", label: "Pad" },
+];
 
 const BLANK: Story = {
   id: "new",
@@ -239,7 +263,21 @@ export default function StoryWorkspace({
    * was typing.
    */
   const canCreate = useRef(apiReachable);
-  canCreate.current = apiReachable;
+  /*
+   * Synced after the commit, not during render.
+   *
+   * `canCreate.current = apiReachable` sat in the render body and was the same
+   * bug in miniature that the ref exists to avoid: a render React discards —
+   * a concurrent interruption, a StrictMode double pass — still leaves the
+   * write behind, so the value `save` reads can come from a render that never
+   * reached the screen. An effect only runs for a render that committed, which
+   * is the one the writer is actually looking at. Autosave is on a 1200ms
+   * debounce and fires from a timer, so the effect has always flushed long
+   * before `save` reads this.
+   */
+  useEffect(() => {
+    canCreate.current = apiReachable;
+  }, [apiReachable]);
 
   // Switching to a different story loads that story's draft. Tracked by id
   // rather than by object identity, so a re-render of the same piece can never
@@ -248,16 +286,42 @@ export default function StoryWorkspace({
   if (existing && existing.id !== loadedId) {
     setLoadedId(existing.id);
     setDraft({ ...existing, body: [...existing.body] });
-    // The identity and the version travel with the story, not with the mount.
-    // Leaving them behind would send the next save to the previous piece's row
-    // carrying the previous piece's timestamp — a 409 if you are lucky, and an
-    // overwrite of the wrong article if you are not.
-    recordId.current = existing.id;
-    version.current = existing.updatedAt;
     setFiledId(existing.id);
     setLanding(null);
     setLandingMessage(null);
   }
+
+  /**
+   * The identity and the version travel with the story, not with the mount.
+   *
+   * Leaving them behind would send the next save to the previous piece's row
+   * carrying the previous piece's timestamp — a 409 if you are lucky, and an
+   * overwrite of the wrong article if you are not.
+   *
+   * ── Why an effect, and why keyed on the two values rather than the prop ──
+   * These two writes used to sit in the render body above, beside the state
+   * adjustment. Adjusting state during render is a pattern React sanctions;
+   * writing a ref during render is not, and the difference matters here — a
+   * render that is thrown away takes its `setState` calls with it but leaves
+   * its ref writes standing, which is precisely how `version` would come to
+   * hold a timestamp belonging to a story the editor is not showing.
+   *
+   * Keyed on `existing.id` and `existing.updatedAt` rather than on `existing`,
+   * because the route hands down a fresh object on every render and this must
+   * not re-run on one: `save` advances `version` to what the server just
+   * returned, and re-running here would put the older seeded timestamp back
+   * and make the next save a conflict. Two primitives compare by value, so
+   * this fires when the story genuinely changes and at no other time — which
+   * is also why the save path deliberately uses `history.replaceState` rather
+   * than `router.replace`, and so never re-seeds this prop at all.
+   */
+  const seededId = existing?.id;
+  const seededVersion = existing?.updatedAt;
+  useEffect(() => {
+    if (!seededId) return;
+    recordId.current = seededId;
+    version.current = seededVersion ?? null;
+  }, [seededId, seededVersion]);
 
   /**
    * Autosave.
@@ -351,7 +415,34 @@ export default function StoryWorkspace({
     if (!onDevice) throw new Error(outcome.message);
   }, []);
 
-  const { status, savedAt } = useAutosave(draft, save);
+  const { status, savedAt, saveNow } = useAutosave(draft, save);
+
+  /**
+   * ⌘S / Ctrl+S saves now instead of opening the browser's save dialog.
+   *
+   * Autosave already has the words — the point of catching this is not to add
+   * a save that would not otherwise happen, it is that the keystroke is a
+   * reflex and the answer to a reflex should not be a "save this page" sheet
+   * over a draft. Honouring it costs nothing, cancels a debounce that was
+   * about to fire anyway, and turns a moment of doubt into the indicator
+   * moving to "Saved".
+   *
+   * Bound on the window rather than on the editor, because the reflex arrives
+   * with the caret anywhere on the screen — in the headline field, in a record
+   * panel, or nowhere at all after a scroll.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
+      // Shift and Alt are somebody else's shortcut; only the bare one is ours.
+      if (event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      void saveNow();
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [saveNow]);
 
   /**
    * A local draft newer than the seed copy.
@@ -503,6 +594,33 @@ export default function StoryWorkspace({
    * a control that would be refused is put in front of somebody.
    */
   const canPublish = useCan("stories:publish");
+
+  /**
+   * Which of the column's panels is open.
+   *
+   * ── Why this is a strip and not six stacked cards ────────────────────────
+   * These six moved beside the draft rather than under it, which fixed the
+   * original complaint — the reporting behind a piece was a scroll away from
+   * the sentence that needed it. It did not fix the second half of it. Six
+   * panels stacked in a 5/12 column are still six panels deep, and the pad at
+   * the bottom was now behind a scroll through a records table, a version
+   * list, two sets of findings and a page of proposals, in a column narrower
+   * than the one they came from.
+   *
+   * A strip makes all six one press. It is also the pattern this screen
+   * already speaks: the collections inside the records panel are tabs, and so
+   * are Records and Curation, so nothing new is being introduced — the same
+   * control is being applied one level up.
+   *
+   * Records is the landing panel because it is the one that answers a
+   * question asked *while writing a sentence*; the other five are things you
+   * go and look at when you pause.
+   *
+   * The ids deliberately do not collide with the collection keys used by the
+   * strip nested inside the records panel — `WorkspacePanel` builds its ARIA
+   * ids from the tab id alone, so two strips on one screen must not share one.
+   */
+  const [panel, setPanel] = useState("records");
 
   /**
    * What the server said the piece's state now is.
@@ -900,33 +1018,65 @@ export default function StoryWorkspace({
           ever does, and the attribute costs nothing until then. */}
         <div
           data-lenis-prevent
-          className="lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100svh-3rem)] lg:overflow-y-auto lg:pr-1"
+          className={cn(
+            "lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100svh-3rem)] lg:overflow-y-auto lg:pr-1",
+            /*
+             * Each panel's component still draws itself as a card with its own
+             * leading margin — and, in the records panel's case, a top rule —
+             * because it was written to be one of six stacked in a column.
+             * Inside a tab panel that opening gap is a second separator under
+             * the strip's own rule. Neutralised here, on the one container
+             * that knows these are now panels, rather than by editing the
+             * first line of five components that are otherwise untouched.
+             */
+            "[&_[role=tabpanel]>section]:mt-0 [&_[role=tabpanel]>section]:border-t-0 [&_[role=tabpanel]>section]:pt-0",
+          )}
         >
-          {/* The deterministic checks, reading the live draft. Collapsed until
-          asked for — see the note in the component. */}
+          {/* Sticky inside the column's own scroller, so the strip stays put
+              while a long records table or a page of proposals scrolls under
+              it. Without this the way back to another panel scrolls off the
+              top and the column is a stack again. */}
+          <WorkspaceTabs
+            tabs={PANELS}
+            active={panel}
+            onChange={setPanel}
+            label="The work behind this draft"
+            layoutId="story-panels-tab"
+            className="sticky top-0 z-10 bg-background"
+          />
           {/* The reporting behind the piece — sources, quotes, interviews,
           evidence, the timeline, notes and what is due. Beside the draft
           rather than in front of it: see `StoryRecords`. */}
-          <StoryRecords storyId={filedId} />
+          <WorkspacePanel id="records" active={panel}>
+            <StoryRecords storyId={filedId} />
+          </WorkspacePanel>
 
           {/* Earlier versions, and a way back to one. Restoring loads the older
           copy into the editor unsaved — see `StoryHistory` for why it does
           not write on its own. */}
-          <StoryHistory
-            storyId={filedId}
-            onRestore={(copy) => setDraft((d) => ({ ...d, ...copy }))}
-          />
+          <WorkspacePanel id="history" active={panel}>
+            <StoryHistory
+              storyId={filedId}
+              onRestore={(copy) => setDraft((d) => ({ ...d, ...copy }))}
+            />
+          </WorkspacePanel>
 
-          <StoryChecks draft={draft} />
+          {/* The deterministic checks, reading the live draft. */}
+          <WorkspacePanel id="checks" active={panel}>
+            <StoryChecks draft={draft} />
+          </WorkspacePanel>
 
           {/* Advice about the writing rather than about the reporting. Two halves,
           measured and modelled, never mixed — see `WritingCoach`. */}
-          <WritingCoach draft={draft} />
+          <WorkspacePanel id="coach" active={panel}>
+            <WritingCoach draft={draft} />
+          </WorkspacePanel>
 
           {/* What a model can propose against this draft: where it is filed, the
           sequence it describes, and every figure in it against the records
           filed for it. Nothing here writes — see `StoryAssist` for why that
           is structural rather than a promise. */}
+          <WorkspacePanel id="assist" active={panel}>
           <StoryAssist
             draft={draft}
             storyId={filedId}
@@ -948,15 +1098,18 @@ export default function StoryWorkspace({
               }))
             }
           />
+          </WorkspacePanel>
 
           {/* The same pad as the one on the ideas screen, deliberately.
 
-          It sits last because it is the only panel here that is not about this
-          piece: everything above describes the draft, and this is where the
-          thought that arrived *while* working on the draft goes when it turns
-          out to be about something else. Material that does belong to this
-          piece has a home a few panels up, under "The reporting behind it". */}
-          <Scratchpad />
+          It is the last tab because it is the only panel here that is not
+          about this piece: every other one describes the draft, and this is
+          where the thought that arrived *while* working on the draft goes
+          when it turns out to be about something else. Material that does
+          belong to this piece has a tab of its own, under Records. */}
+          <WorkspacePanel id="pad" active={panel}>
+            <Scratchpad />
+          </WorkspacePanel>
         </div>
       </div>
     </div>
@@ -1888,6 +2041,23 @@ function BlockEditor({
             onFocus={onFocus}
             onBlur={onBlur}
             placeholder="Caption — read aloud with the article"
+            className={cn(shared, "text-xs")}
+          />
+          {/* Its own field, not the tail of the caption.
+
+              The imported archive keeps both in `caption`, joined with a
+              slash, and reads back as one run of small caps with no space
+              around the separator. Typing the credit here instead means the
+              renderer can set it as attribution — quietly, in small caps,
+              after the sentence — rather than guessing where the sentence
+              ended. See `splitLegacyCaption` for what happens to the blocks
+              that were imported before this field existed. */}
+          <input
+            value={block.credit ?? ""}
+            onChange={(e) => onChange({ credit: e.target.value } as Partial<Block>)}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            placeholder="Credit — who made the picture"
             className={cn(shared, "text-xs")}
           />
           <input

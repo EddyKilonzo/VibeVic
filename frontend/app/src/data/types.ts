@@ -36,7 +36,15 @@ export interface ImageBlock extends BaseBlock {
   /** Seed for generated cover art, or a real URL once uploads exist. */
   src: string;
   alt: string;
+  /** What the picture shows. A sentence, read aloud with the article. */
   caption?: string;
+  /**
+   * Who made it. Separate from the caption because it is attribution rather
+   * than reporting — see the note on the same field in the API's
+   * `story-block.ts`, and `splitLegacyCaption` for how imported blocks that
+   * still carry both in `caption` are read.
+   */
+  credit?: string;
 }
 
 export interface ListBlock extends BaseBlock {

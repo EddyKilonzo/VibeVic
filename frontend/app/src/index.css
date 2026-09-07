@@ -420,16 +420,35 @@
     hanging-punctuation: first last;
   }
 
+  /*
+   * The indent marks the paragraph, and nothing else does.
+   *
+   * This carried `mb-3` as well, which is two conventions arguing: a book
+   * indents and closes the paragraphs up, the web spaces them and sets them
+   * flush. Doing both marks every break twice and leaves a 12px gap that is
+   * too small to read as a break and too large to read as continuous
+   * setting — the page ends up looking loosely typed rather than either.
+   *
+   * The indent is the one to keep here, because the piece already opens like
+   * a book: a drop cap, a small-caps first line, an asterism for a section
+   * break and centred quotations. Every other block in this stylesheet
+   * carries its own vertical margin, so a paragraph followed by a heading,
+   * a figure, a list or a rule still gets its air from the thing after it.
+   *
+   * ── And why the text is no longer justified ─────────────────────────
+   * It was `text-align: justify; hyphens: auto` from 640px up. Justification
+   * is what a newspaper does, and it works there because the column is
+   * narrow *and* a typesetter is choosing the breaks. A browser has neither:
+   * it hyphenates greedily on a 62-character measure, which on this article
+   * meant a broken word every two or three lines — "auto-phobia",
+   * "vulnera-ble", "at-tributed" in four consecutive paragraphs — and the
+   * uneven word spacing that comes with forcing every line to the same
+   * width. Ragged-right costs the page a straight edge it never needed and
+   * gives back an even colour and whole words.
+   */
   .article-body p {
-    @apply mb-3;
+    margin-bottom: 0;
     text-indent: 1.4em;
-  }
-  @media (min-width: 640px) {
-    .article-body p {
-      text-align: justify;
-      hyphens: auto;
-      -webkit-hyphens: auto;
-    }
   }
 
   .article-body > p:first-of-type,
@@ -525,10 +544,22 @@
     text-indent: 0;
   }
 
+  /*
+   * The caption is a sentence; only the credit is set in small caps.
+   *
+   * `font-variant-caps: small-caps` used to sit on the whole figcaption,
+   * which was fine while a caption was four words and wrong the moment it was
+   * a clause — small caps have no ascenders or descenders to give a line its
+   * shape, so a full sentence in them is read letter by letter. The credit is
+   * exactly the kind of short, repeated, non-narrative string they suit.
+   */
   .article-body figcaption {
+    text-indent: 0;
+  }
+  .article-body .figure-credit {
     font-variant-caps: small-caps;
     letter-spacing: 0.05em;
-    text-indent: 0;
+    opacity: 0.8;
   }
   .article-body a {
     @apply text-accent underline decoration-brand-sky underline-offset-4 hover:text-primary;

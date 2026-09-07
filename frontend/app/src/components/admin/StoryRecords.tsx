@@ -132,6 +132,12 @@ export function StoryRecords({ storyId }: { storyId: string | null }) {
           }))}
           active={active}
           onChange={(id) => setActive(id as RecordKey)}
+          label="Collections filed against this story"
+          // Its own underline. The workspace column now carries a strip of its
+          // own above this one, and Motion matches `layoutId` across the whole
+          // tree — sharing the default would send one underline flying between
+          // the two strips every time either changed.
+          layoutId="story-records-tab"
         />
       </div>
 

@@ -9,6 +9,23 @@ const KEY = "vv:reading-position";
 const FLOOR = 0.08;
 const CEILING = 0.94;
 
+/**
+ * Shorter than this, and resuming is not worth offering.
+ *
+ * The mark is still kept — an archive should be able to say a three-minute
+ * column was read — but the *offer* is suppressed, because on a short piece
+ * it does more harm than good. On a three-minute read, "pick up where you
+ * left off, 35%" is a filled primary button proposing that the reader skip
+ * most of the article to save perhaps ninety seconds. It also sits at the top
+ * of the rail, pushing the actions and the size control down, on the pieces
+ * that have the least to put there.
+ *
+ * Five minutes is where the arithmetic turns over: at that length the part
+ * being skipped is longer than the time it takes to decide whether to skip
+ * it, which is the point at which a reader is glad to be asked.
+ */
+const RESUME_MIN_MINUTES = 5;
+
 /** Positions older than this are not offered — the reader has moved on. */
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
@@ -167,7 +184,7 @@ export function useReadState(slug: string): ReadState | null {
  * across a different window width, a different text size, or an edit to the
  * piece; a fraction lands in roughly the right paragraph in all three cases.
  */
-export function useReadingPosition(slug: string) {
+export function useReadingPosition(slug: string, readingMinutes = Infinity) {
   const latest = useRef(0);
 
   /**
@@ -176,11 +193,22 @@ export function useReadingPosition(slug: string) {
    * for it, and React's own hydration handling for the two snapshots is
    * better than a mount effect that renders twice on every article.
    */
-  const saved = useSyncExternalStore(
+  const stored = useSyncExternalStore(
     subscribe,
     () => offerFor(slug),
     () => null,
   );
+
+  /*
+   * The length gate is applied here rather than inside `offerFor`, and that
+   * is deliberate: `offerFor` caches per slug in a module-level Map that
+   * `useSyncExternalStore` compares with `Object.is`, and folding a second
+   * input into it would mean either keying the cache on both or having the
+   * same slug answer differently depending on which component asked first.
+   * Suppressing the offer at the edge leaves the store's one job — what is
+   * on the device for this slug — exactly as it was.
+   */
+  const saved = stored !== null && readingMinutes >= RESUME_MIN_MINUTES ? stored : null;
 
   /** Called as the reader moves. Cheap: it only records into a ref. */
   const record = useCallback((progress: number) => {

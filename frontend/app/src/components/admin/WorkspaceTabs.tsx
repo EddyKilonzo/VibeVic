@@ -29,11 +29,26 @@ export function WorkspaceTabs({
   active,
   onChange,
   className,
+  label = "Story workspace",
+  layoutId = "workspace-tab",
 }: {
   tabs: WorkspaceTab[];
   active: string;
   onChange: (id: string) => void;
   className?: string;
+  /** Names the strip for a screen reader. Two strips on one screen need two. */
+  label?: string;
+  /**
+   * The shared layout id the underline animates against.
+   *
+   * It has to be unique per strip. Motion matches `layoutId` globally, so two
+   * strips mounted at once — which is now the normal case in the workspace,
+   * where the column's own strip sits above the collections strip inside the
+   * records panel — would share one underline and animate it flying between
+   * them whenever either changed. A default keeps every existing caller as it
+   * was; a second strip passes its own.
+   */
+  layoutId?: string;
 }) {
   const reduced = useReducedMotion();
 
@@ -46,7 +61,7 @@ export function WorkspaceTabs({
   return (
     <div
       role="tablist"
-      aria-label="Story workspace"
+      aria-label={label}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") {
           e.preventDefault();
@@ -92,7 +107,7 @@ export function WorkspaceTabs({
               ) : (
                 <motion.span
                   aria-hidden
-                  layoutId="workspace-tab"
+                  layoutId={layoutId}
                   className="absolute inset-x-2 bottom-0 h-0.5 bg-primary"
                   transition={transitions.layout}
                 />

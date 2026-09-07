@@ -30,6 +30,22 @@ export const blockSchema = z.discriminatedUnion('type', [
     src: z.string(),
     alt: z.string(),
     caption: z.string().optional(),
+    /**
+     * Who made the picture, kept apart from what the picture shows.
+     *
+     * These were one field, and the archive shows what that costs: the
+     * WordPress import joined them with a slash, so a reader gets "Phone
+     * consumers stay glued to their phones, seeming drawn to it/Cottonbro
+     * Studio (Pexels)" as a single run of small caps with no space around the
+     * separator. They are two different statements — one is reporting, the
+     * other is attribution — and only the second is boilerplate that should
+     * be set quietly and consistently.
+     *
+     * Optional, and additive: every block already stored parses unchanged,
+     * and the renderer falls back to splitting a legacy caption so the
+     * imported archive reads correctly without a migration.
+     */
+    credit: z.string().optional(),
   }),
   z.object({
     id: z.string(),

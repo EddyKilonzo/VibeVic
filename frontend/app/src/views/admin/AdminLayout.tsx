@@ -29,6 +29,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PageTransition, RevealDefaults } from "@/components/motion";
 import { LogoMark } from "@/components/Logotype";
 import { Mia } from "@/components/admin/Mia";
+import { CommandPalette } from "@/components/admin/CommandPalette";
 import { MobileAdminBar } from "@/components/admin/MobileAdminBar";
 import { ConnectionState } from "@/components/admin/ConnectionState";
 import { AccountMenu, type SessionSummary } from "@/components/admin/AccountMenu";
@@ -66,40 +67,68 @@ import { can, type Scope } from "@/lib/newsroom-scopes";
  *
  * A row with no `scope` is shared by both roles, which is most of them.
  */
+/**
+ * The five headings the rail is divided under, in the order they are worked.
+ *
+ * ── Why the rail is grouped at all ───────────────────────────────────────
+ * Fourteen rows, each an icon and a word, in one undifferentiated column. A
+ * list that long stops being scanned and starts being *read* — you go down it
+ * looking for the label you want, every time, because nothing about position
+ * tells you where anything is. Five headings turn one list of fourteen into
+ * five lists of two or three, which is the size a person actually recognises
+ * by shape rather than by reading.
+ *
+ * The split is by the question being asked, not by permission — the scopes
+ * already decide what appears at all. "Am I writing, or looking at what I
+ * wrote, or maintaining the machine" is the distinction that predicts which
+ * row somebody wants.
+ */
+const GROUPS = ["Writing", "Reporting", "Audience", "Filing", "System"] as const;
+type NavGroup = (typeof GROUPS)[number];
+
 const NAV: {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
   scope?: Scope;
+  group: NavGroup;
 }[] = [
-  { href: newsroomPath(), label: "Dashboard", icon: LayoutDashboard, end: true },
-  { href: newsroomPath("/stories"), label: "Stories", icon: FileText },
-  { href: newsroomPath("/drafts"), label: "Drafts", icon: FilePen },
-  { href: newsroomPath("/ideas"), label: "Ideas", icon: Lightbulb, scope: "newsroom:ideas" },
+  { href: newsroomPath(), label: "Dashboard", icon: LayoutDashboard, end: true, group: "Writing" },
+  { href: newsroomPath("/stories"), label: "Stories", icon: FileText, group: "Writing" },
+  { href: newsroomPath("/drafts"), label: "Drafts", icon: FilePen, group: "Writing" },
+  {
+    href: newsroomPath("/ideas"),
+    label: "Ideas",
+    icon: Lightbulb,
+    scope: "newsroom:ideas",
+    group: "Writing",
+  },
   // The reporting record. Not scoped: a DEV holds `newsroom:read` and
   // `newsroom:write` so a bug can be reproduced against real shapes, and the
   // confidential rows are filtered out of every response before they get here.
-  { href: newsroomPath("/records"), label: "Records", icon: FolderOpen },
-  { href: newsroomPath("/curation"), label: "Curation", icon: Layers },
-  { href: newsroomPath("/media"), label: "Media", icon: Image },
-  { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3 },
-  { href: newsroomPath("/readers"), label: "Readers", icon: Users },
-  { href: newsroomPath("/genres"), label: "Beats", icon: Tags },
-  { href: newsroomPath("/awards"), label: "Awards", icon: Trophy },
+  { href: newsroomPath("/records"), label: "Records", icon: FolderOpen, group: "Reporting" },
+  { href: newsroomPath("/curation"), label: "Curation", icon: Layers, group: "Reporting" },
+  { href: newsroomPath("/media"), label: "Media", icon: Image, group: "Reporting" },
+  { href: newsroomPath("/analytics"), label: "Analytics", icon: BarChart3, group: "Audience" },
+  { href: newsroomPath("/readers"), label: "Readers", icon: Users, group: "Audience" },
+  { href: newsroomPath("/genres"), label: "Beats", icon: Tags, group: "Filing" },
+  { href: newsroomPath("/awards"), label: "Awards", icon: Trophy, group: "Filing" },
   {
     href: newsroomPath("/diagnostics"),
     label: "Diagnostics",
     icon: Activity,
     scope: "system:diagnostics",
+    group: "System",
   },
   {
     href: newsroomPath("/accounts"),
     label: "Accounts",
     icon: UserCog,
     scope: "system:accounts",
+    group: "System",
   },
-  { href: newsroomPath("/settings"), label: "Settings", icon: Settings },
+  { href: newsroomPath("/settings"), label: "Settings", icon: Settings, group: "System" },
 ];
 
 /**
@@ -136,6 +165,20 @@ export default function AdminLayout({
    * in the header than "Admin".
    */
   const sections = NAV.filter((item) => !item.scope || can(session.role, item.scope));
+
+  /*
+   * The groups this account actually has rows in.
+   *
+   * Empty ones are dropped rather than drawn with nothing under them: a
+   * WRITER holds no `system:` scopes, so "System" for them is Settings alone,
+   * and a DEV has no Ideas row under Writing. A heading over an empty list
+   * would be the rail advertising a section the person cannot open, which is
+   * the thing hiding the rows was for.
+   */
+  const grouped = GROUPS.map((name) => ({
+    name,
+    items: sections.filter((item) => item.group === name),
+  })).filter((group) => group.items.length > 0);
 
   return (
     /* The provider wraps the whole shell rather than only `main`, so the rail
@@ -210,13 +253,34 @@ export default function AdminLayout({
         </div>
 
         <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-2">
-          <ul className="space-y-0.5">
-            {sections.map((item) => (
-              <li key={item.href}>
-                <SidebarLink item={item} collapsed={collapsed} surface="rail" />
-              </li>
-            ))}
-          </ul>
+          {grouped.map((group, index) => (
+            <div key={group.name} role="group" aria-labelledby={`rail-${group.name}`}>
+              {/* Collapsed to icons there is no room for a word, but the
+                  grouping is still real and a screen reader should still hear
+                  it — so the heading goes to `sr-only` rather than away, and a
+                  hairline does the dividing that the word was doing. */}
+              {collapsed && index > 0 && (
+                <div aria-hidden className="mx-3 my-2 h-px bg-sidebar-border/40" />
+              )}
+              <p
+                id={`rail-${group.name}`}
+                className={cn(
+                  "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/40",
+                  index > 0 && "pt-4",
+                  collapsed && "sr-only",
+                )}
+              >
+                {group.name}
+              </p>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => (
+                  <li key={item.href}>
+                    <SidebarLink item={item} collapsed={collapsed} surface="rail" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-sidebar-border/50 p-3">
@@ -256,24 +320,44 @@ export default function AdminLayout({
               exit={reduced ? { opacity: 0 } : { x: "-100%" }}
               transition={transitions.sheet}
             >
+              {/* The same five headings as the rail. The stagger is indexed
+                  across the whole drawer rather than restarting per group, so
+                  the rows still arrive as one sequence down the sheet instead
+                  of five short ones firing together. */}
               <nav aria-label="Admin" className="mt-4">
-                <ul className="space-y-0.5">
-                  {sections.map((item, i) => (
-                    <motion.li
-                      key={item.href}
-                      initial={reduced ? false : { opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ ...transitions.normal, delay: i * stagger.tight }}
+                {grouped.map((group, groupIndex) => (
+                  <div key={group.name} role="group" aria-labelledby={`drawer-${group.name}`}>
+                    <p
+                      id={`drawer-${group.name}`}
+                      className={cn(
+                        "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/40",
+                        groupIndex > 0 && "pt-4",
+                      )}
                     >
-                              <SidebarLink
-                        item={item}
-                        collapsed={false}
-                        surface="drawer"
-                        onClick={() => setMobileOpen(false)}
-                      />
-                    </motion.li>
-                  ))}
-                </ul>
+                      {group.name}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {group.items.map((item) => (
+                        <motion.li
+                          key={item.href}
+                          initial={reduced ? false : { opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{
+                            ...transitions.normal,
+                            delay: sections.indexOf(item) * stagger.tight,
+                          }}
+                        >
+                          <SidebarLink
+                            item={item}
+                            collapsed={false}
+                            surface="drawer"
+                            onClick={() => setMobileOpen(false)}
+                          />
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </nav>
             </motion.aside>
           </>
@@ -340,6 +424,19 @@ export default function AdminLayout({
           for are asked while doing something else. Docked above the mobile
           bar so the two never overlap. */}
       <Mia />
+
+      {/* ⌘K, on every newsroom screen. Mounted in the shell rather than per
+          page for the obvious reason — the whole point is that it is reachable
+          from wherever you happen to be — and handed the same filtered rows
+          the rail draws, so it can never offer a screen this role cannot
+          open. */}
+      <CommandPalette
+        sections={sections.map((item) => ({
+          href: item.href,
+          label: item.label,
+          group: item.group,
+        }))}
+      />
 
       <MobileAdminBar />
     </div>

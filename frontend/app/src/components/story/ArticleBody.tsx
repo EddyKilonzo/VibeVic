@@ -157,16 +157,7 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
             ratio="16/9"
             className="rounded-lg shadow-card"
           />
-          {block.caption && (
-            <figcaption
-              className={cn(
-                "mt-3 px-5 font-sans text-[0.8rem] leading-relaxed text-muted-foreground sm:px-0",
-                active && "speaking",
-              )}
-            >
-              <Inline text={block.caption} />
-            </figcaption>
-          )}
+          <FigureCaption block={block} active={active} />
         </figure>
       );
 
@@ -191,4 +182,90 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
     case "divider":
       return <hr className="my-12 border-border" />;
   }
+}
+
+/**
+ * The caption, and the credit under it.
+ *
+ * ── Why they are drawn differently ───────────────────────────────────────
+ * They are two different statements. A caption is reporting — it says what is
+ * happening in the picture, it is read aloud with the article, and it can be
+ * a full sentence. A credit is attribution: a name, boilerplate, the same
+ * shape every time. Setting both in the same run of small caps made the
+ * sentence hard work and the name no easier to find, so the caption is now
+ * ordinary sentence case and only the credit keeps the small caps, which is
+ * the job small caps are actually good at.
+ */
+function FigureCaption({
+  block,
+  active,
+}: {
+  block: Extract<Block, { type: "image" }>;
+  active: boolean;
+}) {
+  const { caption, credit } = splitLegacyCaption(block);
+  if (!caption && !credit) return null;
+
+  return (
+    <figcaption
+      className={cn(
+        "mt-3 px-5 font-sans text-[0.8rem] leading-relaxed text-muted-foreground sm:px-0",
+        active && "speaking",
+      )}
+    >
+      {caption && (
+        <span className="figure-caption-text">
+          <Inline text={caption} />
+        </span>
+      )}
+      {credit && (
+        <span className="figure-credit">
+          {caption ? " " : null}
+          {credit}
+        </span>
+      )}
+    </figcaption>
+  );
+}
+
+/**
+ * Reads a block's caption and credit, splitting a legacy caption if it holds
+ * both.
+ *
+ * ── Why a heuristic rather than a migration ──────────────────────────────
+ * Every written piece on this site was imported from WordPress, and the
+ * importer joined the caption and the credit with a bare slash. Splitting the
+ * schema fixes what is written from now on and does nothing for the archive,
+ * which is all of it — so the fallback is what actually makes the change
+ * visible to a reader.
+ *
+ * ── And why it is this narrow ────────────────────────────────────────────
+ * A guess that mangles a caption is worse than a caption with a slash in it,
+ * so every condition below has to hold before anything is split:
+ *
+ *   - the block carries no explicit `credit`, so a block edited since the
+ *     change is never second-guessed;
+ *   - there is exactly one "/" in the string, which rules out URLs, dates
+ *     written 12/03/2026, and fractions;
+ *   - the tail is short and the head is long, which is the shape of
+ *     "a sentence about the picture" + "a name" and not of "and/or";
+ *   - the tail is not glued to a word that suggests a path.
+ *
+ * Anything that fails is left exactly as it was written.
+ */
+export function splitLegacyCaption(block: Extract<Block, { type: "image" }>): {
+  caption: string;
+  credit: string;
+} {
+  const caption = block.caption?.trim() ?? "";
+  const credit = block.credit?.trim() ?? "";
+
+  if (credit || !caption) return { caption, credit };
+  if (caption.split("/").length !== 2) return { caption, credit: "" };
+
+  const [head, tail] = caption.split("/").map((part) => part.trim());
+  if (!head || !tail) return { caption, credit: "" };
+  if (head.length < 20 || tail.length > 60) return { caption, credit: "" };
+
+  return { caption: head, credit: tail };
 }

@@ -91,7 +91,9 @@ export default function Story({
     (block): block is Extract<typeof block, { type: "heading" }> => block.type === "heading",
   );
   const activeSection = useActiveSection(headings.map((heading) => heading.id));
-  const { saved, record, decline } = useReadingPosition(slug);
+  // The length is passed so the hook can decline to offer a resume on a piece
+  // too short to be worth skipping into — see `RESUME_MIN_MINUTES`.
+  const { saved, record, decline } = useReadingPosition(slug, story?.readingMinutes);
 
   /**
    * The article was opened.
@@ -176,7 +178,19 @@ export default function Story({
             underneath it, which is also the only honest place for it — it is
             generated art, not a photograph of anything, and at full bleed it
             implied it was. */}
-        <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-12 pt-28 sm:pb-16 sm:pt-36">
+        {/* ── The top padding, and why it is not larger ──────────────────
+            It was `pt-28 sm:pt-36` — 144px of empty comb above the kicker on
+            a desktop, on top of the masthead's own height. The band has a
+            job (clear the transparent masthead, then establish the piece)
+            and 96px does it: the header is 64px tall, so there is still a
+            clear 32px between it and the kicker at every width.
+
+            What this buys is the first line of prose. The measured distance
+            from the top of the page to the first sentence was a screen and a
+            half on a 900px laptop, on a site whose whole value is the
+            writing. Every 48px taken out of this band is 48px of article
+            that arrives without a scroll. */}
+        <header className="honeycomb honeycomb-intense honeycomb-fade relative isolate overflow-hidden border-b border-border pb-10 pt-24 sm:pb-12 sm:pt-24">
           <div className="container-site relative">
             <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-16">
               <div>
@@ -286,7 +300,22 @@ export default function Story({
             phone, and a reader on one gets the same controls in the bottom
             HUD and the section sheet anyway. */}
         <div className="container-site mt-10 sm:mt-14">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_290px] lg:gap-14">
+          {/* ── Why this grid is capped below the site container ───────────
+              `container-site` is 1440px, which left this row 1344px to fill:
+              290px of rail, a 56px gap, and a 998px column holding a sheet
+              that stops at 46rem. The remaining 262px was not margin, it was
+              a gap *inside* the row — the article sat hard against the left
+              edge, the rail against the right, and on a wide display the
+              reader's eye had to cross an empty corridor to get from the last
+              word of a line to the control they wanted.
+
+              736 + 56 + 290 is 1082, so 1120px is the width this row actually
+              wants. Capped and centred, the two columns sit together as one
+              object in the middle of the page instead of being pushed to
+              opposite edges of a container sized for something else. Below
+              1120px nothing changes: the cap is inert and the grid fills its
+              container as before. */}
+          <div className="mx-auto grid max-w-[1120px] gap-8 lg:grid-cols-[minmax(0,1fr)_290px] lg:gap-14">
             <aside className="lg:order-2">
               {/* Everything in the rail lives inside the sticky box.
 

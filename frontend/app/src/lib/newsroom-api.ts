@@ -46,18 +46,43 @@ export class NewsroomApiError extends Error {
 }
 
 /**
+ * The default budget for a call to the API.
+ *
+ * Long enough for a cold Neon connection to wake up, short enough that a hang
+ * is visible rather than a page that never finishes. A caller with a genuinely
+ * more expensive request raises it with `timeoutMs` — see the publish route —
+ * and everything stays under the platform's own function ceiling, which is the
+ * real limit and cannot be argued with from here.
+ */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+export type NewsroomInit = RequestInit & {
+  /**
+   * Overrides `DEFAULT_TIMEOUT_MS` for this one call.
+   *
+   * Raise it only for a request that is expensive on the server rather than
+   * one that is merely important: a longer budget does not make a dead API
+   * answer, it only delays the moment somebody is told.
+   */
+  timeoutMs?: number;
+};
+
+/**
  * Performs the call and returns the parsed body.
  *
  * Throws `NewsroomApiError` with a status the caller can pass straight back.
- * Three distinctions worth keeping apart: 401 means nobody is signed in, 501
- * means the API says a feature is not built, and 502 means the API could not
- * be reached or refused us. They send whoever reads them to three different
- * places — the sign-in page, a roadmap, and a status page.
+ * Four distinctions worth keeping apart: 401 means nobody is signed in, 501
+ * means the API says a feature is not built, 502 means the API could not be
+ * reached or refused us, and 504 means it was reached and did not answer in
+ * time — which, for anything but a read, leaves what happened unknown. They
+ * send whoever reads them to four different places: the sign-in page, a
+ * roadmap, a status page, and back to the record to look.
  */
 export async function newsroomFetch<T>(
   path: string,
-  init: RequestInit = {},
+  init: NewsroomInit = {},
 ): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...request } = init;
   const token = await sessionToken();
   if (!token) {
     /*
@@ -81,7 +106,7 @@ export async function newsroomFetch<T>(
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
-      ...init,
+      ...request,
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
@@ -89,10 +114,41 @@ export async function newsroomFetch<T>(
         ...init.headers,
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (cause) {
     console.error(`[newsroom-api] ${init.method ?? "GET"} ${path} failed:`, cause);
+
+    /**
+     * A timeout is not an unreachable server, and saying so is not pedantry.
+     *
+     * Both used to arrive here as one 502 reading "The API could not be
+     * reached. Nothing was changed." For a refused connection that is exactly
+     * true. For a request that was accepted, started work and did not answer
+     * in time, the second sentence is a promise this code is in no position to
+     * make — the row may well have been written while we were giving up, and a
+     * publish is the case where that matters most. Telling somebody nothing
+     * changed, when what actually happened is unknown, is how a piece goes
+     * live that its writer believes is still a draft.
+     *
+     * So the two are separated, and the timeout's wording distinguishes a read
+     * from a write. A GET that times out really did change nothing; anything
+     * else is an open question, and the honest instruction is to go and look
+     * rather than to press the button again.
+     */
+    const method = (init.method ?? "GET").toUpperCase();
+    const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
+
+    if (timedOut) {
+      const readOnly = method === "GET" || method === "HEAD";
+      throw new NewsroomApiError(
+        readOnly
+          ? "The newsroom took too long to answer. It may be waking up — try again in a moment."
+          : "The newsroom took too long to answer, so what happened to this request is not known. It may be waking up. Reload the piece to see where it ended up before trying again.",
+        504,
+      );
+    }
+
     throw new NewsroomApiError("The API could not be reached. Nothing was changed.", 502);
   }
 

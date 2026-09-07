@@ -445,6 +445,55 @@ export default function StoryWorkspace({
   }, [saveNow]);
 
   /**
+   * The device copy is brought up to date the moment the tab goes away.
+   *
+   * Autosave is on a debounce, which is right — a request per keystroke is
+   * not — but it leaves a window of about a second in which the newest words
+   * are in React state and nowhere else. Closing the tab, following a link or
+   * putting a phone to sleep inside that window used to lose them from both
+   * stores at once, and the restore banner had nothing newer to offer.
+   *
+   * Only the local write happens here, and deliberately: `writeDraft` is
+   * synchronous and completes before the page is gone, whereas a request
+   * started on `pagehide` is not guaranteed to be sent at all. So this does
+   * not replace the save — it makes the failure mode "your last sentence is on
+   * this device" instead of "your last sentence is nowhere", which is exactly
+   * the distinction the rest of this screen is built around.
+   *
+   * `pagehide` rather than `beforeunload`, and `visibilitychange` beside it,
+   * because a phone browser being backgrounded fires neither of the two that
+   * desktop advice reaches for first.
+   */
+  const current = useRef(draft);
+  useEffect(() => {
+    current.current = draft;
+  }, [draft]);
+
+  useEffect(() => {
+    const persist = () => {
+      try {
+        writeDraft(current.current);
+      } catch {
+        // A full quota or a private window. Nothing to say about it here: the
+        // save path reports the same condition where a writer can act on it.
+      }
+    };
+
+    // `pagehide` is unconditional — it only fires when the page is going. The
+    // visibility listener is filtered, because it also fires on the way back.
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") persist();
+    };
+
+    window.addEventListener("pagehide", persist);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, []);
+
+  /**
    * A local draft newer than the seed copy.
    *
    * Offered, never applied. The stored draft and the published story can

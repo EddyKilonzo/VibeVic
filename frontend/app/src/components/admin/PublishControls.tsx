@@ -100,6 +100,17 @@ export function PublishControls({
        */
       await flush?.();
 
+      /*
+       * The button cannot hang forever.
+       *
+       * This `fetch` carried no timeout at all while the save path had one,
+       * so a slow answer left the control reading "Publishing…" until the
+       * platform cut the request — no error, no way back, and no way to tell
+       * whether the piece had gone live. 35s rather than the route's own 30s,
+       * deliberately: when the proxy times out first its answer wins, and its
+       * answer is the more useful one because it knows a write was attempted.
+       * This is only the backstop for the proxy itself not returning.
+       */
       const response = await fetch(
         `/api/newsroom/stories/${encodeURIComponent(storyId)}/publish`,
         {
@@ -107,6 +118,7 @@ export function PublishControls({
           headers: { Accept: "application/json", "Content-Type": "application/json" },
           body: JSON.stringify(publishAt ? { action, publishAt } : { action }),
           cache: "no-store",
+          signal: AbortSignal.timeout(35_000),
         },
       );
 
@@ -123,10 +135,23 @@ export function PublishControls({
         action === "unpublish" ? "The piece is still on the site" : "The piece was not published",
         body?.error ?? `The newsroom returned ${response.status}.`,
       );
-    } catch {
+    } catch (cause) {
+      /*
+       * "Nothing changed" is only said when it is true.
+       *
+       * A refused connection did leave the piece where it was. A timeout did
+       * not necessarily — the request may have been accepted and applied while
+       * this end gave up waiting — and on a control whose whole job is to move
+       * a piece in and out of public view, guessing wrong in that direction is
+       * the expensive one. So the timeout gets its own sentence, and it sends
+       * the writer to look rather than to press again.
+       */
+      const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
       notify.error(
-        "Nothing changed",
-        "Could not reach the newsroom. The piece is where it was.",
+        timedOut ? "No answer yet" : "Nothing changed",
+        timedOut
+          ? "The newsroom took too long to reply, so where this piece ended up is not known. Reload it to see before pressing this again."
+          : "Could not reach the newsroom. The piece is where it was.",
       );
     } finally {
       setBusy(null);

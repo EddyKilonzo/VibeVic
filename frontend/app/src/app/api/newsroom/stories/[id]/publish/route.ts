@@ -49,9 +49,26 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
 
   try {
+    /*
+     * A longer budget than the default, because this request is genuinely
+     * more work than a read.
+     *
+     * Publishing runs the canonical check, writes the transition and takes the
+     * conditional-update path, and it is the request most likely to be the
+     * first thing to touch a Neon instance that has gone to sleep. The default
+     * 15s was losing it: the dev log carries a real `POST
+     * /admin/stories/…/publish failed: TimeoutError` against a piece that is
+     * still sitting as a draft, which is a writer having pressed Publish and
+     * been told the newsroom could not be reached.
+     *
+     * Not unbounded, and the ceiling is not ours to choose: the deployment's
+     * functions are cut off at 60s, so a budget above that would be a promise
+     * the platform overrides with a worse error than this one. 30s leaves room
+     * for the answer and room for this route to return it.
+     */
     const published = await newsroomFetch<AdminStoryRow>(
       `/admin/stories/${encodeURIComponent(id)}/publish`,
-      { method: "POST", body: JSON.stringify(body) },
+      { method: "POST", body: JSON.stringify(body), timeoutMs: 30_000 },
     );
     return Response.json(toStory(published));
   } catch (cause) {

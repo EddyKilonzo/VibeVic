@@ -764,6 +764,60 @@ export default function StoryWorkspace({
         </div>
       </Reveal>
 
+      {/*
+          Why the reason gets a line of its own rather than a tooltip.
+
+          The indicator can say "Saved on this device — a newer version exists"
+          in the width it has, and that is the right summary. It is not an
+          instruction, and a conflict is the one state on this screen where
+          the writer has to do something before their words can ever reach the
+          newsroom again: every save from here answers 409, forever, and
+          nothing about continuing to type changes that. The sentence that says
+          so lived in a `title` attribute, which is no sentence at all on a
+          phone and none for anybody using a keyboard.
+
+          Reloading is safe to offer, and that is the whole reason it can be a
+          button. The local copy is written before every request, so the words
+          survive the reload and come back as the "unsent draft on this device"
+          offer below — which is the existing way this editor hands somebody
+          two versions and lets them decide, rather than merging on their
+          behalf.
+
+          The device case gets the same strip without the button, because there
+          is nothing to press: a dropped connection fixes itself, the next save
+          lands, and the strip goes away on its own. */}
+      {landing && landing !== "server" && landingMessage && (
+        <Reveal
+          variant="fade-up"
+          delay={30}
+          className={cn(
+            "mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border p-3.5",
+            landing === "conflict"
+              ? "border-destructive/30 bg-destructive/[0.06]"
+              : "border-accent/30 bg-accent/[0.07]",
+          )}
+        >
+          <p className="min-w-0 flex-1 text-sm leading-snug text-muted-foreground">
+            <span className="font-semibold text-primary">
+              {landing === "conflict"
+                ? "This piece has moved on somewhere else."
+                : "This has not reached the newsroom."}
+            </span>{" "}
+            {landingMessage}
+          </p>
+          {landing === "conflict" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => window.location.reload()}
+            >
+              Open the newsroom copy
+            </Button>
+          )}
+        </Reveal>
+      )}
+
       {/* The offer to restore, when a newer local copy exists. Never applied
           on its own — see `lib/drafts`. */}
       {stored &&

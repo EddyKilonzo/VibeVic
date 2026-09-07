@@ -69,7 +69,6 @@ export function CommandPalette({ sections }: { sections: PaletteSection[] }) {
   const [cursor, setCursor] = useState(0);
   const [stories, setStories] = useState<StoryRow[] | null>(null);
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   /* ── Opening ────────────────────────────────────────────────────────── */
@@ -84,20 +83,31 @@ export function CommandPalette({ sections }: { sections: PaletteSection[] }) {
       // The editor's link shortcut got here first. See the note above.
       if (event.defaultPrevented) return;
       event.preventDefault();
-      setOpen((was) => !was);
+
+      if (open) {
+        setOpen(false);
+        return;
+      }
+
+      /*
+       * A fresh query every time it opens.
+       *
+       * Reopening onto the last search is the behaviour that makes people
+       * delete a word before they can type one. The reset happens here, on the
+       * keystroke that opens it, rather than in an effect watching `open` —
+       * an effect would set state in response to state, which is a second
+       * render for a decision this handler has already made, and the linter is
+       * right to call it out. Focus comes from `autoFocus` on the input, which
+       * is mounted fresh on every open because the whole panel unmounts when
+       * it closes.
+       */
+      setQuery("");
+      setCursor(0);
+      setOpen(true);
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  // A fresh query every time it opens. Reopening onto the last search is the
-  // behaviour that makes people delete a word before they can type one.
-  useEffect(() => {
-    if (!open) return;
-    setQuery("");
-    setCursor(0);
-    inputRef.current?.focus();
   }, [open]);
 
   /*
@@ -225,7 +235,7 @@ export function CommandPalette({ sections }: { sections: PaletteSection[] }) {
             <div className="flex items-center gap-3 border-b border-border px-4">
               <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               <input
-                ref={inputRef}
+                autoFocus
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Play } from "lucide-react";
-import type { Block, Story } from "@/data/types";
+import type { Block, ImageBlock, Story } from "@/data/types";
 import { Inline } from "./Inline";
 import { splitSentences } from "@/lib/voice";
 import { blockImage } from "@/lib/cover";
@@ -146,15 +146,46 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
       );
 
     case "image":
+      /**
+       * A block that was never given a picture shows the reader nothing.
+       *
+       * `src` used to hold an id into the editor's own IndexedDB store, which
+       * resolved to a blob URL alive only in the browser that made it. Those
+       * ids outlived the scheme: three of them sit at the foot of the Abraham
+       * piece, and because `blockImage` falls back to generated cover art for
+       * anything that is not an address, a reader was served three panels of
+       * blue gradient with no caption, no alt text and nothing to look at.
+       *
+       * Generated art is right for a *cover*, which must exist for a card to
+       * be drawn at all. Inside an article it is decoration standing where a
+       * photograph was meant to be, so this renders nothing instead. The block
+       * is still in the record and still in the editor, where the writer can
+       * give it a picture or delete it — the reader simply stops paying for a
+       * mistake in the tooling.
+       */
+      if (!hasPicture(block.src)) return null;
+
       return (
-        <figure data-block-id={block.id} className="my-10 -mx-5 sm:mx-0">
+        <figure
+          data-block-id={block.id}
+          className={cn("my-10", figureWidth(block.size))}
+        >
           <ImageReveal
-            // 1280: the article column tops out well below this, and the
-            // reveal renders at 16/9 — asking for the measure rather than the
-            // original is the difference between tens of KB and megabytes.
-            src={blockImage(block.src, 1280)}
+            // 1280: the article column tops out well below this, so asking for
+            // the measure rather than the original is the difference between
+            // tens of KB and megabytes. A `small` picture is drawn at under
+            // two-thirds of that, and asking for the same file would be
+            // sending a reader bytes they will never see.
+            src={blockImage(block.src, block.size === "small" ? 800 : 1280)}
             alt={block.alt}
-            ratio="16/9"
+            // The writer's choice, defaulting to the crop every block written
+            // before this option existed was drawn in.
+            ratio={block.ratio ?? "16/9"}
+            sizes={
+              block.size === "small"
+                ? "(min-width: 640px) 24rem, 100vw"
+                : "(min-width: 640px) 46rem, 100vw"
+            }
             className="rounded-lg shadow-card"
           />
           <FigureCaption block={block} active={active} />
@@ -181,6 +212,40 @@ function BlockView({ block, active, sentenceIndex, canSeek, onSeek }: BlockViewP
 
     case "divider":
       return <hr className="my-12 border-border" />;
+  }
+}
+
+/** Whether an image block's `src` is an address a reader's browser can fetch. */
+function hasPicture(src: string): boolean {
+  return /^(https?:)?\/\//.test(src) || src.startsWith("/") || src.startsWith("data:");
+}
+
+/**
+ * How wide the writer asked for the picture to be.
+ *
+ * The three sizes are expressed against the sheet the article is set on
+ * (`paper`, `max-w-[46rem]` with `px-5 sm:px-10 lg:px-14`), which is why the
+ * numbers here are the sheet's own padding rather than percentages:
+ *
+ *   small   under two-thirds of the measure, centred — a portrait, a
+ *           screenshot, a document. Something to read *beside* a point.
+ *   column  the measure, which is where every image sat before this existed.
+ *           On a phone it still bleeds to the sheet's edges, because a 20px
+ *           margin either side of a picture on a 390px screen is a frame
+ *           around nothing.
+ *   wide    out to the sheet's edges on every screen, cancelling the padding
+ *           the text is set in. It stops there rather than breaking into the
+ *           page: the rail sits alongside this column, and a picture that
+ *           reached past the paper would collide with it.
+ */
+function figureWidth(size: ImageBlock["size"]): string {
+  switch (size) {
+    case "small":
+      return "mx-auto max-w-[24rem]";
+    case "wide":
+      return "-mx-5 sm:-mx-10 lg:-mx-14";
+    default:
+      return "-mx-5 sm:mx-0";
   }
 }
 

@@ -46,6 +46,35 @@ export const blockSchema = z.discriminatedUnion('type', [
      * imported archive reads correctly without a migration.
      */
     credit: z.string().optional(),
+    /**
+     * How much of the measure the picture takes.
+     *
+     * Every article image used to be the full width of the text sheet, which
+     * is right for a landscape opener and wrong for everything else: a
+     * portrait, a screenshot, a document — anything the writer wants beside a
+     * point rather than instead of it — arrived as a wall the reader has to
+     * scroll past.
+     *
+     * Absent means `column`, which is what every block written before this
+     * existed rendered as, so the archive parses and looks unchanged.
+     */
+    size: z.enum(['small', 'column', 'wide']).optional(),
+    /**
+     * The shape to draw it in, as a CSS aspect ratio.
+     *
+     * A fixed 16/9 crop was the other half of the problem: a portrait was not
+     * merely large, it was beheaded. The writer picks 16/9, 4/3 or the
+     * picture's own proportions, and "its own" is resolved to real numbers in
+     * the editor — where the file is on screen and its dimensions can simply
+     * be read — rather than being a keyword the renderer would have to
+     * measure at runtime and reflow around.
+     *
+     * Constrained to `w/h` so nothing arbitrary reaches a stylesheet.
+     */
+    ratio: z
+      .string()
+      .regex(/^[1-9]\d{0,4}\/[1-9]\d{0,4}$/, 'ratio must look like 16/9')
+      .optional(),
   }),
   z.object({
     id: z.string(),

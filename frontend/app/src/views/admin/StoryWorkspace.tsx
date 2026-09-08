@@ -1681,6 +1681,16 @@ function ImageBlockPicker({
 }) {
   const [picking, setPicking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /**
+   * The picture's own proportions, read off the preview once it has decoded.
+   *
+   * This is why "Original" is a button here rather than a keyword the reader's
+   * page would have to resolve: the file is already on screen in this panel,
+   * so its real dimensions can simply be read and stored as numbers. The
+   * article then reserves exactly the right box on the first paint, with no
+   * measure-then-reflow and no second layout pass in front of a reader.
+   */
+  const [natural, setNatural] = useState<string | null>(null);
 
   /**
    * `src` holds an address now, not a library id.
@@ -1705,7 +1715,15 @@ function ImageBlockPicker({
         <div className="relative overflow-hidden rounded-lg border border-border">
           {/* Cloudinary has already sized this; the Next optimiser would size
               it again. Anything pasted from elsewhere has no optimiser route. */}
-          <img src={preview} alt="" className="max-h-72 w-full object-cover" />
+          <img
+            src={preview}
+            alt=""
+            className="max-h-72 w-full object-cover"
+            onLoad={(event) => {
+              const { naturalWidth: w, naturalHeight: h } = event.currentTarget;
+              if (w > 0 && h > 0) setNatural(`${w}/${h}`);
+            }}
+          />
           <button
             type="button"
             onClick={() => setPicking(true)}
@@ -1755,11 +1773,103 @@ function ImageBlockPicker({
         </>
       )}
 
+      {/* Shape and size, offered only once there is a picture to apply them
+          to — controls for an empty block are furniture. */}
+      {src && (
+        <div className="space-y-2 pt-0.5">
+          <BlockOptionRow
+            label="Size"
+            options={[
+              { value: "small", label: "Small" },
+              { value: "column", label: "Column" },
+              { value: "wide", label: "Wide" },
+            ]}
+            /* Absent means `column`: that is how the block already renders,
+               so the row shows the truth rather than an empty selection. */
+            value={block.size ?? "column"}
+            onPick={(value) =>
+              onChange({ size: value === "column" ? undefined : value } as Partial<Block>)
+            }
+          />
+          <BlockOptionRow
+            label="Shape"
+            options={[
+              { value: "16/9", label: "16:9" },
+              { value: "4/3", label: "4:3" },
+              /* Disabled until the preview has decoded, because the whole
+                 point of this option is the numbers it reads from it. */
+              { value: natural ?? "", label: "Original", disabled: !natural },
+            ]}
+            value={
+              block.ratio && block.ratio !== "16/9" && block.ratio !== "4/3"
+                ? (natural ?? block.ratio)
+                : (block.ratio ?? "16/9")
+            }
+            onPick={(value) =>
+              onChange({ ratio: value === "16/9" ? undefined : value } as Partial<Block>)
+            }
+          />
+        </div>
+      )}
+
       {problem && (
         <p role="alert" className="text-[11px] text-destructive">
           {problem}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * A labelled row of mutually exclusive choices, drawn small enough to live
+ * inside a block's own panel.
+ *
+ * `radiogroup` rather than a row of buttons: these *are* a single value with
+ * several options, and a writer on a keyboard should be able to arrow through
+ * them and hear which one is set instead of tabbing past three unrelated
+ * controls.
+ */
+function BlockOptionRow({
+  label,
+  options,
+  value,
+  onPick,
+}: {
+  label: string;
+  options: { value: string; label: string; disabled?: boolean }[];
+  value: string;
+  onPick: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span id={`${label}-label`} className="w-11 shrink-0 text-[11px] font-semibold text-muted-foreground">
+        {label}
+      </span>
+      <div role="radiogroup" aria-labelledby={`${label}-label`} className="flex gap-1">
+        {options.map((option) => {
+          const current = option.value !== "" && option.value === value;
+          return (
+            <button
+              key={option.label}
+              type="button"
+              role="radio"
+              aria-checked={current}
+              disabled={option.disabled}
+              onClick={() => onPick(option.value)}
+              className={cn(
+                "focus-ring rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                "disabled:cursor-not-allowed disabled:opacity-40",
+                current
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:text-primary",
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

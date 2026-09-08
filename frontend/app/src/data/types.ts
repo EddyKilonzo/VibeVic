@@ -45,6 +45,17 @@ export interface ImageBlock extends BaseBlock {
    * still carry both in `caption` are read.
    */
   credit?: string;
+  /**
+   * How much of the measure it takes. Absent means `column`, which is how
+   * every block written before this option existed already rendered.
+   */
+  size?: "small" | "column" | "wide";
+  /**
+   * The shape to draw it in, as a CSS aspect ratio (`16/9`, `4/3`, or the
+   * picture's own, resolved to real numbers by the editor). Absent means
+   * 16/9 — again, what the archive already looks like.
+   */
+  ratio?: string;
 }
 
 export interface ListBlock extends BaseBlock {

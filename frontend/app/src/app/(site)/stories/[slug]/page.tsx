@@ -9,34 +9,44 @@ import { storyCover } from "@/lib/cover";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 
 export async function generateStaticParams() {
-  // The throwing reader: this list *is* the set of pages that exist, so an
-  // empty one caused by an unreachable API would 404 the whole archive.
+  // The throwing reader, still, though it no longer decides what exists: an
+  // empty list from an unreachable API would ship a build that looks fine and
+  // renders every article on demand, one cold API read at a time.
   const stories = await getStoriesForParams();
   return stories.map((story) => ({ slug: story.slug }));
 }
 
 /**
- * The published set is the whole set.
+ * On, because the published set stopped being fixed at build time.
  *
- * This was briefly `true`, on the reasoning that a story published after the
- * last build should still be reachable. It was the wrong trade, and testing the
- * built site is what showed it: with `true`, an unknown slug renders the 404
- * page inside a **200** response. `notFound()` does not change that — the page
- * has already begun — so every mistyped link became a soft 404, which is worse
- * than a missing page: it invites a crawler to index an apology and never tells
- * a reader the URL was wrong.
+ * This flag has been both ways and both readings were right about their own
+ * moment. It was `false` because Next refuses an unrouted param before the page
+ * runs, which is the only thing that reliably makes a mistyped URL answer 404
+ * with a 404 — an earlier `true` had every wrong address rendering the 404 page
+ * inside a **200**.
  *
- * With `false`, Next refuses an unrouted param before the page runs, and the
- * 404 carries a 404. The cost is that a newly published story needs a build to
- * become reachable. That costs nothing today — publishing is still a 501 stub —
- * and when it is implemented it should call `revalidatePath` rather than this
- * flag being flipped back.
+ * What has changed since is that publishing is no longer a 501 stub. It writes,
+ * so the archive grows between deploys, and `false` turned each new piece into
+ * a hard 404 at the address the writer had just shared — two of them, by the
+ * time this was found.
  *
- * The build-time risk that prompted the change is handled where it belongs:
- * `generateStaticParams` now throws if the API is unreachable, so a bad build
- * fails instead of quietly shipping a site where nothing can be read.
+ * `true` is safe now because the soft 404 has been fixed at its actual cause,
+ * which was never this flag. A `loading.tsx` above this segment made Next flush
+ * a 200 shell before `generateMetadata` had decided anything, so the
+ * `notFound()` below arrived after the status line had gone out. The skeleton
+ * that did it is gone from this route (see the note in `(site)/(home)`), and
+ * with no Suspense boundary above it the metadata check runs before the
+ * response is committed. Verified against a production build: an unknown slug
+ * answers 404, a slug published after the build renders and answers 200.
+ *
+ * The build-time risk stays handled where it belongs: `generateStaticParams`
+ * throws if the API is unreachable, so a bad build fails rather than shipping a
+ * site whose every article has to be rendered on demand.
+ *
+ * Publishing also calls `revalidatePath` for this route, so a piece is at its
+ * address the moment it goes out rather than on its first cold render.
  */
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 /**
  * The snippet Google prints under the headline.

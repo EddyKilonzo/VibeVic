@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+
 import { isUnlocked } from "@/lib/newsroom-auth";
 import { errorResponse, newsroomFetch } from "@/lib/newsroom-api";
 import { toStory, type AdminStoryRow } from "@/lib/story-records";
@@ -70,8 +72,43 @@ export async function POST(
       `/admin/stories/${encodeURIComponent(id)}/publish`,
       { method: "POST", body: JSON.stringify(body), timeoutMs: 30_000 },
     );
-    return Response.json(toStory(published));
+    const story = toStory(published);
+    revalidatePublicPages(story.slug);
+    return Response.json(story);
   } catch (cause) {
     return errorResponse(cause);
+  }
+}
+
+/**
+ * Drop the reader-facing pages this decision changed.
+ *
+ * The article route is the one that genuinely breaks without this. It is
+ * prerendered from the list `generateStaticParams` read at build time, so
+ * until the path is revalidated a piece published since the last deploy is
+ * served from a cache that predates it — and, before `dynamicParams` was
+ * turned back on, was a hard 404 at the very address the writer had just
+ * pasted into a message. Unpublishing has the mirror problem: the page stays
+ * warm and keeps serving a piece that has been pulled.
+ *
+ * The listings — the archive, the beats, the feed — are refreshed too. They
+ * would come right on their own within the minute their reads are cached for,
+ * but "within the minute" is not what someone checks after pressing Publish,
+ * and a headline that appears on the site while the index still omits it reads
+ * as a half-finished publish rather than a cache.
+ *
+ * Failure here is logged and swallowed. The transition is already committed on
+ * the API; turning a stale cache into a failed publish would tell the writer
+ * the opposite of what happened, and the next revalidation clears it anyway.
+ */
+function revalidatePublicPages(slug: string): void {
+  try {
+    revalidatePath(`/stories/${slug}`);
+    revalidatePath("/stories");
+    revalidatePath("/beats/[slug]", "page");
+    revalidatePath("/sitemap.xml");
+    revalidatePath("/rss.xml");
+  } catch (cause) {
+    console.error("[publish] could not revalidate the public pages:", cause);
   }
 }

@@ -1,5 +1,11 @@
 import { Skeleton, StoryGridSkeleton } from "@/components/ui/Skeleton";
 
+/**
+ * The archive's own skeleton, in a path-less group so that it is the archive's
+ * alone. Sitting at `stories/` it was also a Suspense boundary above
+ * `stories/[slug]`, which cost that route its 404 status — see
+ * `(site)/(home)/loading.tsx` for what that broke and why it matters.
+ */
 export default function StoriesLoading() {
   return (
     <div className="container-page pt-32">

@@ -34,18 +34,23 @@ import { absoluteUrl } from "@/lib/site";
  * sent to — which is exactly what the admin tells you when you open one.
  */
 export async function generateStaticParams() {
-  // Throws rather than degrading: with `dynamicParams` off this list is the set
-  // of beat pages that exist, so an empty one would 404 the whole taxonomy.
+  // Throws rather than degrading: an empty list from an unreachable API would
+  // leave the whole taxonomy rendering on demand from a build that looked fine.
   const genres = await getGenresForParams();
   return genres.map((beat) => ({ slug: beat.slug }));
 }
 
 /**
- * Off, for the same reason as the story route: with it on, an unknown beat
- * renders the 404 page inside a 200 response, and `notFound()` cannot undo
- * that. See that file for the full reasoning and the revalidatePath note.
+ * On, for the same reason as the story route: the taxonomy is fetched now, so
+ * a beat added after the last build exists and would have no page.
+ *
+ * The soft 404 that argued for `false` came from the `loading.tsx` this route
+ * inherited from `(site)`, which flushed a 200 shell before `generateMetadata`
+ * had looked the slug up. That default has been scoped to the pages that want
+ * it, so nothing streams above this segment and `notFound()` below sets a real
+ * 404 again. See the story route for the full reasoning.
  */
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,

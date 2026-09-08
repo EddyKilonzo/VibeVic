@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Video from "@/views/Video";
-import { CHANNEL, VIDEOS, posterFor, topicName, videoById, watchUrl } from "@/data/videos";
+import { CHANNEL, VIDEOS, embedUrl, posterFor, topicName, videoById, watchUrl } from "@/data/videos";
 import { PROFILE } from "@/data/content";
 import { absoluteUrl } from "@/lib/site";
 
@@ -86,7 +86,10 @@ export default async function VideoRoute({ params }: { params: Promise<{ id: str
     thumbnailUrl: [posterFor(video.id)],
     uploadDate: video.published,
     duration: isoDuration(video.duration) || undefined,
-    embedUrl: `https://www.youtube-nocookie.com/embed/${video.id}`,
+    // The address this page actually frames. Built from the same helper the
+    // player uses, so the markup cannot claim a host the page stopped using —
+    // which is exactly what happened when the embed moved off `nocookie`.
+    embedUrl: embedUrl(video.id),
     url: watchUrl(video.id),
     inLanguage: "en",
     author: { "@type": "Person", name: PROFILE.name, url: absoluteUrl("/about") },

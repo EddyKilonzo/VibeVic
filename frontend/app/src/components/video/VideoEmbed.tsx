@@ -16,8 +16,9 @@ import { useVoice } from "@/context/VoiceProvider";
  * created until the viewer presses it. That is worth doing for three separate
  * reasons: a YouTube iframe costs upwards of a megabyte and blocks the main
  * thread while it boots, six of them on one page would dominate the load, and
- * nothing from Google is contacted until the viewer has actually chosen to
- * watch. `youtube-nocookie.com` handles the rest.
+ * nothing from Google is contacted — and no cookie set — until the viewer has
+ * actually chosen to watch. That last point is this component's doing, not the
+ * embed host's; see `embedUrl` for why the no-cookie host had to go.
  *
  * Pressing play also stops any narration — two voices at once is the one
  * failure mode a reading assistant must never have.

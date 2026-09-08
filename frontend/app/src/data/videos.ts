@@ -229,8 +229,29 @@ export const posterFor = (id: string, size: PosterSize = "max"): string => {
   return `https://i.ytimg.com/vi/${id}/${file}.jpg`;
 };
 
-/** Privacy-enhanced embed — no cookies until the viewer presses play. */
+/**
+ * The player, loaded only after the viewer presses play.
+ *
+ * ── Why this is `youtube.com` and not `youtube-nocookie.com` ─────────────
+ * It was the no-cookie host, which is the better one on privacy and does not
+ * work. That host cannot store the consent choice its own player asks for, so
+ * the frame goes to google.com's consent page, comes back, is asked again, and
+ * the reader gets "www.google.com redirected you too many times" where the
+ * report should be. Intermittently, too — once a consent cookie happens to
+ * exist the video plays, which is what made it look fixed.
+ *
+ * Confirmed by swapping the host on the live page and nothing else: the same
+ * video looped on `youtube-nocookie.com` and played immediately on
+ * `youtube.com`.
+ *
+ * The privacy that actually mattered here is untouched, because it was never
+ * this hostname doing the work — it is the click-to-load in `VideoEmbed`.
+ * Nothing is requested from Google, and no cookie of any kind is set, until
+ * the viewer has chosen to watch. The no-cookie host would only have narrowed
+ * what is stored *after* that choice, and a report that will not play is a
+ * worse answer to a reader than a cookie they opted into.
+ */
 export const embedUrl = (id: string, autoplay = false): string =>
-  `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1${autoplay ? "&autoplay=1" : ""}`;
+  `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1${autoplay ? "&autoplay=1" : ""}`;
 
 export const watchUrl = (id: string): string => `https://www.youtube.com/watch?v=${id}`;

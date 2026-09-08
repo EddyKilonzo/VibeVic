@@ -265,9 +265,17 @@ function contentSecurityPolicy(): string {
      * play button was pressed.
      */
     "frame-src": [
-      "https://www.youtube-nocookie.com",
+      // The player, and the consent hop it navigates itself through. CSP
+      // checks a frame's current URL rather than the src it was given, so
+      // leaving google.com out is what put Chrome's "This content is blocked"
+      // over the whole player.
       "https://www.youtube.com",
       "https://www.google.com",
+      // Kept for anything still pointing at the privacy-enhanced host. The
+      // player moved off it — see `embedUrl` — because it cannot store the
+      // consent choice its own flow asks for, and the frame ends up looping
+      // between the two hosts until the browser gives up.
+      "https://www.youtube-nocookie.com",
     ],
     // Decoders that three.js may run off the main thread. Same blob URL
     // mechanism, different directive.

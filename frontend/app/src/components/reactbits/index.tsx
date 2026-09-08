@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useCallback, useId, useState, type ReactNode } from "react";
+import { Children, Component, useCallback, useId, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -161,14 +161,34 @@ export function PillNav({
                 aria-current={current ? "true" : undefined}
                 className={cn(
                   "focus-ring tap relative inline-flex items-center rounded-full px-4 text-[13px] font-semibold transition-colors duration-normal",
-                  current ? "text-primary" : "text-white/70 hover:text-white",
+                  /*
+                   * White, not `text-primary`, and the difference is the whole
+                   * reason this line is spelled out. The rail sits inside the
+                   * dark hero, which swaps `--primary` to white so that a
+                   * button on navy is the light thing in the composition. The
+                   * pill was asking for `text-primary` on a `bg-white` ground:
+                   * white on white, so the beat you had just chosen was the
+                   * one word in the row you could not read.
+                   */
+                  current ? "text-white" : "text-white/70 hover:text-white",
                 )}
               >
                 {current && (
                   <motion.span
                     aria-hidden
                     layoutId={`pill-${layout}`}
-                    className="absolute inset-0 rounded-full bg-white shadow-raised"
+                    /*
+                     * Deeper than the rail it sits in rather than lighter.
+                     * The rail is brand ink (`--sidebar-background`, the same
+                     * #0E47A1 the active filter pills use on white), so a pill
+                     * of that blue would disappear into it and a white one
+                     * fought the hero — a bright lozenge pulling more
+                     * attention than the heading above it. `ink-deep` reads as
+                     * a pressed well in the rail, and carries white at about
+                     * 11:1. The hairline keeps its edge legible where the two
+                     * blues are closest.
+                     */
+                    className="absolute inset-0 rounded-full bg-brand-ink-deep ring-1 ring-inset ring-white/20 shadow-raised"
                     transition={reduced ? { duration: 0 } : transitions.sheet}
                   />
                 )}
@@ -200,6 +220,45 @@ export function PillNav({
  * so it would fight the page for every swipe and win nothing. Both cases fall
  * back to the caller's static children.
  */
+/**
+ * The last line between a decorative scene and the page it decorates.
+ *
+ * The lanyard is three.js, a WASM physics engine and a GLTF model, and any of
+ * the three can be unavailable for reasons that have nothing to do with this
+ * site: no WebGL, a driver the browser has blocklisted, a policy that refuses
+ * to compile WebAssembly. When that happened there was no boundary between it
+ * and the route, so the throw climbed to the page's own `error.tsx` and the
+ * About page — the name, the biography, the contact details — was replaced by
+ * "Something broke while rendering".
+ *
+ * That is the wrong trade by a wide margin. The scene is an ornament and the
+ * page is the content, so a scene that cannot run renders the same fallback
+ * every other unsupported case already gets, and the biography stays up. The
+ * reason is logged, because a silently missing press pass is still a bug
+ * worth seeing in the console.
+ */
+class SceneBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(cause: unknown) {
+    console.error(
+      "[press-pass] the 3D scene could not run; showing the still image.",
+      cause,
+    );
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 export function PressPass({
   frontImage,
   fallback,
@@ -225,26 +284,28 @@ export function PressPass({
       {reduced || fine !== true ? (
         fallback
       ) : (
-        <LanyardBase
-          // At fov 20 the visible height is 2·z·tan(10°), so the camera
-          // distance *is* the framing. The whole assembly — anchor at 2.5, a
-          // 1.8-unit cord, then the card — spans about 4.3 units, and 13 gave
-          // a 4.6-unit frustum: technically enough, with no margin, so the
-          // strap clipped at the top or the card at the bottom depending on
-          // where the rope settled. 15 leaves it about half a unit of air at
-          // each end, which is what stops it touching either edge as it swings.
-          position={[0, 0, 13.5]}
-          gravity={[0, -40, 0]}
-          frontImage={frontImage}
-          imageFit="cover"
-          // The band reads PRESS · JOURNALIST, repeating, in brand navy — the
-          // texture is generated rather than sourced so it stays on palette and
-          // tiles cleanly along the strap. Widened to give the words room; at
-          // the library's default the tape is too narrow to read them on.
-          lanyardImage="/lanyard/band-press.png"
-          lanyardWidth={1.1}
-          transparent
-        />
+        <SceneBoundary fallback={fallback}>
+          <LanyardBase
+            // At fov 20 the visible height is 2·z·tan(10°), so the camera
+            // distance *is* the framing. The whole assembly — anchor at 2.5, a
+            // 1.8-unit cord, then the card — spans about 4.3 units, and 13 gave
+            // a 4.6-unit frustum: technically enough, with no margin, so the
+            // strap clipped at the top or the card at the bottom depending on
+            // where the rope settled. 15 leaves it about half a unit of air at
+            // each end, which is what stops it touching either edge as it swings.
+            position={[0, 0, 13.5]}
+            gravity={[0, -40, 0]}
+            frontImage={frontImage}
+            imageFit="cover"
+            // The band reads PRESS · JOURNALIST, repeating, in brand navy — the
+            // texture is generated rather than sourced so it stays on palette and
+            // tiles cleanly along the strap. Widened to give the words room; at
+            // the library's default the tape is too narrow to read them on.
+            lanyardImage="/lanyard/band-press.png"
+            lanyardWidth={1.1}
+            transparent
+          />
+        </SceneBoundary>
       )}
     </div>
   );
@@ -310,7 +371,9 @@ export function PictureWall({
             className="group rounded-xl shadow-primary"
             imgClassName="object-cover"
           />
-          {tile.caption && <figcaption className="rule-label mt-3">{tile.caption}</figcaption>}
+          {tile.caption && (
+            <figcaption className="rule-label mt-3">{tile.caption}</figcaption>
+          )}
         </figure>
       ))}
     </div>

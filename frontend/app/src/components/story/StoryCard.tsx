@@ -101,7 +101,11 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
         <ImageReveal
           src={storyCover(story)}
           alt=""
-          ratio="16/10"
+          // 16:9 rather than 16:10. The cover is the tallest thing in a
+          // card and the cheapest place to take height out of one: at three
+          // to a row it saves about a tenth of the card without cropping a
+          // picture any harder than the grid already does.
+          ratio="16/9"
           hoverZoom
           priority={isFeature}
           // The feature's cover is 38% of the card, and the card is a bento
@@ -132,8 +136,8 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
             meta on one line. */}
         <div
           className={cn(
-            "flex flex-1 flex-col p-5",
-            isFeature ? "justify-center sm:p-7 lg:px-9 lg:py-8" : "sm:p-6",
+            "flex flex-1 flex-col p-4",
+            isFeature ? "justify-center sm:p-6 lg:px-7 lg:py-7" : "sm:p-5",
           )}
         >
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -153,8 +157,8 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
               "transition-transform duration-normal ease-entrance",
               "group-hover:translate-x-[3px] motion-reduce:transform-none",
               isFeature
-                ? "mt-3 text-[1.6rem] leading-[1.12] sm:text-[1.75rem] lg:text-[2.1rem]"
-                : "mt-2.5 text-xl leading-[1.18]",
+                ? "mt-3 text-[1.45rem] leading-[1.14] sm:text-[1.6rem] lg:text-[1.85rem]"
+                : "mt-2.5 text-lg leading-[1.2]",
             )}
           >
             {story.title}
@@ -164,8 +168,8 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
             className={cn(
               "text-pretty text-muted-foreground",
               isFeature
-                ? "mt-4 max-w-[50ch] text-[1.02rem] leading-[1.65]"
-                : "mt-3 flex-1 text-[0.94rem] leading-relaxed",
+                ? "mt-3.5 max-w-[50ch] text-[0.98rem] leading-[1.6]"
+                : "mt-2.5 flex-1 text-[0.9rem] leading-relaxed",
             )}
           >
             {/* Stripped, not rendered. A card summary is clamped to a few
@@ -180,7 +184,7 @@ export function StoryCard({ story, variant = "default", delay = 0, className }: 
           <div
             className={cn(
               "flex items-center gap-3 border-t border-border text-[13px] text-muted-foreground",
-              isFeature ? "mt-7 pt-4" : "mt-6 pt-4",
+              isFeature ? "mt-6 pt-3.5" : "mt-5 pt-3.5",
             )}
           >
             <time dateTime={story.publishedAt}>{formatShortDate(story.publishedAt)}</time>

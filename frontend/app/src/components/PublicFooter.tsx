@@ -177,6 +177,11 @@ export function PublicFooter() {
           <p>
             © {year} {PROFILE.name}. All rights reserved.
           </p>
+          {/* The build credit, kept as plain text in the same row as the
+              copyright. It belongs at this weight: whose work the site *is*
+              stays with the byline at the top of the footer, and who built it
+              is a line at the bottom, the way a masthead names its printer. */}
+          <p>Engineered by Eddy Max</p>
           <p>
             Tips and corrections:{" "}
             <a href={`mailto:${PROFILE.email}`} className="underline-grow text-primary">

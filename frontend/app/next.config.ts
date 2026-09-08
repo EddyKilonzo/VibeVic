@@ -192,6 +192,25 @@ function contentSecurityPolicy(): string {
     "script-src": [
       "'self'",
       "'unsafe-inline'",
+      /*
+       * WebAssembly, and only WebAssembly.
+       *
+       * The press pass on the About page hangs on a rope with real physics,
+       * and Rapier — the engine behind it — is a WASM module. Compiling one
+       * counts as evaluating script, so with this absent the browser threw
+       * `CompileError: ... violates the following Content Security policy
+       * directive`, React caught it, and the whole About page came back as
+       * "Something broke while rendering". A decorative lanyard took down a
+       * journalist's biography.
+       *
+       * `'wasm-unsafe-eval'` grants exactly that and nothing else: it permits
+       * WebAssembly compilation while `eval` and `new Function` stay refused,
+       * which is why it exists as a separate keyword rather than being folded
+       * into `'unsafe-eval'`. A browser too old to know it ignores it and
+       * falls back to refusing the module — the same as today, and the
+       * fallback below now covers that case properly.
+       */
+      "'wasm-unsafe-eval'",
       // Turbopack's dev runtime evaluates. Never in a build.
       ...(isProduction ? [] : ["'unsafe-eval'"]),
     ],
@@ -229,8 +248,27 @@ function contentSecurityPolicy(): string {
       // Hot reload.
       ...(isProduction ? [] : ["ws:", "wss:"]),
     ],
-    // Reports are embedded, and only from the no-cookie host.
-    "frame-src": ["https://www.youtube-nocookie.com", "https://www.youtube.com"],
+    /*
+     * Reports are embedded, and only from the no-cookie host — but the frame
+     * does not stay there.
+     *
+     * The player navigates itself to `https://www.google.com` as part of the
+     * consent hop it runs before playing, and CSP checks a frame's *current*
+     * URL, not the one the src attribute was written with. With google.com
+     * missing, that navigation was refused and the reader got Chrome's grey
+     * "This content is blocked. Contact the site owner to fix the issue."
+     * over the whole player — on a page whose entire purpose is the video.
+     * The site owner was us; this is the fix.
+     *
+     * Confirmed rather than guessed: a `securitypolicyviolation` listener on
+     * the live page named `frame-src` and `https://www.google.com` when the
+     * play button was pressed.
+     */
+    "frame-src": [
+      "https://www.youtube-nocookie.com",
+      "https://www.youtube.com",
+      "https://www.google.com",
+    ],
     // Decoders that three.js may run off the main thread. Same blob URL
     // mechanism, different directive.
     "worker-src": ["'self'", "blob:"],

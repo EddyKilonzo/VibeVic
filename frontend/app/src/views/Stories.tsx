@@ -184,7 +184,7 @@ export default function Stories() {
           <motion.div
             layout={!reduced}
             transition={transitions.layout}
-            className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:auto-rows-auto lg:grid-cols-6"
+            className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:auto-rows-auto lg:grid-cols-6 xl:grid-cols-8"
           >
             <AnimatePresence mode="popLayout" initial={false}>
               {stories.map((story, i) => (
@@ -220,19 +220,36 @@ export default function Stories() {
  * Bento spans for the archive.
  *
  * A uniform three-column grid says every piece matters equally, which is the
- * one thing an archive should never say. The lead runs full width, the next
- * two take halves, and the rest fall into thirds — the rhythm repeats every
- * six so a long list stays composed rather than turning into one wide row
- * followed by wallpaper.
+ * one thing an archive should never say. So the newest piece runs full width
+ * and everything after it falls into thirds.
+ *
+ * ── Why the rhythm no longer repeats ─────────────────────────────────────
+ * It used to cycle every six — one full-width, two halves, three thirds — so
+ * that a long list stayed composed. Two things were wrong with that. The
+ * halves were a card about 700px across carrying a 16:10 cover, which is
+ * over 400px of picture before a word of the piece, twice per screenful. And
+ * the cycle handed every seventh card the full-width span *without* the
+ * feature variant that makes full width work: the lead is a side-by-side card
+ * whose cover is 38% of its width, while the rest are stacked, so a stacked
+ * card at full width put a cover the width of the container above three lines
+ * of text. That was the card that read as enormous.
+ *
+ * One emphatic card, then a scannable grid. Hierarchy is what the top of the
+ * page is for; further down, being able to compare pieces matters more than
+ * being told again which one is newest.
+ *
+ * ── Three to a row, four on a wide screen ────────────────────────────────
+ * The track count grows with the viewport rather than the cards growing with
+ * it. Six tracks from `lg:` puts three cards in a row; eight from `xl:` puts
+ * four, because a 1500px window given three cards is a 460px card — a size
+ * that reads as a poster rather than as an entry in a list. The lead spans
+ * whatever the row has.
  *
  * Only from `lg:` up. Below that the column is the layout, and imposing spans
  * on a single-column stack achieves nothing but a bigger stylesheet.
  */
 function bentoSpan(index: number): string {
-  const position = index % 6;
-  if (position === 0) return "lg:col-span-6";
-  if (position === 1 || position === 2) return "lg:col-span-3";
-  return "lg:col-span-2";
+  return index === 0 ? "lg:col-span-6 xl:col-span-8" : "lg:col-span-2";
 }
 
 function FilterChip({
